@@ -250,11 +250,13 @@ public final class DiagLog {
         });
 
         section(sb, "设置", x -> {
-            for (java.util.Map.Entry<String, String> e : AppActions.currentSettings(ctx).entrySet()) {
-                if (com.ecut.campus.data.AppSetting.SHARE_NAME.equals(e.getKey())) continue; // 昵称不导出
-                x.append(com.ecut.campus.data.AppSetting.label(e.getKey())).append(" = ")
-                        .append(e.getValue()).append('\n');
-            }
+            x.append("主题 = ").append(Prefs.theme(ctx) == G.THEME_GLASS ? "磨砂玻璃" : "纸墨").append('\n');
+            x.append("深色模式 = ").append(Prefs.nightMode(ctx)).append('\n');
+            x.append("显示天数 = ").append(Prefs.displayDays(ctx)).append('\n');
+            x.append("显示非本周 = ").append(yn(Prefs.showInactiveCourses(ctx))).append('\n');
+            x.append("一屏显示10节 = ").append(yn(Prefs.fitAllSections(ctx))).append('\n');
+            x.append("新成绩提醒 = ").append(yn(Prefs.gradeNotify(ctx))).append('\n');
+            x.append("自动检查更新 = ").append(yn(Prefs.updateAutoCheck(ctx))).append('\n');
             x.append("更新: 上次检查 ").append(ts(Prefs.updateCheckedAt(ctx)))
                     .append(" · 跳过版本 ").append(Prefs.updateSkippedTag(ctx).isEmpty() ? "(无)" : Prefs.updateSkippedTag(ctx)).append('\n');
             ScheduleSettings ss = ScheduleSettingsStore.load(ctx);
@@ -325,17 +327,8 @@ public final class DiagLog {
                     .append(" · 未读新成绩: ").append(Prefs.newGradeKeys(ctx).size()).append('\n');
         });
 
-        section(sb, "同学与指令", x -> {
+        section(sb, "同学", x -> {
             x.append("已添加同学: ").append(FriendStore.load(ctx).size()).append('\n');
-            java.util.List<String> h = CommandUi.history(ctx);
-            x.append("指令历史: ").append(h.size()).append("条\n");
-            for (int i = 0; i < Math.min(5, h.size()); i++) {
-                String[] lines = h.get(i).split("\n");
-                String first = lines.length > 1 ? lines[1] : lines[0];
-                if (first.contains("昵称")) first = "设置 昵称=***";
-                x.append("  ").append(lines.length).append("行 · ")
-                        .append(scrub(first.length() > 40 ? first.substring(0, 40) + "…" : first)).append('\n');
-            }
         });
 
         sb.append("== 最近一次教务原始课表（已去除学生信息）==\n");

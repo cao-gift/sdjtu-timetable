@@ -8,8 +8,8 @@ public final class WhatsNew {
 
     private WhatsNew() {}
 
-    /** 有说明可看的最低版本号（1.3.14 = 66）。以后换说明时改这里和 strings.xml 里 whats_new_*。 */
-    public static final int NOTES_CODE = 66;
+    /** 有说明可看的最低版本号（1.3.15 = 67）。以后换说明时改这里和 strings.xml 里 whats_new_*。 */
+    public static final int NOTES_CODE = 67;
 
     /**
      * @param lastSeen 上次打开时记下的 versionCode；从没记过（新装，或从 ≤1.2.6 升上来）为 0

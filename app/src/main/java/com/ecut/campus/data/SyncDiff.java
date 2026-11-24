@@ -51,7 +51,7 @@ public final class SyncDiff {
         List<String> r = new ArrayList<>();
         for (Timetable.Session s : c.sessions) {
             String x = Dates.cnDay(s.dayOfWeek) + s.startSection + "-" + s.endSection + "节 "
-                    + TangliCommand.weekExpr(s.weeks) + "周";
+                    + WeekRange.weekExpr(s.weeks) + "周";
             if (!r.contains(x)) r.add(x);
         }
         java.util.Collections.sort(r);

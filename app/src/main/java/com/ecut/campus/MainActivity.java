@@ -22,7 +22,18 @@ import com.ecut.campus.data.TimetableStore;
 import com.google.android.material.color.DynamicColors;
 
 
-public class MainActivity extends AppCompatActivity implements AppActions.Host {
+public class MainActivity extends AppCompatActivity {
+
+    static final String EXTRA_ACTION = "tangli_action";
+    static final String EXTRA_VALUE = "tangli_value";
+
+    static void launchAction(Activity from, String action, String value) {
+        Intent i = new Intent(from, MainActivity.class);
+        i.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        i.putExtra(EXTRA_ACTION, action);
+        i.putExtra(EXTRA_VALUE, value);
+        from.startActivity(i);
+    }
 
     static final int TAB_TIMETABLE = 0;
     static final int TAB_SETTINGS = 1;
@@ -111,9 +122,8 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
         if (!whatsNew && !bgGuide) container.postDelayed(() -> {
             if (!isFinishing()) Updater.autoCheck(this);
         }, 1500);
-        // 从 lvlv:// 链接冷启动
         Intent launch = getIntent();
-        if (launch != null && (launch.getData() != null || launch.hasExtra(AppActions.EXTRA_ACTION))) {
+        if (launch != null && launch.hasExtra(EXTRA_ACTION)) {
             container.post(() -> handleExternalIntent(launch));
         }
     }
@@ -155,25 +165,17 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
         handleExternalIntent(intent);
     }
 
-    /** lvlv:// 链接（弹预览）或其它页面转过来的动作（同步、切页签）。 */
+    /** 其它页面或桌面组件转过来的动作（同步、切页签）。 */
     private void handleExternalIntent(Intent intent) {
         if (intent == null || isFinishing()) return;
-        String action = intent.getStringExtra(AppActions.EXTRA_ACTION);
+        String action = intent.getStringExtra(EXTRA_ACTION);
         if (action != null) {
-            String value = intent.getStringExtra(AppActions.EXTRA_VALUE);
-            intent.removeExtra(AppActions.EXTRA_ACTION);
+            String value = intent.getStringExtra(EXTRA_VALUE);
+            intent.removeExtra(EXTRA_ACTION);
             runHostAction(action, value == null ? "" : value);
-            return;
-        }
-        Uri data = intent.getData();
-        if (CommandUi.isCommandLink(data)) {
-            intent.setData(null);
-            showTab(TAB_TIMETABLE);
-            CommandUi.openLink(this, data, this::onCommandApplied);
         }
     }
 
-    @Override
     public void runHostAction(String action, String value) {
         if ("sync".equals(action)) {
             showTab(TAB_TIMETABLE);
@@ -188,17 +190,6 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
         }
     }
 
-    /** 驴驴课表指令应用（或撤销）之后：课表重画；设置可能变了，下次打开设置页时重建。 */
-    void onCommandApplied() {
-        refreshTimetableTab();
-        if (settingsFragment != null) {
-            contentContainer.removeView(settingsFragment);
-            settingsFragment = null;
-            settings = null;
-            if (currentTab == TAB_SETTINGS) showTab(TAB_SETTINGS);
-        }
-    }
-
     private ViewGroup contentContainer;
     private boolean skipNextResumeRefresh;
     private static final String STARTUP_PREFS = "startup_meta";
@@ -209,18 +200,6 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
      */
     private void runStartupMigrationsOnce() {
         android.content.SharedPreferences sp = getSharedPreferences(STARTUP_PREFS, MODE_PRIVATE);
-        // 同包升级后，系统可能仍保留旧功能发过的通知和通知渠道。
-        if (!sp.getBoolean("retired_filter_cleared", false)) {
-            android.app.NotificationManager nm = getSystemService(android.app.NotificationManager.class);
-            nm.cancel(1001);
-            nm.cancel(3303);
-            if (android.os.Build.VERSION.SDK_INT >= 26) {
-                nm.deleteNotificationChannel("dns_filter");
-                nm.deleteNotificationChannel("dns_pause");
-            }
-            deleteSharedPreferences("dns_control");
-            sp.edit().putBoolean("retired_filter_cleared", true).apply();
-        }
         if (sp.getInt("migrated_vc", 0) == BuildConfig.VERSION_CODE) return;
         // 一次性清理历史学期被全局日期污染的 startDate（有 startDateTouched 标记的不动）
         SemesterArchive.clearUnsetStartDates(this);
@@ -308,16 +287,16 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
                 @Override
                 public void onMarkedClick(Timetable.Course course, Timetable.Session session,
                                           String label, String adjustId, boolean extra) {
-                    CommandUi.onMarked(MainActivity.this, course, session, label, adjustId, extra,
-                            MainActivity.this::onCommandApplied, MainActivity.this::openCourseEditor);
+                    CourseBlockActions.onMarked(MainActivity.this, course, session, label, adjustId, extra,
+                            MainActivity.this::refreshTimetableTab, MainActivity.this::openCourseEditor);
                 }
 
                 @Override
                 public void onSessionLongPress(Timetable.Course course, Timetable.Session session,
                                                boolean active, String label, String adjustId,
                                                boolean extra, int week) {
-                    CommandUi.onLongPress(MainActivity.this, course, session, active, label, adjustId,
-                            extra, week, MainActivity.this::onCommandApplied,
+                    CourseBlockActions.onLongPress(MainActivity.this, course, session, active, label, adjustId,
+                            extra, week, MainActivity.this::refreshTimetableTab,
                             MainActivity.this::openCourseEditor);
                 }
 
@@ -359,28 +338,14 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
         }
 
         View addBtn = campusFragment.findViewById(R.id.btn_add_course);
-        if (addBtn != null) addBtn.setOnClickListener(this::showEditMenu);
+        if (addBtn != null) addBtn.setOnClickListener(v -> {
+            int day = WeekMath.todayDayOfWeek();
+            if (Prefs.displayDays(this) == 5) day = Math.min(5, day);
+            openCourseEditor(null, day, 1);
+        });
 
         View moreBtn = campusFragment.findViewById(R.id.btn_more);
         if (moreBtn != null) moreBtn.setOnClickListener(this::showTimetableMenu);
-    }
-
-    /** 「＋」：改课表的三种方式。 */
-    private void showEditMenu(View anchor) {
-        new GaugeMenu(this)
-                .add("手动添加课程")
-                .divider()
-                .add("用 AI 改课表")
-                .add("粘贴驴驴课表指令")
-                .show(anchor, title -> {
-                    if ("用 AI 改课表".equals(title)) CommandUi.copyAiGuide(this);
-                    else if ("粘贴驴驴课表指令".equals(title)) CommandUi.showPasteDialog(this, this::onCommandApplied);
-                    else {
-                        int day = WeekMath.todayDayOfWeek();
-                        if (Prefs.displayDays(this) == 5) day = Math.min(5, day);
-                        openCourseEditor(null, day, 1);
-                    }
-                });
     }
 
     /** 「⋯」：只留常用的四项，其余收进分享和课表设置。 */
@@ -401,13 +366,11 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
 
     private void showShareMenu(View anchor) {
         anchor.post(() -> new GaugeMenu(this)
-                .add("二维码")
-                .add("驴驴课表指令（发给同学）")
+                .add("二维码 / 分享码")
                 .divider()
                 .add("导出到日历 (ICS)")
                 .show(anchor, title -> {
-                    if ("二维码".equals(title)) startActivity(new Intent(this, ShareActivity.class));
-                    else if (title.startsWith("驴驴课表指令")) CommandUi.exportForShare(this);
+                    if (title.startsWith("二维码")) startActivity(new Intent(this, ShareActivity.class));
                     else exportIcs();
                 }));
     }
@@ -701,13 +664,6 @@ public class MainActivity extends AppCompatActivity implements AppActions.Host {
     public void onBackPressed() {
         if (currentTab == TAB_SETTINGS && settings != null && settings.backToRoot()) return;
         super.onBackPressed();
-    }
-
-    @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        // Android 10+ 只有拿到焦点后才能读剪贴板：复制了 AI 给的驴驴课表指令，回来就弹预览
-        if (hasFocus) CommandUi.checkClipboard(this, this::onCommandApplied);
     }
 
     @Override

@@ -46,12 +46,12 @@ public class LauncherAliasManifestTest {
     @Test
     public void mainActivityItselfIsNotALauncherEntry() throws Exception {
         String m = manifest();
-        Matcher x = Pattern.compile("<activity\\s+android:name=\"\\.MainActivity\"[\\s\\S]*?</activity>").matcher(m);
+        Matcher x = Pattern.compile("<activity\\s+android:name=\"\\.MainActivity\"[\\s\\S]*?(?:/>|</activity>)").matcher(m);
         assertTrue(x.find());
         assertFalse(x.group().contains("android.intent.category.LAUNCHER"));
-        // 新老分享链接都由同一 Activity 接收。
-        assertTrue(x.group().contains("android:scheme=\"lvlv\""));
-        assertTrue(x.group().contains("android:scheme=\"tangli\""));
+        // 指令链接入口已移除，不再注册 lvlv:// 或 tangli:// scheme
+        assertFalse(x.group().contains("android:scheme=\"lvlv\""));
+        assertFalse(x.group().contains("android:scheme=\"tangli\""));
         // 整个清单里 LAUNCHER 只出现在兼容的三个 alias 上
         int n = 0;
         Matcher l = Pattern.compile("android.intent.category.LAUNCHER").matcher(m);

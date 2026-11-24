@@ -50,9 +50,9 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         status = Ui.text(this, header, "", 14, G.INK);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         login = Ui.button(this, "登录统一门户", false, v -> openLogin());
-        login.setMinHeight(dp(48));
-        login.setPadding(dp(16), 0, dp(16), 0);
-        header.addView(login, new LinearLayout.LayoutParams(-2, -2));
+        LinearLayout.LayoutParams loginLp = new LinearLayout.LayoutParams(-2, -2);
+        loginLp.topMargin = dp(10);
+        header.addView(login, loginLp);
         ListView list = findViewById(R.id.study_list);
         list.addHeaderView(header, null, false);
         list.setAdapter(adapter);
@@ -170,12 +170,17 @@ public final class SdjtuExamActivity extends AppCompatActivity {
             if (row == null) {
                 row = new LinearLayout(SdjtuExamActivity.this);
                 row.setOrientation(LinearLayout.VERTICAL);
-                row.setPadding(0, dp(10), 0, dp(10));
+                row.setPadding(0, dp(12), 0, 0);
                 Ui.text(SdjtuExamActivity.this, row, "", 16, G.INK).setTypeface(Typeface.DEFAULT_BOLD);
                 TextView time = Ui.text(SdjtuExamActivity.this, row, "", 14, G.INK);
                 time.setTypeface(Typeface.MONOSPACE);
                 time.setPadding(0, dp(4), 0, 0);
-                Ui.text(SdjtuExamActivity.this, row, "", 14, G.SUB);
+                Ui.text(SdjtuExamActivity.this, row, "", 13.5f, G.SUB);
+                View line = new View(SdjtuExamActivity.this);
+                line.setBackgroundColor(G.LINE);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, 1);
+                lp.topMargin = dp(12);
+                row.addView(line, lp);
             }
             JSONObject exam = getItem(i);
             ((TextView) row.getChildAt(0)).setText(exam.optString("name"));

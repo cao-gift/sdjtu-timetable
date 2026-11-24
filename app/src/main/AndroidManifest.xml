@@ -47,17 +47,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:configChanges="orientation|screenSize|keyboardHidden"
-            android:launchMode="singleTop">
-            <!-- 桌面入口由下方 activity-alias 提供。 -->
-            <!-- lvlv://cmd?t=驴驴课表指令：点链接直接打开预览（仍需确认） -->
-            <intent-filter>
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="lvlv" />
-                <data android:scheme="tangli" />
-            </intent-filter>
-        </activity>
+            android:launchMode="singleTop" />
 
         <!-- 沿用旧版本的三个桌面组件名，以便更新后已启用的图标及长按快捷方式继续可用。 -->
         <activity-alias
@@ -164,10 +154,6 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 
-
-        <activity
-            android:name=".DebugActivity"
-            android:exported="false" />
 
         <activity
             android:name=".AboutActivity"

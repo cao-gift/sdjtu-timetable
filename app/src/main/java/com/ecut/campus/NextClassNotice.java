@@ -89,8 +89,8 @@ public final class NextClassNotice {
         }
         Intent open = new Intent(c, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra(AppActions.EXTRA_ACTION, "open")
-                .putExtra(AppActions.EXTRA_VALUE, "timetable");
+                .putExtra(MainActivity.EXTRA_ACTION, "open")
+                .putExtra(MainActivity.EXTRA_VALUE, "timetable");
         PendingIntent pi = PendingIntent.getActivity(c, REQ_OPEN, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH)

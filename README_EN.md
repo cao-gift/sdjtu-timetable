@@ -1,12 +1,12 @@
 # 驴驴课表 · Lǘlǘ Timetable
 
-**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.3.14 (66)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
+**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.3.15 (67)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
 
 [简体中文](README.md) | **English**
 
-Sign in once through SDJTU WebVPN to store your **timetable, grades, empty classrooms, curriculum plan, and exam schedule** locally for instant offline access — alongside **one-sentence AI timetable editing**, home-screen widgets, class/rain reminders, and classmate free-time matching.
+Sign in once through SDJTU WebVPN to store your **timetable, grades, empty classrooms, curriculum plan, and exam schedule** locally for instant offline access — featuring the **Frosted Glass** theme by default, home-screen widgets, class/rain reminders, and classmate free-time matching.
 
-[Changes from Upstream](#changes-from-upstream) · [SDJTU Features](#sdjtu-features) · [Edit your timetable with AI](#-edit-your-timetable-with-ai) · [Installation](#installation) · [Changelog](CHANGELOG.md)
+[Changes from Upstream](#changes-from-upstream) · [SDJTU Features](#sdjtu-features) · [Features](#features) · [Installation](#installation) · [Changelog](CHANGELOG.md)
 
 ---
 
@@ -25,7 +25,7 @@ Modified from [augustlies/tangli](https://github.com/augustlies/tangli) `v1.3.1`
 ### Key Modifications & Simplifications
 - **SDJTU-Only Focus**: Locked to SDJTU WebVPN (`wwebvpn.sdjtu.edu.cn`) with the university seal in Settings; removed the multi-school directory, school picker, custom school URLs, and other universities' adapters/assets.
 - **Legacy Qiangzhi & Calendar Fixes**: Fixed course code being parsed as course name on legacy Qiangzhi timetables; calibrated SDJTU 2026–2027 Term 1 start date (2026-08-24) with one-tap current-week calibration in Settings.
-- **Standalone App**: Renamed to Lǘlǘ Timetable with donkey icon and standalone package ID `app.lvlv.timetable` (installable alongside upstream); removed DNS ad-filtering, VPN service, and domain rules; bottom bar simplified to Timetable / Settings while maintaining compatibility with legacy backups, commands, and `tangli://` links.
+- **Standalone App & Streamlined Scope**: Renamed to Lǘlǘ Timetable with donkey icon and standalone package ID `app.lvlv.timetable` (installable alongside upstream); completely removed DNS ad-filtering, VPN service, domain rules, and AI/text-command editing (`lvlv://` / `tangli://`); simplified the bottom bar to Timetable / Settings, enabled Frosted Glass by default, and unified buttons and cards across all screens.
 
 ---
 
@@ -37,36 +37,6 @@ Settings displays Shandong Jiaotong University and its seal, and all academic to
 - **Empty Classrooms (`查空教室`)**: Required campus and week, optional building, room search, status filter, and all-slot availability filter.
 - **Curriculum Plan (`培养方案`)**: Grouped by course category with semester filter, keyword/code search, credits, hours, and completion status.
 - **Exam Schedule (`考试安排`)**: Merges current-term final and early final exams into one timeline and updates offline cache when both succeed.
-
----
-
-## ✨ Edit your timetable with AI
-
-Other timetable apps make you tap cell by cell. Lǘlǘ Timetable lets **any AI you already use** (Doubao, DeepSeek, Kimi, ChatGPT…) do it for you — no plugins, no extra accounts:
-
-1. On the timetable page, tap "+" → "Edit timetable with AI". Lǘlǘ Timetable copies a briefing to your clipboard (it includes the current week number, your daily schedule, and your existing timetable).
-2. Paste it to the AI and say what you want changed at the end, for example:
-   - "Add a College Physics midterm exam next Wednesday, 2:30–4:30 PM, in A201"
-   - "Move Advanced Math from Friday of week 10, periods 1–2, to Saturday of week 11, periods 3–4"
-   - "National Day holiday runs Oct 1–7; make up the Oct 3 classes on Oct 11"
-   - "Make every period 40 minutes, with the first period starting at 8:00"
-   - Or just send a screenshot of your timetable / a notice from your teacher
-3. Copy the "Lǘlǘ Timetable command" the AI replies with and paste it back — Lǘlǘ Timetable shows a preview listing every addition, deletion, and change. **Nothing takes effect until you confirm**, and mistakes can be undone.
-
-The AI's reply looks roughly like this (the command syntax is in Chinese — it is human-readable, and you can also write it by hand):
-
-```
-驴驴课表指令 v1
-+ 大学物理期中考试 | 周三 | 14:30-16:30 | 第10周 | A201
-停 大学英语 | 第9周 | 周一 | 3-4节
-调 高等数学 | 第10周 | 周五 | 1-2节 -> 第11周 | 周六 | 3-4节
-假 2026-10-01 至 2026-10-07 | 国庆
-```
-
-- Sending the same class again with a new room or teacher updates it in place — no duplicates; specifying only some weeks changes only those weeks
-- Add, delete, suspend, reschedule classes, holidays and make-up classes, term start dates, daily schedules, course notes, and common settings — all in one sentence
-- Ask the AI for a `lvlv://` link and send it to a classmate; one tap imports the same changes (confirmation still required). Existing `tangli://` links and commands starting with 烫梨指令 are also accepted
-- Commands are parsed on your phone only. Lǘlǘ Timetable never sends your timetable to any server; which AI you share it with, and how much, is up to you
 
 ---
 
@@ -85,7 +55,6 @@ The AI's reply looks roughly like this (the command syntax is in Chinese — it 
 - Same-name courses share a color; different courses in the same term never clash
 - Holidays are greyed out automatically; make-up days automatically carry the classes of the day they replace; long-press a class to suspend just this week, or move it elsewhere
 - You get a reminder if the timetable hasn't synced in a long time or the login has expired
-- **Edit your timetable with AI**: see [above](#-edit-your-timetable-with-ai)
 
 ### 🎓 Grades
 - View grades and GPA by term
@@ -102,9 +71,8 @@ The AI's reply looks roughly like this (the command syntax is in Chinese — it 
 
 ### 🎨 Appearance & more
 - The launcher uses the 驴驴课表 donkey icon
-- Two themes, "Paper & Ink" and "Frosted Glass", each in light / dark, expanding in a circle from where you tap when switching; dialogs under Frosted Glass are nearly opaque, so text never blends into the background
+- Two themes: "Frosted Glass" (default) and "Paper & Ink", each in light / dark, expanding in a circle from where you tap when switching; dialogs under Frosted Glass are nearly opaque, so text never blends into the background
 - Export your timetable to your phone's calendar, or back it up to a file to restore on a new phone
-- Some adapted schools also have shortcuts such as the academic calendar and campus map
 
 ## Installation
 

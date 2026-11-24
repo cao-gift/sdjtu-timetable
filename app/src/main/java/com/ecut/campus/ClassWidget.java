@@ -239,8 +239,8 @@ public final class ClassWidget extends AppWidgetProvider {
     static PendingIntent openTimetable(Context c, int req, boolean mutable) {
         Intent open = new Intent(c, MainActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra(AppActions.EXTRA_ACTION, "open")
-                .putExtra(AppActions.EXTRA_VALUE, "timetable");
+                .putExtra(MainActivity.EXTRA_ACTION, "open")
+                .putExtra(MainActivity.EXTRA_VALUE, "timetable");
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (mutable && Build.VERSION.SDK_INT >= 31) flags |= PendingIntent.FLAG_MUTABLE;
         else flags |= PendingIntent.FLAG_IMMUTABLE;

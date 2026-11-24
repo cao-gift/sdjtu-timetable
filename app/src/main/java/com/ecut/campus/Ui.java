@@ -41,7 +41,7 @@ public final class Ui {
         back.setBackgroundResource(selectable(a, true));
         back.setOnClickListener(v -> a.finish());
         LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, dp(a, 40));
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(a, 48));
         bl.leftMargin = -dp(a, 6);
         col.addView(back, bl);
 

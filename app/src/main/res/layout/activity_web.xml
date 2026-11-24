@@ -8,7 +8,7 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="52dp"
+        android:layout_height="56dp"
         android:background="?attr/gBg"
         android:gravity="center_vertical"
         android:orientation="horizontal"
@@ -16,8 +16,8 @@
 
         <ImageButton
             android:id="@+id/btn_web_back"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="返回"
             android:src="@drawable/ic_back" />
@@ -26,7 +26,7 @@
             android:id="@+id/web_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
+            android:layout_marginStart="4dp"
             android:layout_weight="1"
             android:ellipsize="end"
             android:fontFamily="sans-serif-medium"
@@ -38,22 +38,17 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_toggle_fit"
-            style="@style/Gauge.Button.Outline"
+            style="@style/Gauge.Button.Outline.Compact"
             android:layout_width="wrap_content"
-            android:layout_height="34dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minWidth="0dp"
-            android:paddingHorizontal="12dp"
+            android:layout_height="wrap_content"
             android:text="手机适配"
-            android:textSize="12sp"
-            app:cornerRadius="?attr/gSmallRadius" />
+            android:textSize="12.5sp" />
 
         <ImageButton
             android:id="@+id/btn_web_refresh"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginStart="4dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="2dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="刷新"
             android:src="@drawable/ic_refresh" />
@@ -114,11 +109,12 @@
             <TextView
                 android:id="@+id/web_hint_close"
                 android:layout_width="wrap_content"
-                android:layout_height="36dp"
+                android:layout_height="48dp"
                 android:layout_marginStart="8dp"
                 android:background="?attr/selectableItemBackground"
+                android:fontFamily="sans-serif-medium"
                 android:gravity="center"
-                android:paddingHorizontal="10dp"
+                android:paddingHorizontal="12dp"
                 android:text="知道了"
                 android:textColor="?attr/gSub"
                 android:textSize="13sp" />

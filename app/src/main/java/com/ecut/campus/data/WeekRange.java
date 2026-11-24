@@ -184,4 +184,23 @@ public final class WeekRange {
         }
         return sb.toString();
     }
+
+    /** 把周次列表格式化成可读区间（连续单双周折叠为 1-15(单) / 2-16(双)）。 */
+    public static String weekExpr(List<Integer> weeks) {
+        if (weeks == null || weeks.isEmpty()) return "";
+        List<Integer> w = sortedDistinct(weeks);
+        if (w.size() >= 3) {
+            boolean step2 = true;
+            for (int i = 1; i < w.size(); i++) {
+                if (w.get(i) - w.get(i - 1) != 2) {
+                    step2 = false;
+                    break;
+                }
+            }
+            if (step2) {
+                return w.get(0) + "-" + w.get(w.size() - 1) + (w.get(0) % 2 == 1 ? "(单)" : "(双)");
+            }
+        }
+        return compress(w);
+    }
 }

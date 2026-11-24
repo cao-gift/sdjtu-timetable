@@ -73,8 +73,9 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_pin_primary"
+                style="@style/Gauge.Button"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:text="添加到桌面" />
 
@@ -82,36 +83,30 @@
                 android:id="@+id/btn_pin_secondary"
                 style="@style/Gauge.Button.Outline"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="再试一次"
                 android:visibility="gone" />
 
-            <TextView
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_pin_try"
+                style="@style/Gauge.Button.Ghost"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="6dp"
-                android:background="?attr/selectableItemBackground"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:layout_marginTop="4dp"
                 android:text="仍然试试一键添加"
                 android:textColor="?attr/gSub"
                 android:textSize="13.5sp"
                 android:visibility="gone" />
 
-            <TextView
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_pin_close"
+                style="@style/Gauge.Button.Ghost"
                 android:layout_width="wrap_content"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="6dp"
-                android:background="?attr/selectableItemBackground"
-                android:gravity="center"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"
+                android:layout_marginTop="2dp"
                 android:text="关闭"
                 android:textColor="?attr/gMute"
                 android:textSize="13.5sp" />

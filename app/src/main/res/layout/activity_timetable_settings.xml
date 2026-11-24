@@ -15,8 +15,8 @@
 
         <TextView
             android:id="@+id/btn_timetable_settings_back"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="返回"
             android:gravity="center"
@@ -56,13 +56,7 @@
             android:orientation="vertical">
 
             <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="?attr/gCard"
-                app:cardCornerRadius="?attr/gCardRadius"
-                app:cardElevation="0dp"
-                app:strokeColor="?attr/gLine"
-                app:strokeWidth="1dp">
+                style="@style/G.Card">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -83,9 +77,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:layout_marginTop="10dp"
-                        android:background="?attr/gBg"
+                        android:background="@drawable/bg_gauge_outline"
+                        android:fontFamily="monospace"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="14dp"
+                        android:paddingHorizontal="16dp"
                         android:text="未设置"
                         android:textColor="?attr/gInk"
                         android:textSize="14sp" />
@@ -135,22 +130,20 @@
 
                     <LinearLayout
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
+                        android:layout_height="42dp"
                         android:layout_marginTop="10dp"
-                        android:background="?attr/gBg"
                         android:orientation="horizontal"
-                        android:padding="4dp">
+                        android:padding="3dp">
 
                         <TextView
                             android:id="@+id/btn_days_seven"
                             android:layout_width="0dp"
                             android:layout_height="match_parent"
                             android:layout_weight="1"
-                            android:background="?attr/gCard"
                             android:gravity="center"
                             android:text="七天"
                             android:textColor="?attr/gInk"
-                            android:textSize="13.5sp"
+                            android:textSize="13sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -160,8 +153,8 @@
                             android:layout_weight="1"
                             android:gravity="center"
                             android:text="五天"
-                            android:textColor="?attr/gMute"
-                            android:textSize="13.5sp" />
+                            android:textColor="?attr/gSub"
+                            android:textSize="13sp" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -228,13 +221,9 @@
             </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                style="@style/G.Card"
                 android:layout_marginTop="12dp"
-                app:cardBackgroundColor="?attr/gChip"
-                app:cardCornerRadius="?attr/gCardRadius"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
+                app:cardBackgroundColor="?attr/gChip">
 
                 <LinearLayout
                     android:layout_width="match_parent"

@@ -164,8 +164,8 @@ public final class Prefs {
     public static boolean fitAllSections(Context ctx) { return sp(ctx).getBoolean("fit_all_sections", false); }
     public static void setFitAllSections(Context ctx, boolean v) { sp(ctx).edit().putBoolean("fit_all_sections", v).apply(); }
 
-    /** 0 纸墨，1 磨砂玻璃。 */
-    public static int theme(Context ctx) { return sp(ctx).getInt("ui_theme", 0); }
+    /** 0 纸墨，1 磨砂玻璃（默认）。 */
+    public static int theme(Context ctx) { return sp(ctx).getInt("ui_theme", G.THEME_GLASS); }
     public static void setTheme(Context ctx, int t) { sp(ctx).edit().putInt("ui_theme", t).commit(); }
 
     public static int nightMode(Context ctx) { return sp(ctx).getInt("night_mode", 0); }

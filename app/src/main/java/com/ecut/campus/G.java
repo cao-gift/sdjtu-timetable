@@ -15,7 +15,7 @@ public final class G {
     public static int PAPER = 0xFFF5F4F0, CARD = 0xFFFBFAF7, INK = 0xFF111111, SUB = 0xFF55554F,
             SUB2 = 0xFF45453F, MUTE = 0xFF9A9993, LINE = 0xFFE9E7E1, CHIP = 0xFFECEAE4,
             ACCENT = 0xFFFF4A1C, HAIR = 0x17000000, STROKE = 0x33000000, ON_INK = 0xFFFBFAF7,
-            WARN = 0xFFB4540A, OK = 0xFF2F5D3A, CLEAR = 0x00000000;
+            WARN = 0xFFB4540A, OK = 0xFF2F5D3A, DANGER = 0xFFFF4A1C, CLEAR = 0x00000000;
     public static boolean NIGHT = false;
     /** 当前是否磨砂玻璃主题。 */
     public static boolean GLASS = false;
@@ -54,6 +54,7 @@ public final class G {
         ON_INK = a(ctx, R.attr.gOnInk, c(ctx, R.color.g_on_ink));
         WARN = a(ctx, R.attr.gWarn, c(ctx, R.color.g_warn));
         OK = a(ctx, R.attr.gOk, c(ctx, R.color.g_ok));
+        DANGER = a(ctx, R.attr.gDanger, ACCENT);
         CARD_RADIUS = GLASS ? 20f : 8f;
         SMALL_RADIUS = GLASS ? 14f : 4f;
         BUTTON_RADIUS = GLASS ? 24f : 6f;
@@ -62,9 +63,9 @@ public final class G {
         TimetableView.applyPalette(NIGHT);
     }
 
-    /** 成绩不及格等「必须醒目」的红：纸墨用朱砂，玻璃主题（强调色是墨）另给一个砖红。 */
+    /** 成绩不及格 / 正在上课 / 危险操作等「必须醒目」的红：纸墨用朱砂，玻璃主题用砖红（与 ?attr/gDanger 一致）。 */
     public static int alarm() {
-        return GLASS ? (NIGHT ? 0xFFFF7A59 : 0xFFD9480F) : ACCENT;
+        return DANGER;
     }
 
     private static int a(Context ctx, int attr, int fallback) {

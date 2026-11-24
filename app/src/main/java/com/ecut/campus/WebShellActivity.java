@@ -430,28 +430,14 @@ public class WebShellActivity extends AppCompatActivity {
     private void showUnsupported() {
         if (isFinishing()) return;
         String msg = QiangzhiSource.EMPTY_HINT + "\n\n"
-                + "可以「交给 AI 读」：在课表那一页点它，驴驴课表把页面文字（去掉姓名学号）连同说明一起复制，"
-                + "发给任意 AI 换成驴驴课表指令再导回来。\n\n"
-                + "也可以点「反馈上游」向原项目维护者提交适配反馈：会附一份页面结构样本，"
+                + "可点「反馈上游」向原项目维护者提交适配反馈：会附一份页面结构样本，"
                 + "只记网页用了哪些标签和字段名，不含姓名、学号等文字。";
         new androidx.appcompat.app.AlertDialog.Builder(this)
                 .setTitle("没读到课表")
                 .setMessage(msg)
                 .setNegativeButton("关闭", null)
-                .setNeutralButton("反馈上游", (d, w) -> exportPageSample())
-                .setPositiveButton("交给 AI 读", (d, w) -> copyPageForAi())
+                .setPositiveButton("反馈上游", (d, w) -> exportPageSample())
                 .show();
-    }
-
-    /** 读不了的页面：取页面文字交给 AI 转成驴驴课表指令（零适配兜底）。 */
-    private void copyPageForAi() {
-        if (webView == null) return;
-        webView.evaluateJavascript(com.ecut.campus.data.PageTextForAi.collectJs(), raw -> {
-            if (isFinishing()) return;
-            String text = unwrapJsString(raw);
-            DiagLog.log(this, "import", "交给 AI 读: 页面文字 " + text.length() + " 字");
-            CommandUi.copyPageForAi(this, text);
-        });
     }
 
     private void exportPageSample() {

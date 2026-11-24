@@ -125,7 +125,7 @@ public class TimetableSettingsActivity extends AppCompatActivity {
             Ui.row(this, card, "01", "作息时间", "每节课几点上、几点下", "›",
                     v -> startActivity(new android.content.Intent(this, ScheduleSettingsActivity.class)));
             Ui.row(this, card, "02", "同步历史学期", "把以前学期的课表也拉下来存档", "›",
-                    v -> AppActions.run(this, "sync", "history"));
+                    v -> MainActivity.launchAction(this, "sync", "history"));
         }
     }
 

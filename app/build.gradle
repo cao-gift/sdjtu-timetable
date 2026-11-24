@@ -12,11 +12,6 @@ if (keystorePropsFile.exists()) {
     keystorePropsFile.withInputStream { keystoreProps.load(it) }
 }
 
-// 项目保留旧 DNS 源码供历史参考，所有构建变体均不编译这三个文件。
-tasks.withType(JavaCompile).configureEach {
-    exclude 'com/ecut/campus/DnsFilterService.java', 'com/ecut/campus/DnsPacket.java', 'com/ecut/campus/DomainRules.java'
-}
-
 android {
     namespace 'com.ecut.campus'
     compileSdk 33
@@ -29,8 +24,8 @@ android {
         applicationId "app.lvlv.timetable"
         minSdk 24
         targetSdk 33
-        versionCode 66
-        versionName "1.3.14"
+        versionCode 67
+        versionName "1.3.15"
         buildConfigField "String", "RELEASE_REPOSITORY", groovy.json.JsonOutput.toJson(providers.gradleProperty("lvlvReleaseRepository").getOrElse(""))
     }
 
