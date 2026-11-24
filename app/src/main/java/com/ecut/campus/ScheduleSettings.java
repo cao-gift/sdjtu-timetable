@@ -31,6 +31,21 @@ public final class ScheduleSettings {
     private static final int[] DEFAULT_BREAKS = {
             5, 15, 5, 105, 5, 15, 5, 135, 5, 10, 10, 10, 10, 10, 10, 0
     };
+    private static final int[] LEGACY_BREAKS = {
+            10, 20, 10, 140, 10, 20, 10, 80, 10, 20
+    };
+
+    /** 是否仍为旧版（08:00 起、每节 45 分钟、10 节）默认作息；覆盖升级时用于自动切到交院默认作息。 */
+    public boolean isLegacyDefault() {
+        if (!"08:00".equals(firstClassStart == null ? "" : firstClassStart.trim())) return false;
+        if (sectionCount() != DEFAULT_SECTION_COUNT) return false;
+        for (int i = 1; i <= DEFAULT_SECTION_COUNT; i++) {
+            Section s = section(i);
+            if (s.durationMinutes != 45) return false;
+            if (i < DEFAULT_SECTION_COUNT && s.breakAfterMinutes != LEGACY_BREAKS[i - 1]) return false;
+        }
+        return true;
+    }
 
     public static final class Section {
         public int section;

@@ -200,6 +200,14 @@ public class MainActivity extends AppCompatActivity {
      */
     private void runStartupMigrationsOnce() {
         android.content.SharedPreferences sp = getSharedPreferences(STARTUP_PREFS, MODE_PRIVATE);
+        // 旧版默认作息（08:00 起）未被用户自定义过时，覆盖升级自动切换为交院默认作息
+        if (!sp.getBoolean("sdjtu_default_schedule_migrated", false)) {
+            ScheduleSettings saved = ScheduleSettingsStore.load(this);
+            if (saved.isLegacyDefault()) {
+                ScheduleSettingsStore.clear(this);
+            }
+            sp.edit().putBoolean("sdjtu_default_schedule_migrated", true).apply();
+        }
         if (sp.getInt("migrated_vc", 0) == BuildConfig.VERSION_CODE) return;
         // 一次性清理历史学期被全局日期污染的 startDate（有 startDateTouched 标记的不动）
         SemesterArchive.clearUnsetStartDates(this);

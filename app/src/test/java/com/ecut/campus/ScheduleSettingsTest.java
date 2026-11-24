@@ -107,6 +107,28 @@ public class ScheduleSettingsTest {
     }
 
     @Test
+    public void detectsLegacyDefaultWithoutTouchingCustomSchedule() throws Exception {
+        ScheduleSettings legacy = ScheduleSettings.fromJson("{"
+                + "\"schemaVersion\":1,\"firstClassStart\":\"08:00\",\"sectionCount\":10,"
+                + "\"sections\":["
+                + "{\"section\":1,\"durationMinutes\":45,\"breakAfterMinutes\":10},"
+                + "{\"section\":2,\"durationMinutes\":45,\"breakAfterMinutes\":20},"
+                + "{\"section\":3,\"durationMinutes\":45,\"breakAfterMinutes\":10},"
+                + "{\"section\":4,\"durationMinutes\":45,\"breakAfterMinutes\":140},"
+                + "{\"section\":5,\"durationMinutes\":45,\"breakAfterMinutes\":10},"
+                + "{\"section\":6,\"durationMinutes\":45,\"breakAfterMinutes\":20},"
+                + "{\"section\":7,\"durationMinutes\":45,\"breakAfterMinutes\":10},"
+                + "{\"section\":8,\"durationMinutes\":45,\"breakAfterMinutes\":80},"
+                + "{\"section\":9,\"durationMinutes\":45,\"breakAfterMinutes\":10},"
+                + "{\"section\":10,\"durationMinutes\":45,\"breakAfterMinutes\":20}"
+                + "]}");
+        assertTrue(legacy.isLegacyDefault());
+        assertFalse(ScheduleSettings.createDefault().isLegacyDefault());
+        legacy.section(4).breakAfterMinutes = 120;
+        assertFalse(legacy.isLegacyDefault());
+    }
+
+    @Test
     public void invalidTimeIsRejected() {
         assertEquals(-1, ScheduleSettings.parseHm("8点"));
         assertEquals(-1, ScheduleSettings.parseHm("25:00"));
