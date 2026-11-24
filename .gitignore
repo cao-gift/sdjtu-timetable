@@ -42,3 +42,8 @@ artifacts/
 
 # ---- 本地开发交接与工作文档（不上传仓库）----
 docs/
+AGENTS.md
+CHANGELOG.md
+CONTRIBUTING.md
+DESIGN.md
+NOTICE

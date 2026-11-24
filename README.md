@@ -6,7 +6,7 @@
 
 面向山东交通学院学生的非官方校园课表工具：一次登录学校 WebVPN 教务系统，本地保存**课表、成绩、空教室、培养方案与考试安排**，离线或离开校园网也能秒开；默认采用**磨砂玻璃**主题，内置桌面小组件、上课提醒、下雨提醒和同学约空闲时间等功能。
 
-[相比原版的改动与新增功能](#相比原版的改动与新增功能) · [交院教务功能](#交院教务功能) · [能做什么](#能做什么) · [安装](#安装) · [更新日志](CHANGELOG.md)
+[相比原版的改动与新增功能](#相比原版的改动与新增功能) · [交院教务功能](#交院教务功能) · [能做什么](#能做什么) · [安装](#安装)
 
 ---
 
@@ -101,6 +101,4 @@
 
 ## 开源许可
 
-驴驴课表基于 [烫梨（augustlies/tangli）](https://github.com/augustlies/tangli) 修改，遵循 [GPL-3.0](LICENSE)。原项目 © 2026 August Lies。v1.2.3 及以前的版本仍按 MIT 发布。磨砂玻璃主题的设计参考了 [Uiverse.io](https://uiverse.io) 上的 galaxy 组件（MIT），详见 [NOTICE](NOTICE)。
-
-想参与开发？看 [CONTRIBUTING.md](CONTRIBUTING.md)。
+驴驴课表基于 [烫梨（augustlies/tangli）](https://github.com/augustlies/tangli) 修改，遵循 [GPL-3.0](LICENSE)。原项目 © 2026 August Lies。v1.2.3 及以前的版本仍按 MIT 发布。磨砂玻璃主题的设计参考了 [Uiverse.io](https://uiverse.io) 上的 galaxy 组件（MIT），二维码功能使用 ZXing（Apache-2.0）。

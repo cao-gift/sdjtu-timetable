@@ -6,7 +6,7 @@
 
 Sign in once through SDJTU WebVPN to store your **timetable, grades, empty classrooms, curriculum plan, and exam schedule** locally for instant offline access — featuring the **Frosted Glass** theme by default, home-screen widgets, class/rain reminders, and classmate free-time matching.
 
-[Changes from Upstream](#changes-from-upstream) · [SDJTU Features](#sdjtu-features) · [Features](#features) · [Installation](#installation) · [Changelog](CHANGELOG.md)
+[Changes from Upstream](#changes-from-upstream) · [SDJTU Features](#sdjtu-features) · [Features](#features) · [Installation](#installation)
 
 ---
 
@@ -95,6 +95,4 @@ Please open an [Issue](https://github.com/cao-gift/sdjtu-timetable/issues) in th
 
 ## License
 
-Derived from [Tangli (augustlies/tangli)](https://github.com/augustlies/tangli), © 2026 August Lies, and distributed under [GPL-3.0](LICENSE). Versions v1.2.3 and earlier were released under MIT. The Frosted Glass theme's design references the galaxy component on [Uiverse.io](https://uiverse.io) (MIT) — see [NOTICE](NOTICE) for details.
-
-Want to contribute? See [CONTRIBUTING.md](CONTRIBUTING.md).
+Derived from [Tangli (augustlies/tangli)](https://github.com/augustlies/tangli), © 2026 August Lies, and distributed under [GPL-3.0](LICENSE). Versions v1.2.3 and earlier were released under MIT. The Frosted Glass theme's design references the galaxy component on [Uiverse.io](https://uiverse.io) (MIT), and QR code features use ZXing (Apache-2.0).
