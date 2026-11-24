@@ -377,7 +377,7 @@ public final class SemesterArchive {
         if (changed) writeRoot(ctx, root);
     }
 
-    /** 修复旧山交课表中跨校写入的第一周；标记与日期同一次写入，允许用户以后再改。 */
+    /** 修复旧交院课表中跨校写入的第一周；标记与日期同一次写入，允许用户以后再改。 */
     public static boolean migrateSdjtuStartDate(Context ctx) {
         if (Prefs.preserveLegacySemesterDates(ctx)) return true;
         JSONObject root = readRoot(ctx);
@@ -411,7 +411,7 @@ public final class SemesterArchive {
                 }
                 return true;
             } catch (JSONException e) {
-                Log.w(TAG, "迁移山交教学周失败", e);
+                Log.w(TAG, "迁移交院教学周失败", e);
                 return false;
             }
         }

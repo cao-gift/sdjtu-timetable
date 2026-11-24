@@ -41,9 +41,9 @@ public class IcsExporterTest {
         // 1-16 周 → 16 个事件
         int events = ics.split("BEGIN:VEVENT", -1).length - 1;
         assertTrue(events == 16);
-        // 第 1 周周二 = 2026-09-08，双节课 08:00 → 第 2 节下课 09:40
-        assertTrue(ics.contains("DTSTART;TZID=Asia/Shanghai:20260908T080000"));
-        assertTrue(ics.contains("DTEND;TZID=Asia/Shanghai:20260908T094000"));
+        // 第 1 周周二 = 2026-09-08，双节课 08:30 → 第 2 节下课 10:00
+        assertTrue(ics.contains("DTSTART;TZID=Asia/Shanghai:20260908T083000"));
+        assertTrue(ics.contains("DTEND;TZID=Asia/Shanghai:20260908T100000"));
         assertTrue(ics.contains("SUMMARY:矿床学"));
         assertTrue(ics.contains("LOCATION:4-620"));
         assertTrue(ics.contains("DESCRIPTION:教师A"));

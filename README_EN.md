@@ -24,7 +24,7 @@ Modified from [augustlies/tangli](https://github.com/augustlies/tangli) `v1.3.1`
 
 ### Key Modifications & Simplifications
 - **SDJTU-Only Focus**: Locked to SDJTU WebVPN (`wwebvpn.sdjtu.edu.cn`) with the university seal in Settings; removed the multi-school directory, school picker, custom school URLs, and other universities' adapters/assets.
-- **Legacy Qiangzhi & Calendar Fixes**: Fixed course code being parsed as course name on legacy Qiangzhi timetables; calibrated SDJTU 2026–2027 Term 1 start date (2026-08-24) with one-tap current-week calibration in Settings.
+- **Legacy Qiangzhi, Calendar & Schedule Defaults**: Fixed course code being parsed as course name on legacy Qiangzhi timetables; calibrated SDJTU 2026–2027 Term 1 start date (2026-08-24) with one-tap current-week calibration in Settings; aligned default class bell times to SDJTU's schedule (08:30–11:45, 13:30–16:45, 19:00–20:35).
 - **Standalone App & Streamlined Scope**: Renamed to Lǘlǘ Timetable with donkey icon and standalone package ID `app.lvlv.timetable` (installable alongside upstream); completely removed DNS ad-filtering, VPN service, domain rules, and AI/text-command editing (`lvlv://` / `tangli://`); simplified the bottom bar to Timetable / Settings, enabled Frosted Glass by default, and unified buttons and cards across all screens.
 
 ---

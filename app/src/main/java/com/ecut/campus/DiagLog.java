@@ -229,7 +229,7 @@ public final class DiagLog {
                     .append(" · 登录过期: ").append(yn(Prefs.sessionExpired(ctx))).append('\n');
             boolean cookie = android.webkit.CookieManager.getInstance()
                     .getCookie(com.ecut.campus.data.SdjtuPortal.LOGIN) != null;
-            x.append("山交 WebVPN 有 Cookie: ").append(yn(cookie)).append('\n');
+            x.append("交院 WebVPN 有 Cookie: ").append(yn(cookie)).append('\n');
             x.append("上次同步: ").append(Prefs.lastSyncTime(ctx))
                     .append(" · 课表同步于: ").append(ts(Prefs.timetableSyncedAt(ctx))).append('\n');
         });

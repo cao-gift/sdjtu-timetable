@@ -12,7 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 从山交强智教务的教学周历和当前周次推出第 1 周周一。
+ * 从交院强智教务的教学周历和当前周次推出第 1 周周一。
  *
  * 两条线索，按可靠程度：
  * 1. 强智「教学周历」jxzl/jxzl_query：第 1 周那一行里的完整日期；

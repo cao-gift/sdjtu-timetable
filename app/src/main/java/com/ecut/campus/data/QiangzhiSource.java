@@ -46,7 +46,7 @@ public final class QiangzhiSource {
     private static final Pattern DIV = Pattern.compile("<div\\b([^>]*)>(.*?)</div>", FLAGS);
     private static final Pattern FIELD = Pattern.compile(
             "<(font\\b|span\\b(?=[^>]*\\btitle\\s*=))([^>]*)>(.*?)</\\1\\s*>", FLAGS);
-    // 山交旧强智的课程号，如 004714-330001Y。只有后面另有名称时才拆出未标注的编号。
+    // 交院旧强智的课程号，如 004714-330001Y。只有后面另有名称时才拆出未标注的编号。
     private static final Pattern LEADING_CODE = Pattern.compile(
             "(?:[0-9]{4,}|[A-Za-z]{1,4}[0-9]{3,}[A-Za-z0-9]*)(?:[-－][A-Za-z0-9]+)*");
     private static final Pattern TITLE_ATTR = Pattern.compile("\\btitle\\s*=\\s*(\"([^\"]*)\"|'([^']*)')", FLAGS);

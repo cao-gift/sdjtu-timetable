@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/** 在与统一门户共享 Cookie 的临时 WebView 中完成一次山交教务查询。所有调用在主线程。 */
+/** 在与统一门户共享 Cookie 的临时 WebView 中完成一次交院教务查询。所有调用在主线程。 */
 final class SdjtuStudySync {
     interface Callback {
         void onSuccess(JSONObject data);

@@ -21,13 +21,15 @@ public final class ScheduleSettings {
     public static final int MAX_SECTIONS = 16;
     public static final int MIN_SECTIONS = 8;
     public static final int DEFAULT_SECTION_COUNT = 10;
-    public static final String DEFAULT_FIRST_CLASS_START = "08:00";
+    public static final String DEFAULT_FIRST_CLASS_START = "08:30";
 
+    // 交院默认作息：上午 08:30-09:15 / 09:20-10:00 / 10:15-11:00 / 11:05-11:45，
+    // 下午 13:30-14:15 / 14:20-15:00 / 15:15-16:00 / 16:05-16:45，晚上 19:00-19:45 / 19:50-20:35。
     private static final int[] DEFAULT_DURATIONS = {
-            45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45, 45
+            45, 40, 45, 40, 45, 40, 45, 40, 45, 45, 45, 45, 45, 45, 45, 45
     };
     private static final int[] DEFAULT_BREAKS = {
-            10, 20, 10, 140, 10, 20, 10, 80, 10, 20, 10, 10, 10, 10, 10, 0
+            5, 15, 5, 105, 5, 15, 5, 135, 5, 10, 10, 10, 10, 10, 10, 0
     };
 
     public static final class Section {

@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** 山交教务同步页。教务会话由同步器持有，此页只展示已完成的查询结果。 */
+/** 交院教务同步页。教务会话由同步器持有，此页只展示已完成的查询结果。 */
 public final class SdjtuStudyActivity extends AppCompatActivity {
     private static final int SIGN_IN = 1, LOCATE_PAGE = 2;
     private static final String[] ROOM_STATES = {"free", "busy", "unknown", ""};

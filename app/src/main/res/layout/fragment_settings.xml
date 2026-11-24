@@ -413,7 +413,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="非官方校园工具。教务数据以学校系统为准，成绩计算仅供参考。山交自动登录默认关闭，启用后账号密码加密保存在本机。"
+                    android:text="非官方校园工具。教务数据以学校系统为准，成绩计算仅供参考。交院自动登录默认关闭，启用后账号密码加密保存在本机。"
                     android:textColor="?attr/gMute"
                     android:textSize="12sp" />
 

@@ -120,7 +120,7 @@
                 android:textSize="13sp" />
         </LinearLayout>
 
-        <!-- 进入山交教务后可手动导入当前课表。 -->
+        <!-- 进入交院教务后可手动导入当前课表。 -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_import_page"
             style="@style/Gauge.Button"

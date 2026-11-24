@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/** 在当前山交 WebVPN 会话中打开教务菜单，让结果留在学校页面。 */
+/** 在当前交院 WebVPN 会话中打开教务菜单，让结果留在学校页面。 */
 final class SdjtuAcademicPages {
     enum Feature {
         PORTAL("", "", "", null),
@@ -79,7 +79,7 @@ final class SdjtuAcademicPages {
             String reader = feature.asset == null ? "null" : read(view, feature.asset);
             scripts = "document.__lvlvAcademic={portal:" + portal + ",reader:" + reader + "};";
         } catch (IOException e) {
-            android.util.Log.w("WebShell", "无法加载山交教务阅读脚本", e);
+            android.util.Log.w("WebShell", "无法加载交院教务阅读脚本", e);
             scripts = "";
         }
         install = scripts;

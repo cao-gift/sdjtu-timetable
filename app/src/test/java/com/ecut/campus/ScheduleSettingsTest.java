@@ -17,34 +17,35 @@ public class ScheduleSettingsTest {
     public void defaultsMatchConfirmedTimetable() {
         ScheduleSettings s = ScheduleSettings.createDefault();
 
-        assertEquals("08:00", s.startTime(1));
-        assertEquals("08:45", s.endTime(1));
-        assertEquals("08:55", s.startTime(2));
-        assertEquals("09:40", s.endTime(2));
-        assertEquals("10:00", s.startTime(3));
-        assertEquals("10:45", s.endTime(3));
-        assertEquals("10:55", s.startTime(4));
-        assertEquals("11:40", s.endTime(4));
-        assertEquals("14:00", s.startTime(5));
-        assertEquals("14:45", s.endTime(5));
-        assertEquals("14:55", s.startTime(6));
-        assertEquals("15:40", s.endTime(6));
-        assertEquals("16:00", s.startTime(7));
-        assertEquals("16:45", s.endTime(7));
-        assertEquals("16:55", s.startTime(8));
-        assertEquals("17:40", s.endTime(8));
+        assertEquals("08:30", s.startTime(1));
+        assertEquals("09:15", s.endTime(1));
+        assertEquals("09:20", s.startTime(2));
+        assertEquals("10:00", s.endTime(2));
+        assertEquals("10:15", s.startTime(3));
+        assertEquals("11:00", s.endTime(3));
+        assertEquals("11:05", s.startTime(4));
+        assertEquals("11:45", s.endTime(4));
+        assertEquals("13:30", s.startTime(5));
+        assertEquals("14:15", s.endTime(5));
+        assertEquals("14:20", s.startTime(6));
+        assertEquals("15:00", s.endTime(6));
+        assertEquals("15:15", s.startTime(7));
+        assertEquals("16:00", s.endTime(7));
+        assertEquals("16:05", s.startTime(8));
+        assertEquals("16:45", s.endTime(8));
         assertEquals("19:00", s.startTime(9));
         assertEquals("19:45", s.endTime(9));
-        assertEquals("19:55", s.startTime(10));
-        assertEquals("20:40", s.endTime(10));
-        assertEquals("21:00", s.startTime(11));
-        assertEquals("21:45", s.endTime(11));
-        assertEquals("21:55", s.startTime(12));
-        assertEquals("22:40", s.endTime(12));
+        assertEquals("19:50", s.startTime(10));
+        assertEquals("20:35", s.endTime(10));
+        assertEquals("20:45", s.startTime(11));
+        assertEquals("21:30", s.endTime(11));
+        assertEquals("21:40", s.startTime(12));
+        assertEquals("22:25", s.endTime(12));
 
+        int[] expectedDurations = {45, 40, 45, 40, 45, 40, 45, 40, 45, 45};
         for (int section = 1; section <= s.sectionCount(); section++) {
-            assertEquals("第 " + section + " 节应为 45 分钟",
-                    45, s.section(section).durationMinutes);
+            assertEquals("第 " + section + " 节时长不符",
+                    expectedDurations[section - 1], s.section(section).durationMinutes);
         }
     }
 
@@ -53,10 +54,10 @@ public class ScheduleSettingsTest {
         ScheduleSettings s = ScheduleSettings.createDefault();
         s.section(3).durationMinutes = 40;
 
-        assertEquals("10:00", s.startTime(3));
-        assertEquals("10:40", s.endTime(3));
-        assertEquals("10:50", s.startTime(4));
-        assertEquals("13:55", s.startTime(5));
+        assertEquals("10:15", s.startTime(3));
+        assertEquals("10:55", s.endTime(3));
+        assertEquals("11:00", s.startTime(4));
+        assertEquals("13:25", s.startTime(5));
     }
 
     @Test
@@ -64,8 +65,8 @@ public class ScheduleSettingsTest {
         ScheduleSettings s = ScheduleSettings.createDefault();
         s.section(4).breakAfterMinutes = 120;
 
-        assertEquals("13:40", s.startTime(5));
-        assertEquals("11:40", s.endTime(4));
+        assertEquals("13:45", s.startTime(5));
+        assertEquals("11:45", s.endTime(4));
     }
 
     @Test
@@ -77,10 +78,10 @@ public class ScheduleSettingsTest {
 
         s.resetToDefaults();
 
-        assertEquals("08:00", s.firstClassStart);
-        assertEquals(45, s.section(2).durationMinutes);
-        assertEquals(140, s.section(4).breakAfterMinutes);
-        assertEquals("20:40", s.endTime(10));
+        assertEquals("08:30", s.firstClassStart);
+        assertEquals(40, s.section(2).durationMinutes);
+        assertEquals(105, s.section(4).breakAfterMinutes);
+        assertEquals("20:35", s.endTime(10));
     }
 
     @Test
@@ -101,8 +102,8 @@ public class ScheduleSettingsTest {
     @Test
     public void malformedJsonFallsBackToDefaults() throws Exception {
         ScheduleSettings s = ScheduleSettings.fromJson(new JSONObject());
-        assertEquals("08:00", s.startTime(1));
-        assertEquals(10, s.section(1).breakAfterMinutes);
+        assertEquals("08:30", s.startTime(1));
+        assertEquals(5, s.section(1).breakAfterMinutes);
     }
 
     @Test

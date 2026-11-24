@@ -204,7 +204,7 @@ public final class Prefs {
     public static void setShareName(Context ctx, String n) { sp(ctx).edit().putString("share_name", n).apply(); }
 
     /**
-     * 判断升级前的本地状态是否属于非山交学校（需要清理旧校会话、成绩缓存与未读提醒）。
+     * 判断升级前的本地状态是否属于非交院学校（需要清理旧校会话、成绩缓存与未读提醒）。
      * 纯 Java 可测，便于覆盖单校升级与跨校迁移边界。
      */
     static boolean isForeignSchoolState(String previousSchoolId,
@@ -241,7 +241,7 @@ public final class Prefs {
                 || hasUnreadGrades;
     }
 
-    /** 兼容从尚未清理 grades.json 的早期 1.3.14 覆盖升级：仅在确认尚未同步山交时补清旧校成绩与通知。 */
+    /** 兼容从尚未清理 grades.json 的早期 1.3.14 覆盖升级：仅在确认尚未同步交院时补清旧校成绩与通知。 */
     static boolean shouldClearGradesOnFollowUp(boolean alreadyMigratedSchool,
                                                boolean alreadyMigratedGrades,
                                                boolean preserveLegacyDates,
@@ -256,7 +256,7 @@ public final class Prefs {
         return !syncedOnSdjtu;
     }
 
-    /** 只迁移旧版学校入口、身份状态与非山交成绩缓存；课表归档、手动设置及本机山交凭据保留。 */
+    /** 只迁移旧版学校入口、身份状态与非交院成绩缓存；课表归档、手动设置及本机交院凭据保留。 */
     static void migrateSchoolSettings(Context ctx) {
         SharedPreferences prefs = sp(ctx);
         boolean migratedSchool = prefs.getBoolean("sdjtu_only_migrated", false);

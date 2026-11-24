@@ -73,7 +73,7 @@ public class AboutActivity extends AppCompatActivity {
         Ui.row(this, c3, "01", "GPL-3.0 开源许可", "可自由使用和修改，改版须同样开源 · © August Lies", "↗ WEB",
                 v -> Updater.open(this, Updater.UPSTREAM_URL + "/blob/main/LICENSE"));
         TextView note = Ui.text(this, col,
-                "非官方工具，与学校及教务系统厂商无关。教务数据以学校系统为准，成绩计算仅供参考。山交自动登录由你开启，账号密码加密保存在本机，可在设置中删除。",
+                "非官方工具，与学校及教务系统厂商无关。教务数据以学校系统为准，成绩计算仅供参考。交院自动登录由你开启，账号密码加密保存在本机，可在设置中删除。",
                 12f, G.MUTE);
         note.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), Ui.dp(this, 4), 0);
 

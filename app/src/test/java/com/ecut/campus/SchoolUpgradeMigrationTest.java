@@ -22,7 +22,7 @@ public class SchoolUpgradeMigrationTest {
                 true, 1700000000000L, "11-23 10:00",
                 true, true, SDJTU_BASE,
                 true, true, true, false));
-        // 即使早年切校残留过旧 portal_host，显式选中山交时仍保留山交成绩
+        // 即使早年切校残留过旧 portal_host，显式选中交院时仍保留交院成绩
         assertFalse(Prefs.isForeignSchoolState(
                 "sdjtu", true, false, false,
                 true, 1700000000000L, "11-23 10:00",
@@ -43,19 +43,19 @@ public class SchoolUpgradeMigrationTest {
 
     @Test
     public void defaultSdjtuInstallPreservesGradesAcrossSignals() {
-        // 1.3.3–1.3.13 新装默认山交（未写 school_id），通过 academicBase 识别
+        // 1.3.3–1.3.13 新装默认交院（未写 school_id），通过 academicBase 识别
         assertFalse(Prefs.isForeignSchoolState(
                 "", false, false, false,
                 true, 1700000000000L, "11-23 10:00",
                 true, true, SDJTU_BASE,
                 false, false, false, false));
-        // 保存过山交自动登录凭据时，SdjtuCredentials.save 会清空 sdjtu_academic_base，仍须保留山交成绩
+        // 保存过交院自动登录凭据时，SdjtuCredentials.save 会清空 sdjtu_academic_base，仍须保留交院成绩
         assertFalse(Prefs.isForeignSchoolState(
                 "", false, false, false,
                 false, 1700000000000L, "11-23 10:00",
                 true, true, "",
                 true, false, false, false));
-        // 有山交空教室/培养方案/考试快照或路由
+        // 有交院空教室/培养方案/考试快照或路由
         assertFalse(Prefs.isForeignSchoolState(
                 "", false, false, false,
                 true, 0L, "11-23 10:00",
@@ -94,7 +94,7 @@ public class SchoolUpgradeMigrationTest {
                 false, 0L, "",
                 true, false, "",
                 false, false, false, true));
-        // 旧版重置过 portal_host 但仍留有他校成绩或未读提醒、且无任何山交信号
+        // 旧版重置过 portal_host 但仍留有他校成绩或未读提醒、且无任何交院信号
         assertTrue(Prefs.isForeignSchoolState(
                 "", false, false, false,
                 false, 0L, "",
@@ -105,7 +105,7 @@ public class SchoolUpgradeMigrationTest {
                 false, 0L, "",
                 false, true, "",
                 false, false, false, false));
-        // 无效的伪造 academicBase 不能冒充山交信号
+        // 无效的伪造 academicBase 不能冒充交院信号
         assertTrue(Prefs.isForeignSchoolState(
                 "", false, false, false,
                 true, 0L, "11-20 09:00",
@@ -125,17 +125,17 @@ public class SchoolUpgradeMigrationTest {
 
     @Test
     public void followUpMigrationClearsStaleForeignGradesFromEarly1314OnlyBeforeSdjtuSync() {
-        // 从早期 1.3.14 升上来：当时标记了 preserve_legacy_semester_dates 且尚未同步过山交 -> 补清
+        // 从早期 1.3.14 升上来：当时标记了 preserve_legacy_semester_dates 且尚未同步过交院 -> 补清
         assertTrue(Prefs.shouldClearGradesOnFollowUp(
                 true, false, true, false, "", ""));
-        // 已经在 1.3.14 上登录或同步过山交 -> 不得清掉新山交成绩
+        // 已经在 1.3.14 上登录或同步过交院 -> 不得清掉新交院成绩
         assertFalse(Prefs.shouldClearGradesOnFollowUp(
                 true, false, true, true, "", ""));
         assertFalse(Prefs.shouldClearGradesOnFollowUp(
                 true, false, true, false, SDJTU_BASE, ""));
         assertFalse(Prefs.shouldClearGradesOnFollowUp(
                 true, false, true, false, "", "11-24 12:00"));
-        // 原来就是山交用户（preserve_legacy_semester_dates=false） -> 保留
+        // 原来就是交院用户（preserve_legacy_semester_dates=false） -> 保留
         assertFalse(Prefs.shouldClearGradesOnFollowUp(
                 true, false, false, false, "", ""));
         // 已完成成绩迁移 -> 不重复执行

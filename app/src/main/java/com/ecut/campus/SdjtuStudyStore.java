@@ -14,7 +14,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
-/** 上一次成功读取的山交教务结果；一个功能一个快照，包含其实际查询条件。 */
+/** 上一次成功读取的交院教务结果；一个功能一个快照，包含其实际查询条件。 */
 final class SdjtuStudyStore {
     private SdjtuStudyStore() {}
 

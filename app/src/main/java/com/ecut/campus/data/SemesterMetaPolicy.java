@@ -68,7 +68,7 @@ public final class SemesterMetaPolicy {
         return mirrorTotalWeeks >= MIN_WEEKS && mirrorTotalWeeks <= MAX_WEEKS;
     }
 
-    // 2026-11-23 是山交 2026 秋季第 14 周周一。
+    // 2026-11-23 是交院 2026 秋季第 14 周周一。
     static final String SDJTU_FALL_2026_ID = "2026-2027-1";
     static final String SDJTU_FALL_2026_START = "2026-08-24";
 
@@ -84,12 +84,12 @@ public final class SemesterMetaPolicy {
         return qiangzhi;
     }
 
-    /** 为本学期的山交课表补开学日期，并纠正已知的旧自动日期；手动校准优先。 */
+    /** 为本学期的交院课表补开学日期，并纠正已知的旧自动日期；手动校准优先。 */
     public static boolean fillSdjtuStartDate(Timetable t) {
         return isSdjtuFall2026(t) && repairSdjtuStartDate(t.semester, false);
     }
 
-    /** 在已确认的山交学期上执行一次：旧迁移曾把东华日期写成“已手动设置”。 */
+    /** 在已确认的交院学期上执行一次：旧迁移曾把东华日期写成“已手动设置”。 */
     static boolean repairSdjtuStartDate(Timetable.Semester semester, boolean oldMigrationRan) {
         boolean oldDefault = "2026-09-07".equals(semester.startDate)
                 && (oldMigrationRan || !semester.startDateTouched);

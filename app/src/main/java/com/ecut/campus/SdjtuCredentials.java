@@ -26,7 +26,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-/** 山交门户账号仅经用户主动保存。密钥由 Android Keystore 管理，密文不参与备份。 */
+/** 交院门户账号仅经用户主动保存。密钥由 Android Keystore 管理，密文不参与备份。 */
 final class SdjtuCredentials {
     private static final String KEY_ALIAS = "sdjtu_portal_login_v1";
     private static final String PROVIDER = "AndroidKeyStore";

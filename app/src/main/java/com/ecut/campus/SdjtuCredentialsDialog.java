@@ -7,7 +7,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
-/** 明示同意后才保存本人山交门户凭据。 */
+/** 明示同意后才保存本人交院门户凭据。 */
 final class SdjtuCredentialsDialog {
     private SdjtuCredentialsDialog() {}
 

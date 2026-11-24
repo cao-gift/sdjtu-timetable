@@ -42,7 +42,7 @@ public class MultiSchoolUiTest {
         assertTrue(s.ensureCovers(12));
         assertEquals(12, s.sectionCount());
         assertEquals(10, s.section(10).breakAfterMinutes);
-        assertEquals("20:50", s.startTime(11));
+        assertEquals("20:45", s.startTime(11));
         assertFalse(s.ensureCovers(11));
         assertEquals(12, s.sectionCount());
     }
