@@ -1,0 +1,75 @@
+name: Bug Report
+description: 报告一个 bug
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请尽量提供完整信息，尤其是日志和复现步骤。
+
+  - type: input
+    id: version
+    attributes:
+      label: App 版本
+      description: 设置页底部可以看到，或 APK 文件名
+      placeholder: "1.3.1"
+    validations:
+      required: true
+
+  - type: input
+    id: device
+    attributes:
+      label: 设备与系统
+      placeholder: "例如：小米 14 / Android 15"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: 出问题的模块
+      options:
+        - 课表
+        - 成绩
+        - 教务直达
+        - 设置
+        - 其他
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 打开 App
+        2. 在「课表」或「设置」页操作
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志（可选）
+      description: |
+        可在「设置 → 通用 → 诊断日志 → 复制诊断报告」直接导出（已自动脱敏），或使用 adb：
+        ```
+        adb logcat -s WebShell:V AndroidRuntime:E
+        ```
+      render: shell

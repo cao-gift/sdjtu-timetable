@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#F8F8F6</color>
+    <!-- Gauge 纸墨色板（浅色）。深色见 values-night/colors.xml -->
+    <color name="g_paper">#F5F4F0</color>
+    <color name="g_card">#FBFAF7</color>
+    <color name="g_ink">#111111</color>
+    <color name="g_sub">#55554F</color>
+    <color name="g_sub2">#45453F</color>
+    <color name="g_mute">#9A9993</color>
+    <color name="g_line">#E9E7E1</color>
+    <color name="g_chip">#ECEAE4</color>
+    <color name="g_accent">#FF4A1C</color>
+    <color name="g_hair">#17000000</color>
+    <color name="g_stroke">#33000000</color>
+    <color name="g_ink_18">#2E111111</color>
+    <color name="g_ink_12">#1F111111</color>
+    <color name="g_ink_08">#14111111</color>
+    <color name="g_paper_e8">#E8F5F4F0</color>
+    <color name="g_paper_c8">#C8F5F4F0</color>
+    <color name="g_on_ink">#FBFAF7</color>
+    <color name="g_warn">#B4540A</color>
+    <color name="g_ok">#2F5D3A</color>
+    <!-- 磨砂玻璃色板 -->
+    <color name="glass_paper">#EEECE8</color>
+    <color name="glass_card">#B8FFFFFF</color>
+    <color name="glass_card_stroke">#CCFFFFFF</color>
+    <color name="glass_ink">#1B1B1F</color>
+    <color name="glass_sub">#55555C</color>
+    <color name="glass_sub2">#44444A</color>
+    <color name="glass_mute">#8A8A91</color>
+    <color name="glass_line">#14000000</color>
+    <color name="glass_chip">#73FFFFFF</color>
+    <color name="glass_accent">#1B1B1F</color>
+    <color name="glass_hair">#17000000</color>
+    <color name="glass_stroke">#29000000</color>
+    <color name="glass_ink_18">#2E1B1B1F</color>
+    <color name="glass_ink_12">#1F1B1B1F</color>
+    <color name="glass_ink_08">#141B1B1F</color>
+    <color name="glass_dock_top">#B3FFFFFF</color>
+    <color name="glass_dock_bottom">#80FFFFFF</color>
+    <color name="glass_on_ink">#FFFFFF</color>
+    <color name="glass_nav">#00000000</color>
+    <color name="glass_bd_base">#E7E5E1</color>
+    <color name="glass_bd_1">#D9C6B2</color>
+    <color name="glass_bd_2">#C3CDD6</color>
+    <color name="glass_bd_3">#D6CFC0</color>
+    <color name="glass_bd_4">#CDC5D4</color>
+    <color name="glass_dialog">#F6F5F3</color>
+    <!-- 玻璃弹窗片：约 95% 不透明，背景模糊只是锦上添花（很多手机上不生效），不能靠它挡住后面的字 -->
+    <color name="glass_dialog_sheet">#F2F8F7F5</color>
+    <color name="glass_dialog_stroke">#1F000000</color>
+    <!-- 玻璃主题的危险操作文字（强调色是墨，删除 / 清空另给砖红） -->
+    <color name="glass_danger">#D9480F</color>
+</resources>

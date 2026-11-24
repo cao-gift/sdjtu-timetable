@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>随堂考信息查询</title>
+<div class="Nsb_r_title">随堂考信息查询</div>
+<form method="post" action="/jsxsd/xsks/early_result" target="examResult">
+  <input type="hidden" name="pageMode" value="student">
+  <table><tr>
+    <td>学年学期：</td><td><select name="xnxq">
+      <option value="old-E" selected>2030-2031-2</option>
+      <option value="current-E">2031-2032-1</option>
+    </select></td>
+    <td>考试类型：</td><td><select name="kslx">
+      <option value="a">随堂测验</option><option value="b">提前期末考试</option>
+      <option value="c">提前期末考试补考</option>
+    </select></td>
+    <td><button type="submit">查 询</button></td>
+  </tr></table>
+</form>
+<iframe name="examResult" src="previous"></iframe>

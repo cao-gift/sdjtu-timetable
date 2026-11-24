@@ -1,0 +1,12 @@
+<!doctype html>
+<meta charset="utf-8"><title>教室课表查询</title>
+<form id="Form1" action="kbxx_classroom_ifr" method="post" target="frmResult">
+    <input type="hidden" name="xnxq01id" value="2026-2027-1">
+    <table><tr>
+        <td>校区</td><td><select name="xqid"><option value="test">示例校区</option></select></td>
+        <td>星期</td><td><select name="xq1"><option value="2">星期二</option></select></td>
+        <td>周次</td><td><select name="zc"><option value="1">第一周</option></select></td>
+    </tr></table>
+</form>
+<div><input type="button" value="查 询" onclick="document.getElementById('Form1').submit()"></div>
+<iframe name="frmResult"></iframe>

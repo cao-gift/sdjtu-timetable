@@ -1,0 +1,250 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.EcutCampus" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- 主题属性（纸墨默认值）；磨砂玻璃见 ThemeOverlay.Tangli.Glass -->
+        <item name="gBg">@color/g_paper</item>
+        <item name="gPaper">@color/g_paper</item>
+        <item name="gCard">@color/g_card</item>
+        <item name="gCardStroke">@color/g_line</item>
+        <item name="gInk">@color/g_ink</item>
+        <item name="gSub">@color/g_sub</item>
+        <item name="gSub2">@color/g_sub2</item>
+        <item name="gMute">@color/g_mute</item>
+        <item name="gLine">@color/g_line</item>
+        <item name="gChip">@color/g_chip</item>
+        <item name="gAccent">@color/g_accent</item>
+        <item name="gHair">@color/g_hair</item>
+        <item name="gStroke">@color/g_stroke</item>
+        <item name="gInk18">@color/g_ink_18</item>
+        <item name="gInk12">@color/g_ink_12</item>
+        <item name="gInk08">@color/g_ink_08</item>
+        <item name="gPaperE8">@color/g_paper_e8</item>
+        <item name="gPaperC8">@color/g_paper_c8</item>
+        <item name="gOnInk">@color/g_on_ink</item>
+        <item name="gWarn">@color/g_warn</item>
+        <item name="gOk">@color/g_ok</item>
+        <item name="gCardRadius">8dp</item>
+        <item name="gSmallRadius">4dp</item>
+        <item name="gGlass">false</item>
+        <item name="gDialog">@color/g_card</item>
+        <item name="gButtonRadius">6dp</item>
+        <item name="gButtonFill">@android:color/transparent</item>
+        <item name="gDanger">@color/g_accent</item>
+        <item name="colorPrimary">@color/g_ink</item>
+        <item name="colorOnPrimary">@color/g_on_ink</item>
+        <item name="colorPrimaryContainer">@color/g_chip</item>
+        <item name="colorOnPrimaryContainer">@color/g_ink</item>
+        <item name="colorSecondary">@color/g_sub</item>
+        <item name="colorOnSecondary">@color/g_on_ink</item>
+        <item name="colorSecondaryContainer">@color/g_chip</item>
+        <item name="colorOnSecondaryContainer">@color/g_ink</item>
+        <item name="colorError">@color/g_accent</item>
+        <item name="colorSurface">@color/g_paper</item>
+        <item name="colorOnSurface">@color/g_ink</item>
+        <item name="colorSurfaceVariant">@color/g_line</item>
+        <item name="colorOnSurfaceVariant">@color/g_sub</item>
+        <item name="android:windowBackground">@color/g_paper</item>
+        <item name="android:statusBarColor">@color/g_paper</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">@bool/g_light_bars</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">@bool/g_light_bars</item>
+        <item name="android:navigationBarColor">@color/g_paper</item>
+        <!-- Gauge：统一小圆角 + 发丝线 + 墨色控件 -->
+        <item name="shapeAppearanceSmallComponent">@style/Gauge.Shape.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/Gauge.Shape.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/Gauge.Shape.Medium</item>
+        <item name="alertDialogTheme">@style/Gauge.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/Gauge.Dialog</item>
+        <item name="android:alertDialogTheme">@style/Gauge.Dialog.Framework</item>
+        <item name="materialButtonStyle">@style/Gauge.Button</item>
+        <item name="android:textColorHighlight">#33FF4A1C</item>
+        <item name="android:colorControlActivated">@color/g_ink</item>
+        <item name="colorControlActivated">@color/g_ink</item>
+    </style>
+
+    <style name="Gauge.Shape.Small" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">6dp</item>
+    </style>
+    <style name="Gauge.Shape.Medium" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <!--
+        按钮统一规范（DESIGN.md §4）：
+        · Gauge.Button          主按钮：墨底、白字，最小 48dp 触控高度
+        · Gauge.Button.Outline  次按钮：描边；玻璃主题下垫一层半透明白
+        · Gauge.Button.Danger   危险操作：描边 + 朱砂（玻璃为砖红）文字
+        · Gauge.Button.Ghost    行内文字按钮；.Danger 为危险文字按钮
+        · *.Compact             顶栏 / 表头里的小按钮：可见 40dp，触控仍是 48dp
+        圆角统一走 ?attr/gButtonRadius：纸墨 6dp，玻璃为胶囊。
+    -->
+    <style name="Gauge.Button" parent="Widget.Material3.Button">
+        <item name="backgroundTint">?attr/gInk</item>
+        <item name="android:textColor">?attr/gOnInk</item>
+        <item name="cornerRadius">?attr/gButtonRadius</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="elevation">0dp</item>
+        <item name="rippleColor">#33FFFFFF</item>
+    </style>
+    <!-- 纸面描边按钮（替代 Tonal） -->
+    <style name="Gauge.Button.Outline" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textColor">?attr/gInk</item>
+        <item name="backgroundTint">?attr/gButtonFill</item>
+        <item name="strokeColor">?attr/gStroke</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">?attr/gButtonRadius</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.02</item>
+        <item name="rippleColor">?attr/gHair</item>
+    </style>
+    <style name="Gauge.Button.Danger" parent="Gauge.Button.Outline">
+        <item name="android:textColor">?attr/gDanger</item>
+    </style>
+    <!-- 行内文字按钮：无底无框，墨字 -->
+    <style name="Gauge.Button.Ghost" parent="Widget.Material3.Button.TextButton">
+        <item name="android:textColor">?attr/gInk</item>
+        <item name="cornerRadius">?attr/gButtonRadius</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="rippleColor">?attr/gHair</item>
+    </style>
+    <style name="Gauge.Button.Ghost.Danger">
+        <item name="android:textColor">?attr/gDanger</item>
+    </style>
+    <!-- 顶栏小按钮：可见 40dp（上下各内缩 4dp），触控区仍为 48dp -->
+    <style name="Gauge.Button.Compact">
+        <item name="android:insetTop">4dp</item>
+        <item name="android:insetBottom">4dp</item>
+        <item name="android:minWidth">64dp</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    <style name="Gauge.Button.Outline.Compact">
+        <item name="android:insetTop">4dp</item>
+        <item name="android:insetBottom">4dp</item>
+        <item name="android:minWidth">56dp</item>
+        <item name="android:paddingStart">14dp</item>
+        <item name="android:paddingEnd">14dp</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    <style name="Gauge.Button.Text" parent="Widget.Material3.Button.TextButton.Dialog">
+        <item name="android:textColor">?attr/gInk</item>
+        <item name="rippleColor">?attr/gHair</item>
+    </style>
+
+    <!-- 弹窗：纸面、8dp、发丝描边，按钮墨色 -->
+    <style name="Gauge.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="android:windowBackground">@drawable/bg_gauge_dialog</item>
+        <item name="colorSurface">?attr/gDialog</item>
+        <item name="colorPrimary">?attr/gInk</item>
+        <item name="android:textColorPrimary">?attr/gInk</item>
+        <item name="android:textColorSecondary">?attr/gSub</item>
+        <item name="shapeAppearanceOverlay">@style/Gauge.Shape.Medium</item>
+        <item name="shapeAppearance">@style/Gauge.Shape.Medium</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Gauge.Button.Text</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Gauge.Button.Text</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Gauge.Button.Text</item>
+        <item name="android:backgroundDimAmount">0.28</item>
+    </style>
+    <style name="Gauge.Dialog.Framework" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/bg_gauge_dialog</item>
+        <item name="android:colorAccent">?attr/gInk</item>
+        <item name="android:colorPrimary">?attr/gInk</item>
+        <item name="android:textColorPrimary">?attr/gInk</item>
+        <item name="android:textColorSecondary">?attr/gSub</item>
+        <item name="android:backgroundDimAmount">0.28</item>
+    </style>
+
+    <!-- 磨砂玻璃：半透明层叠 + 柔光底，大圆角；在 G.init 里叠加到当前主题上 -->
+    <style name="ThemeOverlay.Tangli.Glass" parent="">
+        <item name="gBg">@android:color/transparent</item>
+        <item name="gPaper">@color/glass_paper</item>
+        <item name="gCard">@color/glass_card</item>
+        <item name="gCardStroke">@color/glass_card_stroke</item>
+        <item name="gInk">@color/glass_ink</item>
+        <item name="gSub">@color/glass_sub</item>
+        <item name="gSub2">@color/glass_sub2</item>
+        <item name="gMute">@color/glass_mute</item>
+        <item name="gLine">@color/glass_line</item>
+        <item name="gChip">@color/glass_chip</item>
+        <item name="gAccent">@color/glass_accent</item>
+        <item name="gHair">@color/glass_hair</item>
+        <item name="gStroke">@color/glass_stroke</item>
+        <item name="gInk18">@color/glass_ink_18</item>
+        <item name="gInk12">@color/glass_ink_12</item>
+        <item name="gInk08">@color/glass_ink_08</item>
+        <item name="gPaperE8">@color/glass_dock_top</item>
+        <item name="gPaperC8">@color/glass_dock_bottom</item>
+        <item name="gOnInk">@color/glass_on_ink</item>
+        <item name="gCardRadius">20dp</item>
+        <item name="gSmallRadius">14dp</item>
+        <item name="gGlass">true</item>
+        <item name="gDialog">@color/glass_dialog</item>
+        <item name="gButtonRadius">24dp</item>
+        <item name="gButtonFill">@color/glass_chip</item>
+        <item name="gDanger">@color/glass_danger</item>
+        <item name="colorPrimary">@color/glass_ink</item>
+        <item name="colorOnPrimary">@color/glass_on_ink</item>
+        <item name="colorSurface">@color/glass_paper</item>
+        <item name="colorOnSurface">@color/glass_ink</item>
+        <item name="colorControlActivated">@color/glass_ink</item>
+        <item name="android:colorControlActivated">@color/glass_ink</item>
+        <item name="android:windowBackground">@drawable/bg_glass_backdrop</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/glass_nav</item>
+        <item name="shapeAppearanceSmallComponent">@style/Glass.Shape.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/Glass.Shape.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/Glass.Shape.Medium</item>
+        <item name="materialButtonStyle">@style/Glass.Button</item>
+        <item name="alertDialogTheme">@style/Glass.Dialog</item>
+        <item name="materialAlertDialogTheme">@style/Glass.Dialog</item>
+        <item name="android:alertDialogTheme">@style/Glass.Dialog.Framework</item>
+    </style>
+    <!-- 玻璃弹窗：近乎不透明的磨砂片 + 发丝边 + 大圆角；Android 12+ 另加背景模糊（只是加分项） -->
+    <style name="Glass.Dialog" parent="Gauge.Dialog">
+        <item name="android:windowBackground">@drawable/bg_glass_dialog</item>
+        <item name="android:backgroundDimAmount">0.25</item>
+    </style>
+    <style name="Glass.Dialog.Framework" parent="Gauge.Dialog.Framework">
+        <item name="android:windowBackground">@drawable/bg_glass_dialog</item>
+        <item name="android:backgroundDimAmount">0.25</item>
+    </style>
+    <style name="Glass.Shape.Small" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">14dp</item>
+    </style>
+    <style name="Glass.Shape.Medium" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">20dp</item>
+    </style>
+    <!-- 玻璃主按钮：圆角、颜色都走主题属性，这里只保留名字给 materialButtonStyle 用 -->
+    <style name="Glass.Button" parent="Gauge.Button" />
+    <!-- 添加桌面组件的小卡片：半透明页面，遮罩和卡片在布局里画 -->
+    <style name="Theme.Tangli.PinCard" parent="Theme.EcutCampus">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

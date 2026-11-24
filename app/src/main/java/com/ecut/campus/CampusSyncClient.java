@@ -1,0 +1,497 @@
+package com.ecut.campus;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Message;
+import android.util.Log;
+import android.webkit.CookieManager;
+import android.net.http.SslError;
+import android.view.View;
+import android.view.ViewGroup;
+import android.webkit.SslErrorHandler;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.webkit.WebSettings;
+import android.webkit.WebChromeClient;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+
+import com.ecut.campus.data.Grades;
+import com.ecut.campus.data.GradesStore;
+import com.ecut.campus.data.SdjtuPortal;
+import com.ecut.campus.data.QiangzhiGrades;
+import com.ecut.campus.data.QiangzhiSource;
+import com.ecut.campus.data.TermStartProbe;
+import com.ecut.campus.data.SemesterArchive;
+import com.ecut.campus.data.Timetable;
+import com.ecut.campus.data.SemesterMetaPolicy;
+import com.ecut.campus.data.TimetableStore;
+import com.ecut.campus.data.SyncDiff;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+
+/** 使用山东交通学院 WebVPN 会话同步强智课表和成绩。 */
+public final class CampusSyncClient {
+
+    public enum Kind {
+        TIMETABLE("课表"),
+        GRADES("成绩");
+
+        final String label;
+
+        Kind(String label) {
+            this.label = label;
+        }
+    }
+
+    /** 最近一次当前学期课表同步的变化摘要（UI 取走后清空）。 */
+    public static volatile String lastTimetableDiff = "";
+
+    public interface Callback {
+        void onSuccess(int count);
+        void onFailure(String message);
+        default void onLoginRequired(String message) { onFailure(message); }
+    }
+
+    private static final String TAG = "CampusSync";
+    private static final long SDJTU_NAVIGATION_TIMEOUT_MS = 65_000L;
+    private static final long DATA_TIMEOUT_MS = 20_000L;
+    private final Context appContext;
+    private final WebView webView;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Kind kind;
+    private final Callback callback;
+    private final String targetXnm;
+    private final String targetXqm;
+    private final SdjtuSyncSession sdjtu;
+    private WebView sdjtuPopup;
+
+    private boolean finished;
+    private boolean dataRequested;
+
+    private final Runnable timeout = () -> fail("同步超时，请确认统一门户登录仍有效");
+
+    private CampusSyncClient(WebView view, Kind kind, String xnm, String xqm, Callback callback) {
+        this.webView = view;
+        this.appContext = view.getContext().getApplicationContext();
+        this.kind = kind;
+        this.callback = callback;
+        this.targetXnm = xnm;
+        this.targetXqm = xqm;
+        this.sdjtu = new SdjtuSyncSession(view, handler, kind, new SdjtuSyncSession.Listener() {
+            @Override public void ready() { requestData(); }
+            @Override public void fail(String message, boolean loginRequired) {
+                CampusSyncClient.this.fail(message, loginRequired);
+            }
+        });
+    }
+
+    /** 必须在主线程调用，并先把 WebView 附着到当前 Activity 的不可见容器。 */
+    public static CampusSyncClient start(WebView view, Kind kind, Callback callback) {
+        return start(view, kind, null, null, callback);
+    }
+
+    /**
+     * 指定学年学期同步。xnm/xqm 为教务参数（如 2025 / 3），
+     * 传 null 时跟随教务页面当前选中的学期。
+     */
+    public static CampusSyncClient start(WebView view, Kind kind,
+                                         String xnm, String xqm, Callback callback) {
+        CampusSyncClient client = new CampusSyncClient(view, kind, xnm, xqm, callback);
+        DiagLog.log(view.getContext(), "sync", "开始同步 " + kind.label
+                + (xnm != null ? " xnm=" + xnm + " xqm=" + xqm : "")
+                + " · " + SdjtuPortal.NAME);
+        client.configure();
+        client.load();
+        return client;
+    }
+
+    static boolean sdjtuLoginPaused(Context context) {
+        return SdjtuSyncSession.loginPaused(context);
+    }
+
+    public boolean isRunning() {
+        return !finished;
+    }
+
+    @SuppressLint("SetJavaScriptEnabled")
+    private void configure() {
+        WebSettings s = webView.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setDatabaseEnabled(true);
+        s.setLoadWithOverviewMode(true);
+        s.setUseWideViewPort(true);
+        s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        s.setAllowFileAccess(false);
+        s.setAllowContentAccess(false);
+        s.setSupportMultipleWindows(true);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setSavePassword(false);
+        s.setSaveFormData(false);
+        if (android.os.Build.VERSION.SDK_INT >= 26)
+            webView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
+        android.util.DisplayMetrics metrics = webView.getResources().getDisplayMetrics();
+        // The host clips this invisible child. Give portal forms and cards a usable viewport.
+        ViewGroup.LayoutParams layout = webView.getLayoutParams();
+        if (layout != null) {
+            layout.width = metrics.widthPixels;
+            layout.height = metrics.heightPixels;
+            webView.setLayoutParams(layout);
+        } else {
+            webView.measure(View.MeasureSpec.makeMeasureSpec(metrics.widthPixels, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.EXACTLY));
+            webView.layout(0, 0, metrics.widthPixels, metrics.heightPixels);
+        }
+        webView.setFocusable(false);
+        webView.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+
+        CookieManager cm = CookieManager.getInstance();
+        cm.setAcceptCookie(true);
+        cm.setAcceptThirdPartyCookies(webView, true);
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                if (!finished) sdjtu.pageStarted(url);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                if (!finished) sdjtu.pageFinished(url);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request,
+                                        android.webkit.WebResourceError error) {
+                if (!finished && request.isForMainFrame()) sdjtu.navigationError(request.getUrl().toString(), 0);
+            }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse response) {
+                if (!finished && request.isForMainFrame() && response.getStatusCode() >= 400) {
+                    sdjtu.navigationError(request.getUrl().toString(), response.getStatusCode());
+                }
+            }
+
+            @Override
+            public void onReceivedSslError(WebView view, SslErrorHandler ssl, SslError error) {
+                ssl.cancel();
+                if (!finished) fail("学校门户证书验证失败，请稍后重试");
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                String url = request.getUrl().toString();
+                if ("about:blank".equals(url) && !request.isForMainFrame()) return false;
+                if (SdjtuPortal.isSchoolUrl(url)) return false;
+                if (request.isForMainFrame() && !finished && sdjtu.current()) {
+                    fail("门户跳转到无法用于同步的地址，请打开统一门户核对", true);
+                }
+                return true;
+            }
+        });
+
+        // WebVPN 的教务系统卡片可能通过 window.open 打开教务，必须在同一隐藏会话里接住。
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onCreateWindow(WebView view, boolean isDialog,
+                                          boolean isUserGesture, Message resultMsg) {
+                if (finished || sdjtuPopup != null || !sdjtu.current()) return false;
+                WebView popup = new WebView(view.getContext());
+                sdjtuPopup = popup;
+                popup.getSettings().setAllowFileAccess(false);
+                popup.getSettings().setAllowContentAccess(false);
+                popup.setWebViewClient(new WebViewClient() {
+                    @Override
+                    public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
+                        if (request.isForMainFrame()) openPopupUrl(v, request.getUrl().toString());
+                        return true;
+                    }
+
+                    @Override
+                    public void onPageStarted(WebView v, String url, Bitmap favicon) {
+                        openPopupUrl(v, url);
+                    }
+                });
+                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
+                transport.setWebView(popup);
+                resultMsg.sendToTarget();
+                return true;
+            }
+        });
+    }
+
+    private void load() {
+        handler.postDelayed(timeout, SDJTU_NAVIGATION_TIMEOUT_MS);
+        handler.post(() -> { if (!finished) sdjtu.start(Prefs.sdjtuAcademicBase(appContext)); });
+    }
+
+    private void requestData() {
+        if (dataRequested) return;
+        dataRequested = true;
+        handler.removeCallbacksAndMessages(null);
+        handler.postDelayed(timeout, DATA_TIMEOUT_MS);
+
+        if (kind == Kind.TIMETABLE) {
+            extractTimetable();
+        } else {
+            extractGrades();
+        }
+    }
+
+    private void extractTimetable() {
+        String js = QiangzhiSource.extractionJs(targetXnm, targetXqm);
+        webView.evaluateJavascript(js, raw -> {
+            if (finished || !sdjtu.current()) return;
+            String text = WebShellActivity.unwrapJsString(raw);
+            if (text == null || text.isEmpty() || text.startsWith("ERR:")) {
+                fail("课表接口没有返回数据");
+                return;
+            }
+            if (text.startsWith("NOTABLE") && retrySdjtuAfterMissingTable()) return;
+            QiangzhiSource.Result result = QiangzhiSource.parseHtml(text);
+            DiagLog.log(appContext, "sync", "强智课表解析: 学期="
+                    + result.timetable.semester.id
+                    + " 原始=" + result.rawRecords + " 课程=" + result.courseCount
+                    + " 周次失败=" + result.failedWeekExpr + " 合并重复=" + result.mergedDuplicates
+                    + (result.warnings.isEmpty() ? "" : " " + result.warnings));
+            if (!result.ok()) {
+                fail(text.startsWith("NOTABLE") ? "没找到课表，可能需要重新登录教务系统"
+                        : "课表解析为空，请稍后重试");
+                return;
+            }
+            Timetable currentActive = (targetXnm == null || targetXnm.isEmpty())
+                    ? TimetableStore.load(appContext) : null;
+            String activeId = currentActive != null ? currentActive.semester.id
+                    : SemesterArchive.activeSemesterId(appContext);
+            QiangzhiSource.SyncTarget target = QiangzhiSource.resolveSyncTarget(
+                    targetXnm, targetXqm, result.timetable.semester.id, activeId, currentCalendarTerm());
+            if (target.action == QiangzhiSource.SyncTarget.Action.SKIP) {
+                DiagLog.log(appContext, "sync", "课表跳过保存: " + target.skipReason);
+                fail(target.skipReason);
+                return;
+            }
+            probeTermStartThenSave(result, target);
+        });
+    }
+
+    private static String currentCalendarTerm() {
+        java.util.Calendar cal = java.util.Calendar.getInstance();
+        return HistorySync.currentTermId(cal.get(java.util.Calendar.YEAR),
+                cal.get(java.util.Calendar.MONTH) + 1);
+    }
+
+    /** 还没有开学日期时，先从教务推出第 1 周周一，再落盘；探测失败不影响课表保存。 */
+    private void probeTermStartThenSave(QiangzhiSource.Result result, QiangzhiSource.SyncTarget target) {
+        if (SemesterMetaPolicy.fillSdjtuStartDate(result.timetable)) {
+            saveTimetable(result, target);
+            return;
+        }
+        String semId = target.semesterId;
+        Timetable local = SemesterArchive.loadSemester(appContext, semId);
+        boolean localHasStart = local != null && local.semester != null
+                && semId.equals(local.semester.id)
+                && local.semester.startDate != null && !local.semester.startDate.isEmpty();
+        if (localHasStart) {
+            saveTimetable(result, target);
+            return;
+        }
+        webView.evaluateJavascript(TermStartProbe.probeJs(semId), raw -> {
+            if (finished) return;
+            String monday = TermStartProbe.detect(WebShellActivity.unwrapJsString(raw),
+                    WeekMath.todayDateLabel());
+            dlog("开学日探测: " + (monday.isEmpty() ? "没找到" : monday));
+            if (!monday.isEmpty()) result.timetable.semester.startDate = monday;
+            saveTimetable(result, target);
+        });
+    }
+
+    private void saveTimetable(QiangzhiSource.Result result, QiangzhiSource.SyncTarget target) {
+        if (finished || !sdjtu.current()) return;
+        if (target == null || target.action == QiangzhiSource.SyncTarget.Action.SKIP
+                || target.semesterId.isEmpty()) {
+            fail(target != null && !target.skipReason.isEmpty() ? target.skipReason : "课表学期无效，已跳过保存");
+            return;
+        }
+        Timetable merged;
+        if (target.action == QiangzhiSource.SyncTarget.Action.SAVE_ARCHIVE) {
+            // 历史学期：合并进归档里该学期的既有数据，不动当前学期。
+            Timetable existing = SemesterArchive.loadSemester(appContext, target.semesterId);
+            merged = TimetableStore.merge(
+                    existing != null ? existing : new Timetable(), result.timetable);
+            if (!SemesterArchive.saveSemester(appContext, merged, false)) {
+                fail("历史课表写入归档失败");
+                return;
+            }
+        } else {
+            Timetable currentActive = TimetableStore.load(appContext);
+            Timetable before = target.semesterId.equals(currentActive.semester.id)
+                    ? currentActive : SemesterArchive.loadSemester(appContext, target.semesterId);
+            if (before == null) before = new Timetable();
+            merged = TimetableStore.merge(before, result.timetable);
+            lastTimetableDiff = SyncDiff.summarize(before, merged);
+            if (!SemesterArchive.saveSemester(appContext, merged, true)) {
+                fail("课表写入本地失败");
+                return;
+            }
+        }
+        SemesterArchive.unifyColors(appContext);
+        Prefs.setLastSyncTime(appContext, now());
+        dlog("Timetable saved: " + merged.courses.size()
+                + " courses (" + result.rawRecords + " records)");
+        Prefs.setPortalSession(appContext, true);
+        finishSuccess(merged.courses.size());
+    }
+
+    private void extractGrades() {
+        webView.evaluateJavascript(QiangzhiGrades.extractionJs(), raw -> {
+            if (finished || !sdjtu.current()) return;
+            String html = WebShellActivity.unwrapJsString(raw);
+            if ("__NOPERM__".equals(html)) {
+                fail("教务系统没开放成绩查询（可能评教没做完或查询未开放），在教务网页里能查到后再同步");
+                return;
+            }
+            if (html != null && html.startsWith("NOTABLE") && retrySdjtuAfterMissingTable()) return;
+            if (html == null || html.isEmpty() || html.startsWith("ERR:") || html.startsWith("NOTABLE")) {
+                fail("没找到成绩表，可能需要重新登录教务系统");
+                return;
+            }
+            Grades parsed = QiangzhiGrades.parseHtml(html);
+            dlog("GRADE_ROWS(qiangzhi): " + html.length() + " chars, courses="
+                    + parsed.totalCourseCount() + ", semesters=" + parsed.semesters.size());
+            if (parsed.totalCourseCount() <= 0) {
+                fail(html.contains("dataList") ? "成绩表是空的：这个账号暂时还没有成绩"
+                        : "成绩解析为空，请稍后重试");
+                return;
+            }
+            saveGrades(parsed);
+        });
+    }
+
+    private boolean retrySdjtuAfterMissingTable() {
+        if (!sdjtu.reopenPortalForMissingTable()) return false;
+        dataRequested = false;
+        handler.removeCallbacks(timeout);
+        handler.postDelayed(timeout, SDJTU_NAVIGATION_TIMEOUT_MS);
+        return true;
+    }
+
+    private void saveGrades(Grades parsed) {
+        if (finished || !sdjtu.current()) return;
+        // 教务成绩是全量权威数据。直接覆盖而不是合并，避免旧演示数据
+        // 或已撤销课程永久残留。
+        parsed.updatedAt = new SimpleDateFormat(
+                "yyyy-MM-dd'T'HH:mm:ssXXX", Locale.US).format(new Date());
+        parsed.recomputeAll();
+        // 0.4：和上一次对比，记下新出的成绩（首次同步不算）
+        try {
+            Grades before = GradesStore.load(appContext);
+            if (!Prefs.isGradesDemo(appContext)) {
+                java.util.List<Grades.CourseGrade> fresh =
+                        com.ecut.campus.data.GradeDiff.newGrades(before, parsed);
+                if (!fresh.isEmpty()) {
+                    java.util.Set<String> keys = Prefs.newGradeKeys(appContext);
+                    keys.addAll(com.ecut.campus.data.GradeDiff.newKeys(before, parsed));
+                    Prefs.setNewGradeKeys(appContext, keys);
+                    Notify.newGrades(appContext, fresh);
+                }
+            } else {
+                Prefs.setNewGradeKeys(appContext, java.util.Collections.emptySet());
+            }
+        } catch (Exception e) {
+            Log.w(TAG, "grade diff failed", e);
+        }
+        if (!GradesStore.save(appContext, parsed)) {
+            fail("成绩写入本地失败");
+            return;
+        }
+        Prefs.setGradesDemo(appContext, false);
+        Prefs.setLastSyncTime(appContext, now());
+        dlog("Grades replaced: " + parsed.totalCourseCount()
+                + " courses in " + parsed.semesters.size() + " semesters");
+        Prefs.setPortalSession(appContext, true);
+        finishSuccess(parsed.totalCourseCount());
+    }
+
+    private void openPopupUrl(WebView popup, String rawUrl) {
+        if (popup == null || finished) return;
+        if (rawUrl == null || rawUrl.isEmpty() || "about:blank".equals(rawUrl)) return;
+        if (sdjtuPopup != popup || !sdjtu.current()) return;
+        closeSdjtuPopup();
+        if (SdjtuPortal.isSchoolUrl(rawUrl)) webView.loadUrl(rawUrl);
+        else fail("教务资源入口未使用学校 HTTPS 地址，请在统一门户中打开教务系统", true);
+    }
+
+    private void closeSdjtuPopup() {
+        if (sdjtuPopup == null) return;
+        WebView popup = sdjtuPopup;
+        sdjtuPopup = null;
+        popup.setWebViewClient(new WebViewClient());
+        popup.stopLoading();
+        // The temporary WebView is never attached. View.post would wait indefinitely.
+        new Handler(Looper.getMainLooper()).post(popup::destroy);
+    }
+
+    private void finishSuccess(int count) {
+        if (finished) return;
+        sdjtu.success();
+        finished = true;
+        Prefs.setSessionExpired(appContext, false);
+        DiagLog.log(appContext, "sync", kind.label + " 成功: " + count);
+        if (kind == Kind.TIMETABLE) Prefs.setTimetableSyncedAt(appContext, System.currentTimeMillis());
+        cleanup();
+        callback.onSuccess(count);
+    }
+
+    private void dlog(String m) {
+        Log.i(TAG, DiagLog.scrub(m));
+        DiagLog.log(appContext, "sync", m);
+    }
+
+    private void fail(String message) {
+        fail(message, false);
+    }
+
+    private void fail(String message, boolean loginRequired) {
+        if (finished) return;
+        finished = true;
+        Log.w(TAG, kind.label + " failed: " + message);
+        DiagLog.log(appContext, "sync", kind.label + " 失败: " + message);
+        if (message != null && message.contains("登录已失效")) Prefs.setSessionExpired(appContext, true);
+        cleanup();
+        if (loginRequired) callback.onLoginRequired(message);
+        else callback.onFailure(message);
+    }
+
+    private void cleanup() {
+        sdjtu.stop();
+        closeSdjtuPopup();
+        webView.setWebViewClient(new WebViewClient());
+        webView.setWebChromeClient(null);
+        webView.stopLoading();
+        handler.removeCallbacksAndMessages(null);
+        CookieManager.getInstance().flush();
+        if (webView.getParent() instanceof android.view.ViewGroup) {
+            ((android.view.ViewGroup) webView.getParent()).removeView(webView);
+        }
+        webView.loadUrl("about:blank");
+        webView.destroy();
+    }
+
+    /** Activity 销毁时静默取消，不触发失败回调，避免向已销毁页面弹 Toast。 */
+    public void cancel() {
+        if (finished) return;
+        finished = true;
+        cleanup();
+    }
+
+    private static String now() {
+        return new SimpleDateFormat("MM-dd HH:mm", Locale.US).format(new Date());
+    }
+}

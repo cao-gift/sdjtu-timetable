@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/gBg">
+
+    <FrameLayout
+        android:id="@+id/content_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <FrameLayout
+        android:id="@+id/sync_host"
+        android:layout_width="1dp"
+        android:layout_height="1dp"
+        android:alpha="0" />
+
+    <!-- 悬浮胶囊 Dock：玻璃主题下垫一层真模糊（Android 12+），形状跟胶囊一致 -->
+    <com.ecut.campus.DockBlurView
+        android:id="@+id/dock_blur"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="22dp"
+        android:layout_marginBottom="14dp" />
+
+    <com.ecut.campus.CapsuleDock
+        android:id="@+id/text_dock"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom"
+        android:layout_marginHorizontal="22dp"
+        android:layout_marginBottom="14dp" />
+
+</FrameLayout>

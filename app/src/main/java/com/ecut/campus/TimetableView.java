@@ -1,0 +1,1755 @@
+package com.ecut.campus;
+
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Typeface;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+import android.text.TextUtils;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+import android.view.VelocityTracker;
+import android.view.View;
+import android.view.ViewConfiguration;
+import android.animation.ValueAnimator;
+import android.view.animation.PathInterpolator;
+import android.widget.OverScroller;
+
+import androidx.annotation.Nullable;
+
+import com.ecut.campus.data.ClassroomLabel;
+import com.ecut.campus.data.Timetable;
+import com.ecut.campus.data.SemesterMetaPolicy;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+/**
+ * 原生课表网格：8–16 节（随作息设置）、一屏 8 节、固定双节块、七天/五天列、左右滑周。
+ *
+ * 手势方向锁：横向滑动切周，纵向滑动查看后面的节次，互不抢占。
+ */
+public class TimetableView extends View {
+
+    public interface OnSessionClickListener {
+        void onSessionClick(Timetable.Course course, Timetable.Session session, boolean activeThisWeek);
+        void onEmptySlotClick(int dayOfWeek, int startSection);
+        /** 在空白格长按后往下拖，画出一段节次；松手时回调。默认当作点了起始格。 */
+        default void onEmptyRangeDrawn(int dayOfWeek, int startSection, int endSection) {
+            onEmptySlotClick(dayOfWeek, startSection);
+        }
+        void onWeekSwipe(int delta);
+        /** 松手判定翻页的瞬间回调，用于立即更新周数标题。 */
+        default void onWeekSettling(int delta) {}
+
+        /** 一句轻提示（比如长按到被占的格子）。 */
+        default void onHint(String message) {}
+        /** 点到带标记的块：停课/放假/已调走（原课程）或补课/调课（本周临时加的）。 */
+        default void onMarkedClick(Timetable.Course course, Timetable.Session session,
+                                   String label, String adjustId, boolean extra) {}
+        /** 长按课块。 */
+        default void onSessionLongPress(Timetable.Course course, Timetable.Session session, boolean active,
+                                        String label, String adjustId, boolean extra, int week) {}
+    }
+
+    public interface OnVerticalScrollListener {
+        void onVerticalScrollEnd();
+    }
+
+    /**
+     * 24 色色板（背景色）。前 12 色就是 1.2.3 以前的老色板，顺序不变，
+     * 老用户的课升级后颜色不会变；后 12 色是补充色，一个学期超过 12 门不同课才会用到。
+     */
+    public static final int[] PALETTE_BG = {
+            0xFFEFE2CC, 0xFFDDE5D6, 0xFFF0D9CF, 0xFFDCE1E6, 0xFFE4DEEC, 0xFFD6E6E3,
+            0xFFF1DCDF, 0xFFE4E2DC, 0xFFE9E3C9, 0xFFD9E0D0, 0xFFE8D5CC, 0xFFD8DCE4,
+            0xFFE3B5B5, 0xFFE3D0B5, 0xFFD4E3B5, 0xFFB5E3B5, 0xFFC0E8CD, 0xFFC0E8E8,
+            0xFFB5D8E3, 0xFFB5B5E3, 0xFFC9C7E1, 0xFFE0B5E3, 0xFFECCBEC, 0xFFDBBDCC
+    };
+
+    /** 24 色色板（文字与强调色） */
+    public static final int[] PALETTE_FG = {
+            0xFF6B4A1E, 0xFF3E5236, 0xFF7A3A24, 0xFF384756, 0xFF4E4364, 0xFF2D5650,
+            0xFF7A3A47, 0xFF4F4D46, 0xFF5C5222, 0xFF46553A, 0xFF6E3E2C, 0xFF3D4558,
+            0xFF6D2C2C, 0xFF6D522C, 0xFF576D2C, 0xFF2C6D2C, 0xFF2C6D42, 0xFF2C6D6D,
+            0xFF2C5D6D, 0xFF2C2C6D, 0xFF322C6D, 0xFF672C6D, 0xFF6D2C6D, 0xFF6D2C4D
+    };
+
+    /** 磨砂玻璃用的课块底色：同色相、饱和度更高，叠在半透明柔光底上也分得清。 */
+    public static final int[] PALETTE_GLASS = {
+            0xFFEBD4AC, 0xFFCAE7B1, 0xFFECC2AF, 0xFFBBCFE3, 0xFFCFB8EE, 0xFFB0E9DE,
+            0xFFEFBAC2, 0xFFDFD7BD, 0xFFEADDA5, 0xFFCAE2AA, 0xFFEABCA6, 0xFFB5C5E3,
+            0xFFE58F8F, 0xFFE5C28F, 0xFFC9E58F, 0xFF8FE58F, 0xFF9CE8B5, 0xFF9CE8E8,
+            0xFF8FD0E5, 0xFF8F8FE5, 0xFFA29CE8, 0xFFDF8FE5, 0xFFEBA9EB, 0xFFE58FBA
+    };
+
+    private static final int[] LIGHT_BG = PALETTE_BG.clone();
+    private static final int[] LIGHT_FG = PALETTE_FG.clone();
+
+    /**
+     * 磨砂玻璃课块的字色：跟纸墨一样取课色本身的深浅，不再一律近黑。
+     * 日间 = 纸墨深色再压 18% 黑（叠在半透明玻璃底上最差约 5.4:1）；夜间 = 玻璃色提亮 35%（最差约 6.1:1）。
+     */
+    static int glassInk(int idx) {
+        return G.NIGHT ? G.mix(PALETTE_GLASS[idx], 0xFFFFFFFF, 0.35f) : G.mix(LIGHT_FG[idx], 0xFF000000, 0.18f);
+    }
+
+    /** 指定课程色在日/夜模式下的字色与色条色（供桌面小组件共用）。 */
+    public static int courseFgColor(int idx, boolean night) {
+        int i = Math.abs(idx) % LIGHT_FG.length;
+        return night ? G.mix(LIGHT_BG[i], 0xFFFFFFFF, 0.10f) : LIGHT_FG[i];
+    }
+
+    /** 深色模式下把暖色课块换成「深底 + 浅字」，色相保持一致。 */
+    public static void applyPalette(boolean night) {
+        for (int k = 0; k < PALETTE_BG.length; k++) {
+            if (night) {
+                PALETTE_BG[k] = G.mix(LIGHT_FG[k], 0xFF0E0E0D, 0.70f);
+                PALETTE_FG[k] = G.mix(LIGHT_BG[k], 0xFFFFFFFF, 0.10f);
+            } else {
+                PALETTE_BG[k] = LIGHT_BG[k];
+                PALETTE_FG[k] = LIGHT_FG[k];
+            }
+        }
+    }
+
+    /** 朱砂：只用于「现在」——今天、现在线、冲突角标。 */
+    private final int ACCENT = G.ACCENT;
+    private final int INK = G.INK;
+    private final int INK_2 = G.SUB;
+    private final int INK_3 = G.MUTE;
+    private final int PAPER = G.CARD;
+    private final int HAIRLINE = G.HAIR;
+
+    private static final String[] DAY_NAMES = {"一", "二", "三", "四", "五", "六", "日"};
+    private static final int DEFAULT_VISIBLE_SECTIONS = 8;
+    /** 一屏显示几节：默认 8 节（可上下滚），打开「一屏显示全部节次」后压缩课块高度一屏放下。 */
+    private int visibleSections = DEFAULT_VISIBLE_SECTIONS;
+    /** 纵向惯性滚动 + 到头回弹。 */
+    private OverScroller scroller;
+
+    private Timetable timetable = new Timetable();
+    private ScheduleSettings schedule = ScheduleSettings.createDefault();
+    private String semesterStartDate = "";
+    private int currentWeek = 1;
+    private int totalWeeks = 30;
+    private int displayDays = 7;
+    private int todayDayOfWeek = 1;
+    private boolean showInactiveCourses = false;
+    private boolean showCourseCode;
+    private List<String> hiddenLocationPhrases = Collections.emptyList();
+    private OnSessionClickListener listener;
+    private OnVerticalScrollListener verticalScrollListener;
+
+    private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint blockPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint accentPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint pageEdgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint rainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final android.graphics.Path clipPath = new android.graphics.Path();
+    private final TextPaint bpSub = new TextPaint(), bpMono = new TextPaint(), bpTagCn = new TextPaint(), bpTagNum = new TextPaint();
+    private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint subTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+
+    private final List<HitBlock> hitBlocks = new ArrayList<>();
+    /** 每周的停课/调课/放假叠加层，按周缓存，课表或开学日期变了就清空。 */
+    private final java.util.Map<Integer, com.ecut.campus.data.WeekOverlay> overlays = new java.util.HashMap<>();
+    private com.ecut.campus.data.WeekOverlay overlay = com.ecut.campus.data.WeekOverlay.empty(0);
+    private final Runnable longPressRunnable = this::fireLongPress;
+    private boolean longPressFired;
+    private final int touchSlop;
+
+    private float headerHeight;
+    private float timeColWidth;
+    private float rowHeight;
+    private float scrollOffset;
+    private float maxScrollOffset;
+    private float bottomInset;
+
+    private float downX;
+    private float downY;
+    private float lastY;
+    private float dragDx;
+    private int gestureMode = 0; // 0=未判定 1=横向切周 2=纵向滚动
+    private boolean moved;
+    private int activePointerId = MotionEvent.INVALID_POINTER_ID;
+    private VelocityTracker velocityTracker;
+    private ValueAnimator pageAnimator;
+    private boolean pageAnimating;
+    /** 正在吸附、尚未提交的翻页方向；0 表示无。快速连续滑动时由新手势立即提交。 */
+    private int pendingCommit;
+    @Nullable
+    private com.ecut.campus.data.RainForecast rainPreviewOverride;
+
+    private static final class HitBlock {
+        final RectF rect;
+        final Timetable.Course course;
+        final Timetable.Session session;
+        final boolean active;
+        String label;      // 非空 = 带标记（停课/放假/已调走/补课/调课）
+        String adjustId = "";
+        boolean extra;
+
+        HitBlock(RectF rect, Timetable.Course course, Timetable.Session session, boolean active) {
+            this.rect = rect;
+            this.course = course;
+            this.session = session;
+            this.active = active;
+        }
+    }
+
+    public TimetableView(Context context) {
+        this(context, null);
+    }
+
+    public TimetableView(Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        headerHeight = dp(52);
+        timeColWidth = dp(48);
+        rowHeight = dp(54);
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
+        scroller = new OverScroller(context, new android.view.animation.DecelerateInterpolator(1.6f));
+
+        gridPaint.setColor(HAIRLINE);
+        gridPaint.setStrokeWidth(Math.max(1f, dp(0.6f)));
+        gridPaint.setStyle(Paint.Style.STROKE);
+
+        pageEdgePaint.setStyle(Paint.Style.FILL);
+
+        todayDayOfWeek = WeekMath.todayDayOfWeek();
+        setWillNotDraw(false);
+    }
+
+    public void setSchedule(ScheduleSettings settings) {
+        this.schedule = settings == null ? ScheduleSettings.createDefault() : settings;
+        applyVisibleSections();
+        invalidate();
+    }
+
+    public void setSemesterStartDate(String startDate) {
+        this.semesterStartDate = startDate == null ? "" : startDate;
+        overlays.clear();
+        invalidate();
+    }
+
+    public void setDisplayDays(int days) {
+        this.displayDays = days == 5 ? 5 : 7;
+        invalidate();
+    }
+
+    public int getDisplayDays() {
+        return displayDays;
+    }
+
+    public void setTimetable(Timetable t, int week) {
+        this.timetable = (t != null) ? t : new Timetable();
+        overlays.clear();
+        this.currentWeek = clampWeek(week);
+        this.todayDayOfWeek = WeekMath.todayDayOfWeek();
+        cancelPageAnimation();
+        dragDx = 0;
+        pageAnimating = false;
+        requestLayout();
+        invalidate();
+    }
+
+    private java.util.Set<String> warnCourses = java.util.Collections.emptySet();
+
+    /** 缺勤快到上限的课（规范化课名），课块左缘描朱砂。 */
+    public void setWarnCourses(java.util.Set<String> keys) {
+        warnCourses = keys == null ? java.util.Collections.emptySet() : keys;
+        invalidate();
+    }
+
+    public void setCurrentWeek(int week) {
+        this.currentWeek = clampWeek(week);
+        cancelPageAnimation();
+        dragDx = 0;
+        invalidate();
+    }
+
+    public int getCurrentWeek() {
+        return currentWeek;
+    }
+
+    public void setTotalWeeks(int weeks) {
+        this.totalWeeks = Math.max(1, Math.min(WeekMath.OPEN_WEEKS_MAX, weeks));
+        this.currentWeek = clampWeek(currentWeek);
+        invalidate();
+    }
+
+    public int getTotalWeeks() {
+        return totalWeeks;
+    }
+
+    private int clampWeek(int week) {
+        return Math.max(1, Math.min(totalWeeks, week));
+    }
+
+    public void setShowInactiveCourses(boolean show) {
+        this.showInactiveCourses = show;
+        invalidate();
+    }
+
+    public boolean isShowInactiveCourses() {
+        return showInactiveCourses;
+    }
+
+    public void setShowCourseCode(boolean show) {
+        if (showCourseCode != show) {
+            showCourseCode = show;
+            invalidate();
+        }
+    }
+
+    public void setHiddenLocationPhrases(String input) {
+        List<String> phrases = ClassroomLabel.parsePhrases(input);
+        if (!hiddenLocationPhrases.equals(phrases)) {
+            hiddenLocationPhrases = phrases;
+            invalidate();
+        }
+    }
+
+    public void setOnSessionClickListener(OnSessionClickListener l) {
+        this.listener = l;
+    }
+
+    public void setOnVerticalScrollListener(OnVerticalScrollListener l) {
+        this.verticalScrollListener = l;
+    }
+
+    /** Dock 覆盖区域高度：课表背景仍延伸其下，但可视 8 节与滚动范围避开遮挡。 */
+    /** true = 一屏放下全部节次（课块变矮），false = 默认 8 节可滚动。 */
+    public void setFitAllSections(boolean fit) {
+        fitAll = fit;
+        applyVisibleSections();
+        invalidate();
+    }
+
+    /** 每天几节由作息设置决定（8–16 节）；不同学校不再钉死 10 节。 */
+    private int totalSections() {
+        return schedule == null ? ScheduleSettings.DEFAULT_SECTION_COUNT : schedule.sectionCount();
+    }
+
+    private boolean fitAll;
+
+    private void applyVisibleSections() {
+        int v = fitAll ? totalSections() : Math.min(DEFAULT_VISIBLE_SECTIONS, totalSections());
+        if (v != visibleSections && scroller != null) scroller.forceFinished(true);
+        visibleSections = v;
+        if (getHeight() > 0) updateRowHeight(getHeight());
+        if (scrollOffset > maxScrollOffset) scrollOffset = maxScrollOffset;
+    }
+
+    /** 拖过头时的阻力：越往外越拉不动，最多拉出约 1/4 屏。 */
+    private float rubberBand(float delta) {
+        float over = scrollOffset < 0 ? -scrollOffset : scrollOffset > maxScrollOffset ? scrollOffset - maxScrollOffset : 0f;
+        boolean outward = (scrollOffset < 0 && delta < 0) || (scrollOffset > maxScrollOffset && delta > 0);
+        if (!outward && over == 0f) {
+            // 正常区间内，跨过边界的那一段才加阻力
+            float next = scrollOffset + delta;
+            if (next < 0) return -scrollOffset + next * 0.45f;
+            if (next > maxScrollOffset) return (maxScrollOffset - scrollOffset) + (next - maxScrollOffset) * 0.45f;
+            return delta;
+        }
+        if (!outward) return delta;
+        float limit = Math.max(dp(80), getHeight() * 0.25f);
+        float k = 0.45f * Math.max(0.05f, 1f - over / limit);
+        return delta * k;
+    }
+
+    private void springBackIfNeeded() {
+        if (scrollOffset < 0 || scrollOffset > maxScrollOffset) {
+            scroller.springBack(0, Math.round(scrollOffset), 0, 0, 0, Math.round(maxScrollOffset));
+            postInvalidateOnAnimation();
+        } else if (verticalScrollListener != null) {
+            verticalScrollListener.onVerticalScrollEnd();
+        }
+    }
+
+    @Override
+    public void computeScroll() {
+        if (scroller != null && scroller.computeScrollOffset()) {
+            scrollOffset = scroller.getCurrY();
+            postInvalidateOnAnimation();
+            if (scroller.isFinished() && verticalScrollListener != null) verticalScrollListener.onVerticalScrollEnd();
+        }
+    }
+
+    public void setBottomInset(float px) {
+        this.bottomInset = Math.max(0, px);
+        if (getHeight() > 0) updateRowHeight(getHeight());
+        invalidate();
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int width = MeasureSpec.getSize(widthMeasureSpec);
+        int height = MeasureSpec.getSize(heightMeasureSpec);
+        setMeasuredDimension(width, height);
+    }
+
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        updateRowHeight(h);
+    }
+
+    private void updateRowHeight(int h) {
+        float available = Math.max(dp(240), h - headerHeight - bottomInset);
+        rowHeight = available / visibleSections;
+        maxScrollOffset = Math.max(0, rowHeight * (totalSections() - visibleSections));
+        scrollOffset = Math.max(0, Math.min(maxScrollOffset, scrollOffset));
+    }
+
+    private float sectionTopY(int section) {
+        return headerHeight + (section - 1) * rowHeight - scrollOffset;
+    }
+
+    private float sectionBottomY(int section) {
+        return headerHeight + section * rowHeight - scrollOffset;
+    }
+
+    private int columnCount() {
+        return displayDays;
+    }
+
+    private float columnWidth(int w) {
+        return (w - timeColWidth) / (float) columnCount();
+    }
+
+    private float pageWidth() {
+        return getWidth();
+    }
+
+    private int adjacentWeek(int direction) {
+        return clampWeek(currentWeek + direction);
+    }
+
+    private boolean canSwipe(int direction) {
+        int adjacent = adjacentWeek(direction);
+        return direction != 0 && adjacent != currentWeek;
+    }
+
+    /**
+     * 边缘周也保留约 18% 的跟手余量，松手回弹。
+     * 这样手指仍有物理反馈，但不会拖出空白页。
+     */
+    private float resistDrag(float dx) {
+        float width = pageWidth();
+        if (width <= 0) return 0;
+        if ((dx < 0 && !canSwipe(1)) || (dx > 0 && !canSwipe(-1))) {
+            return dx * 0.18f;
+        }
+        float limit = width * 1.08f;
+        return Math.max(-limit, Math.min(limit, dx));
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        hitBlocks.clear();
+
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) return;
+        if (rowHeight <= 0) updateRowHeight(h);
+
+        if (!G.GLASS) {
+            bgPaint.setStyle(Paint.Style.FILL);
+            bgPaint.setColor(G.CARD);
+            canvas.drawRect(0, 0, w, h, bgPaint);
+        }
+        todayDayOfWeek = WeekMath.todayDayOfWeek();
+        nowMinutes = nowMinutesOfDay();
+
+        int direction = dragDx < 0 ? 1 : (dragDx > 0 ? -1 : 0);
+        int neighbor = direction == 0 ? currentWeek : adjacentWeek(direction);
+        boolean drawNeighbor = direction != 0 && neighbor != currentWeek;
+        float offset = dragDx;
+
+        // 先画当前页，再画从侧边进入的相邻周。时间轴跟随整页移动。
+        drawPage(canvas, currentWeek, offset, true);
+        if (drawNeighbor) {
+            float neighborOffset = offset + direction * pageWidth();
+            drawPage(canvas, neighbor, neighborOffset, false);
+            drawPageEdge(canvas, direction, neighborOffset, h);
+        }
+    }
+
+    /** 翻页接缝：一条细边加短距离渐变，明确这是两页，而不是两张网格叠在一起。 */
+    private void drawPageEdge(Canvas canvas, int direction, float neighborOffset, int h) {
+        float edgeX = direction > 0 ? neighborOffset : neighborOffset + pageWidth();
+        float shadowWidth = dp(12);
+        float shadowStart = direction > 0 ? edgeX - shadowWidth : edgeX;
+        float shadowEnd = direction > 0 ? edgeX : edgeX + shadowWidth;
+
+        pageEdgePaint.setShader(new LinearGradient(
+                shadowStart, 0, shadowEnd, 0,
+                direction > 0
+                        ? new int[]{0x00000000, G.HAIR}
+                        : new int[]{G.HAIR, 0x00000000},
+                null, android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawRect(Math.min(shadowStart, shadowEnd), headerHeight,
+                Math.max(shadowStart, shadowEnd), h, pageEdgePaint);
+        pageEdgePaint.setShader(null);
+
+        pageEdgePaint.setColor(G.alpha(G.INK, 0x1F));
+        canvas.drawRect(edgeX - dp(0.45f), 0, edgeX + dp(0.45f), h, pageEdgePaint);
+    }
+
+    private void drawPage(Canvas canvas, int week, float xOffset, boolean isPrimary) {
+        int w = getWidth();
+        int h = getHeight();
+        float colWidth = columnWidth(w);
+        int savedWeek = currentWeek;
+        List<HitBlock> savedHits = isPrimary ? null : new ArrayList<>(hitBlocks);
+        if (!isPrimary) hitBlocks.clear();
+        currentWeek = week;
+        overlay = overlayFor(week);
+
+        canvas.save();
+        canvas.translate(xOffset, 0);
+        canvas.clipRect(-xOffset, 0, w - xOffset, h);
+
+        canvas.save();
+        canvas.clipRect(0, headerHeight, w, h);
+        drawTimeColumnAndGrid(canvas, w, colWidth);
+        if (showInactiveCourses) drawCourseBlocks(canvas, colWidth, false);
+        drawCourseBlocks(canvas, colWidth, true);
+        canvas.restore();
+        drawWeekHeader(canvas, colWidth, w);
+        if (isPrimary) drawScrollHint(canvas, w, h);
+
+        canvas.restore();
+        currentWeek = savedWeek;
+        if (!isPrimary) {
+            hitBlocks.clear();
+            if (savedHits != null) hitBlocks.addAll(savedHits);
+        }
+    }
+
+    private boolean isViewingRealCurrentWeek() {
+        if (semesterStartDate == null || semesterStartDate.isEmpty()) return false;
+        return currentWeek == WeekMath.currentWeek(semesterStartDate, totalWeeks);
+    }
+
+    private void drawWeekHeader(Canvas canvas, float colWidth, int w) {
+        if (!G.GLASS) {
+            bgPaint.setStyle(Paint.Style.FILL);
+            bgPaint.setColor(G.CARD);
+            canvas.drawRect(0, 0, w, headerHeight, bgPaint);
+        }
+
+        String[] dateLabels = WeekMath.weekDates(semesterStartDate, currentWeek);
+
+        subTextPaint.setColor(G.MUTE);
+        subTextPaint.setTextSize(sp(9.5f));
+        subTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
+        subTextPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText("节次", timeColWidth / 2f, headerHeight / 2f + dp(4), subTextPaint);
+
+        boolean highlightToday = isViewingRealCurrentWeek();
+        for (int d = 1; d <= columnCount(); d++) {
+            float cx = timeColWidth + (d - 0.5f) * colWidth;
+            boolean isToday = highlightToday && d == todayDayOfWeek;
+
+            if (isToday && G.GLASS) {
+                // 今天：浅色半透明胶囊 + 底部一小段砖红，不再用黑胶囊
+                badgePaint.setColor(G.alpha(INK, 0x14));
+                RectF pill = new RectF(cx - colWidth / 2f + dp(3), dp(8), cx + colWidth / 2f - dp(3), headerHeight - dp(5));
+                canvas.drawRoundRect(pill, dp(12), dp(12), badgePaint);
+                badgePaint.setColor(G.alarm());
+                canvas.drawRoundRect(new RectF(cx - dp(7), pill.bottom - dp(4.5f), cx + dp(7), pill.bottom - dp(2.5f)),
+                        dp(1), dp(1), badgePaint);
+            } else if (isToday) {
+                badgePaint.setColor(ACCENT);
+                canvas.drawRect(cx - dp(9), headerHeight - dp(2.5f), cx + dp(9), headerHeight, badgePaint);
+            }
+            int todayInk = G.GLASS ? INK : ACCENT;
+
+            textPaint.setTypeface(Typeface.DEFAULT_BOLD);
+            textPaint.setTextSize(sp(12.5f));
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setColor(isToday ? todayInk : INK);
+            canvas.drawText("周" + DAY_NAMES[d - 1], cx, dp(23), textPaint);
+
+            subTextPaint.setTypeface(Typeface.MONOSPACE);
+            subTextPaint.setTextSize(sp(9.5f));
+            subTextPaint.setTextAlign(Paint.Align.CENTER);
+            subTextPaint.setColor(isToday ? todayInk : INK_3);
+            String dayLabel = overlay.dayLabels[d];
+            if (dayLabel != null) {
+                // 放假 / 补课日：日期换成标签
+                subTextPaint.setTypeface(Typeface.DEFAULT_BOLD);
+                subTextPaint.setColor(overlay.dayOff[d] ? ACCENT : INK);
+                canvas.drawText(dayLabel.length() > 4 ? dayLabel.substring(0, 4) : dayLabel, cx, dp(39), subTextPaint);
+            } else {
+                canvas.drawText(dateLabels[d - 1], cx, dp(39), subTextPaint);
+            }
+        }
+
+        if (!G.GLASS) canvas.drawLine(0, headerHeight, w, headerHeight, gridPaint);
+    }
+
+    private void drawTimeColumnAndGrid(Canvas canvas, int w, float colWidth) {
+        for (int sec = 1; sec <= totalSections(); sec++) {
+            float top = sectionTopY(sec);
+            float bottom = sectionBottomY(sec);
+            float cy = (top + bottom) / 2f;
+
+            if (bottom > headerHeight && top < getHeight()) {
+                textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                textPaint.setTextSize(sp(11.5f));
+                textPaint.setColor(G.INK);
+                textPaint.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(String.valueOf(sec), timeColWidth / 2f, cy - dp(9), textPaint);
+
+                subTextPaint.setTypeface(Typeface.MONOSPACE);
+                subTextPaint.setTextSize(sp(7.5f));
+                subTextPaint.setColor(G.MUTE);
+                subTextPaint.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(schedule.startTime(sec), timeColWidth / 2f, cy + dp(2), subTextPaint);
+                canvas.drawText(schedule.endTime(sec), timeColWidth / 2f, cy + dp(11), subTextPaint);
+            }
+
+            if (!G.GLASS) canvas.drawLine(timeColWidth, bottom, w, bottom, gridPaint);
+        }
+
+        if (G.GLASS) return;
+        for (int d = 0; d <= columnCount(); d++) {
+            float x = timeColWidth + d * colWidth;
+            canvas.drawLine(x, headerHeight, x, getHeight(), gridPaint);
+        }
+    }
+
+    private com.ecut.campus.data.WeekOverlay overlayFor(int week) {
+        com.ecut.campus.data.WeekOverlay o = overlays.get(week);
+        if (o == null) {
+            o = com.ecut.campus.data.WeekOverlay.build(timetable, semesterStartDate, week);
+            overlays.put(week, o);
+        }
+        return o;
+    }
+
+    private void drawCourseBlocks(Canvas canvas, float colWidth, boolean activePass) {
+        if (timetable == null || timetable.courses == null) return;
+
+        // 本周真正要上的课（去掉停课/放假，加上补课/调来的）按真实起止位置算重叠；重叠的一簇按列并排，全部可点。
+        java.util.Map<Timetable.Session, int[]> laneOf = new java.util.IdentityHashMap<>();
+        List<List<Timetable.Session>> perDay = new ArrayList<>();
+        for (int d = 0; d <= 7; d++) perDay.add(new ArrayList<>());
+        for (Timetable.Course c : timetable.courses) {
+            for (Timetable.Session s : c.sessions) {
+                if (s.dayOfWeek < 1 || s.dayOfWeek > columnCount()) continue;
+                if (s.isActive(currentWeek) && !overlay.cancelled.containsKey(s)) perDay.get(s.dayOfWeek).add(s);
+            }
+        }
+        for (com.ecut.campus.data.WeekOverlay.Extra e : overlay.extras) {
+            int d = e.session.dayOfWeek;
+            if (d >= 1 && d <= columnCount()) perDay.get(d).add(e.session);
+        }
+        for (int d = 1; d <= 7; d++) assignLanes(perDay.get(d), laneOf);
+
+        for (Timetable.Course course : timetable.courses) {
+            for (Timetable.Session s : course.sessions) {
+                if (s.dayOfWeek < 1 || s.dayOfWeek > columnCount()) continue;
+                boolean isActive = s.isActive(currentWeek);
+                com.ecut.campus.data.WeekOverlay.Mark mark = isActive ? overlay.cancelled.get(s) : null;
+                // 被停/放假/调走的课总是画出来（虚线 + 标签），不受「显示非本周」开关影响
+                boolean pass = mark != null || isActive;
+                if (pass != activePass) continue;
+                boolean solid = isActive && mark == null;
+                if (!solid && overlapsActive(s, perDay.get(s.dayOfWeek))) continue;
+                String tag = mark != null ? "[" + mark.label + "] " : null;
+                HitBlock hb = drawBlock(canvas, colWidth, course, s, solid, tag, laneOf.get(s));
+                if (hb != null && mark != null) {
+                    hb.label = mark.label;
+                    hb.adjustId = mark.adjustId;
+                }
+            }
+        }
+        if (activePass) {
+            for (com.ecut.campus.data.WeekOverlay.Extra e : overlay.extras) {
+                int d = e.session.dayOfWeek;
+                if (d < 1 || d > columnCount()) continue;
+                HitBlock hb = drawBlock(canvas, colWidth, e.course, e.session, true,
+                        "[" + e.label + "] ", laneOf.get(e.session));
+                if (hb != null) {
+                    hb.label = e.label;
+                    hb.adjustId = e.adjustId;
+                    hb.extra = true;
+                }
+            }
+            drawNowLine(canvas, colWidth);
+            drawGhost(canvas, colWidth);
+        }
+    }
+
+    private boolean overlapsActive(Timetable.Session s, List<Timetable.Session> active) {
+        float[] pos = position(s);
+        for (Timetable.Session a : active) {
+            if (a == s) continue;
+            float[] p = position(a);
+            if (p[0] < pos[1] - 0.01f && pos[0] < p[1] - 0.01f) return true;
+        }
+        return false;
+    }
+
+    /** 画一个课块并登记点击区域；不在可见范围返回 null。 */
+    private HitBlock drawBlock(Canvas canvas, float colWidth, Timetable.Course course, Timetable.Session s,
+                              boolean isActive, String tag, int[] laneInfo) {
+        int colorIdx = Math.abs(course.colorIndex) % PALETTE_BG.length;
+        int bgColor = PALETTE_BG[colorIdx];
+        int fgColor = PALETTE_FG[colorIdx];
+        float padH = dp(1.6f);
+        float padV = dp(1.6f);
+        float radius = G.GLASS ? dp(10f) : dp(3f);
+        float[] pos = position(s);
+
+        int lane = 0;
+        int lanes = 1;
+        if (isActive && laneInfo != null) { lane = laneInfo[0]; lanes = laneInfo[1]; }
+
+        float cellLeft = timeColWidth + (s.dayOfWeek - 1) * colWidth;
+        float laneW = colWidth / lanes;
+        float left = cellLeft + lane * laneW + padH;
+        float right = cellLeft + (lane + 1) * laneW - padH;
+        float top = posY(pos[0]) + padV;
+        float bottom = posY(pos[1]) - padV;
+        RectF rect = new RectF(left, top, right, bottom);
+        if (rect.bottom <= headerHeight || rect.top >= getHeight()) return null;
+
+        int textColor = isActive ? fgColor : INK_3;
+        int liveLeft = -1;
+        float progress = isActive && tag == null ? liveProgress(s) : -1f;
+        boolean live = progress >= 0f;
+        int rainLv = isActive && tag == null ? resolveRainLevel(s) : com.ecut.campus.data.RainForecast.NONE;
+        if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
+            drawRainOuterGlow(canvas, rect, radius, rainLv, live);
+        }
+        if (isActive) {
+            if (live) {
+                // 正在上的课：保留课色，已上的部分略深（夜间略浅），外加红框 + 左侧红书脊；不再用墨色实块
+                int fill = bgColor;
+                if (G.GLASS) {
+                    int glass = PALETTE_GLASS[colorIdx];
+                    fill = G.NIGHT ? G.alpha(G.mix(glass, 0xFF000000, 0.58f), 0xC8) : G.alpha(glass, 0xD6);
+                    textColor = glassInk(colorIdx);
+                }
+                blockPaint.setStyle(Paint.Style.FILL);
+                blockPaint.setColor(fill);
+                canvas.drawRoundRect(rect, radius, radius, blockPaint);
+                if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
+                    drawRainInnerMist(canvas, rect, radius, rainLv, true);
+                }
+                canvas.save();
+                clipPath.reset();
+                clipPath.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW);
+                canvas.clipPath(clipPath);
+                blockPaint.setColor(G.alpha(fgColor, 0x21));  // ≈ mix(底色, 字色, 0.13)：日间更深、夜间更浅
+                float split = top + (bottom - top) * progress;
+                canvas.drawRect(left, top, right, split, blockPaint);
+                // 「现在」在块内只画一条朱砂发丝线（在文字下面），块外的现在线遇到这里会跳过
+                blockPaint.setColor(G.alpha(G.alarm(), 0x99));
+                float hl = Math.max(1f, dp(0.7f));
+                canvas.drawRect(left, split - hl / 2f, right, split + hl / 2f, blockPaint);
+                accentPaint.setStyle(Paint.Style.FILL);
+                accentPaint.setColor(G.alarm());
+                canvas.drawRect(left, top, left + dp(3f), bottom, accentPaint);
+                canvas.restore();
+                if (G.GLASS) {
+                    blockPaint.setStyle(Paint.Style.STROKE);
+                    blockPaint.setStrokeWidth(Math.max(1f, dp(0.8f)));
+                    blockPaint.setColor(G.alpha(0xFFFFFFFF, G.NIGHT ? 0x26 : 0xCC));
+                    canvas.drawRoundRect(rect, radius, radius, blockPaint);
+                }
+                float sw = dp(2f), in = sw / 2f + (G.GLASS ? dp(0.8f) : 0f);
+                blockPaint.setStyle(Paint.Style.STROKE);
+                blockPaint.setStrokeWidth(sw);
+                blockPaint.setColor(G.alarm());
+                canvas.drawRoundRect(new RectF(left + in, top + in, right - in, bottom - in),
+                        Math.max(0f, radius - in), Math.max(0f, radius - in), blockPaint);
+                blockPaint.setStyle(Paint.Style.FILL);
+                liveLeft = Math.max(1, sessionEndMin(s) - nowMinutes);
+            } else if (G.GLASS) {
+                blockPaint.setStyle(Paint.Style.FILL);
+                int glass = PALETTE_GLASS[colorIdx];
+                blockPaint.setColor(G.NIGHT ? G.alpha(G.mix(glass, 0xFF000000, 0.58f), 0xC8) : G.alpha(glass, 0xD6));
+                canvas.drawRoundRect(rect, radius, radius, blockPaint);
+                if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
+                    drawRainInnerMist(canvas, rect, radius, rainLv, false);
+                }
+                blockPaint.setStyle(Paint.Style.STROKE);
+                blockPaint.setStrokeWidth(Math.max(1f, dp(0.8f)));
+                blockPaint.setColor(G.alpha(0xFFFFFFFF, G.NIGHT ? 0x26 : 0xCC));
+                canvas.drawRoundRect(rect, radius, radius, blockPaint);
+                textColor = glassInk(colorIdx);
+            } else {
+                blockPaint.setStyle(Paint.Style.FILL);
+                blockPaint.setColor(bgColor);
+                canvas.drawRoundRect(rect, radius, radius, blockPaint);
+                if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
+                    drawRainInnerMist(canvas, rect, radius, rainLv, false);
+                }
+
+                // 发丝书脊：左侧 2dp 实色
+                accentPaint.setStyle(Paint.Style.FILL);
+                accentPaint.setColor(fgColor);
+                canvas.drawRect(left, top, left + dp(2f), bottom, accentPaint);
+            }
+
+            // 快上课了（15 分钟内）：右下角一圈刻度倒计时
+            int until = tag == null ? minutesUntil(s) : -1;
+            if (until >= 0 && until <= 15 && !live) drawCountdown(canvas, rect, until);
+
+            if (lanes > 1) {
+                // 冲突角标：朱砂小方块 + 数量
+                float bs = dp(11);
+                RectF badge = new RectF(right - bs - dp(2), top + dp(2), right - dp(2), top + dp(2) + bs);
+                badgePaint.setColor(G.alarm());
+                canvas.drawRoundRect(badge, dp(2), dp(2), badgePaint);
+                subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                subTextPaint.setTextSize(sp(7.5f));
+                subTextPaint.setColor(PAPER);
+                subTextPaint.setAlpha(255);
+                subTextPaint.setTextAlign(Paint.Align.CENTER);
+                canvas.drawText(String.valueOf(lanes), badge.centerX(), badge.centerY() + dp(2.7f), subTextPaint);
+            }
+        } else {
+            blockPaint.setStyle(Paint.Style.STROKE);
+            blockPaint.setStrokeWidth(Math.max(1f, dp(0.7f)));
+            blockPaint.setColor(tag != null ? G.alpha(ACCENT, 0x66) : G.alpha(G.INK, 0x24));
+            blockPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{dp(3), dp(2.5f)}, 0));
+            canvas.drawRoundRect(rect, radius, radius, blockPaint);
+            blockPaint.setPathEffect(null);
+        }
+
+        drawBlockText(canvas, rect, course, s, isActive, textColor, tag, liveLeft, rainLv);
+        HitBlock hb = new HitBlock(rect, course, s, isActive);
+        hitBlocks.add(hb);
+        return hb;
+    }
+
+    /** 供预览或测试注入指定天气数据；正常运行时传 null 走 RainWeather。 */
+    public void setRainPreviewOverride(@Nullable com.ecut.campus.data.RainForecast forecast) {
+        this.rainPreviewOverride = forecast;
+        invalidate();
+    }
+
+    private int resolveRainLevel(Timetable.Session s) {
+        if (semesterStartDate == null || semesterStartDate.isEmpty()) {
+            return com.ecut.campus.data.RainForecast.NONE;
+        }
+        com.ecut.campus.data.RainForecast rf = rainPreviewOverride != null
+                ? rainPreviewOverride : RainWeather.current(getContext());
+        if (rf == null) return com.ecut.campus.data.RainForecast.NONE;
+        String ymd = com.ecut.campus.data.Dates.dateOf(semesterStartDate, currentWeek, s.dayOfWeek);
+        if (ymd.isEmpty()) return com.ecut.campus.data.RainForecast.NONE;
+        return rf.query(ymd, sessionStartMin(s), sessionEndMin(s), System.currentTimeMillis()).level;
+    }
+
+    /**
+     * 1. 静态雨蓝光晕：课块外圈一层模糊的冷色「雨蓝」光晕（日间 #5B7FA6、夜间 #8FB3DA）。
+     * 正在上的课（live）有朱砂框，光晕强度减半。
+     */
+    private void drawRainOuterGlow(Canvas canvas, RectF rect, float radius, int rainLv, boolean live) {
+        float glow = com.ecut.campus.data.RainForecast.glowStrength(rainLv);
+        if (glow <= 0f) return;
+        int rainBlue = G.NIGHT
+                ? com.ecut.campus.data.RainForecast.RAIN_BLUE_NIGHT
+                : com.ecut.campus.data.RainForecast.RAIN_BLUE_DAY;
+        float factor = live ? 0.5f : 1f;
+        float k = glow * factor * (G.NIGHT ? 0.78f : 0.56f);
+        float[] radiiDp = {7.2f, 5.6f, 4.2f, 3.0f, 2.0f, 1.0f};
+        float[] weights = {0.10f, 0.14f, 0.18f, 0.22f, 0.26f, 0.30f};
+        rainPaint.setShader(null);
+        rainPaint.setStyle(Paint.Style.FILL);
+        for (int i = 0; i < radiiDp.length; i++) {
+            float r = dp(radiiDp[i]);
+            int a = Math.max(1, Math.min(255, Math.round(255f * weights[i] * k)));
+            rainPaint.setColor(G.alpha(rainBlue, a));
+            canvas.drawRoundRect(
+                    new RectF(rect.left - r, rect.top - r, rect.right + r, rect.bottom + r),
+                    radius + r, radius + r, rainPaint);
+        }
+    }
+
+    /**
+     * 2. 卡内静态水汽：卡片上半部一层很淡的冷色渐变。
+     * 正在上的课（live）水汽强度减半。
+     */
+    private void drawRainInnerMist(Canvas canvas, RectF rect, float radius, int rainLv, boolean live) {
+        float glow = com.ecut.campus.data.RainForecast.glowStrength(rainLv);
+        if (glow <= 0f) return;
+        int rainBlue = G.NIGHT
+                ? com.ecut.campus.data.RainForecast.RAIN_BLUE_NIGHT
+                : com.ecut.campus.data.RainForecast.RAIN_BLUE_DAY;
+        float factor = live ? 0.5f : 1f;
+        int topA = Math.max(1, Math.min(255, Math.round(60f * glow * factor)));
+        float mistH = rect.height() * 0.5f;
+        if (mistH <= dp(4f)) return;
+        canvas.save();
+        clipPath.reset();
+        clipPath.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW);
+        canvas.clipPath(clipPath);
+        rainPaint.setStyle(Paint.Style.FILL);
+        rainPaint.setShader(new LinearGradient(
+                0, rect.top, 0, rect.top + mistH,
+                new int[]{G.alpha(rainBlue, topA), G.alpha(rainBlue, topA / 4), 0x00000000},
+                new float[]{0f, 0.5f, 1f},
+                android.graphics.Shader.TileMode.CLAMP));
+        canvas.drawRect(rect.left, rect.top, rect.right, rect.top + mistH, rainPaint);
+        rainPaint.setShader(null);
+        canvas.restore();
+    }
+
+    /** 第 p 节边界（0 = 第 1 节顶部）对应的 y。 */
+    private float posY(float p) {
+        return headerHeight + p * rowHeight - scrollOffset;
+    }
+
+    /**
+     * 时段在网格里的起止位置，单位「节」（第 1 节顶部为 0）。
+     * 普通课按真实节次（可以是单节、三节）；自定义时间按作息表换算，不必对齐节次。
+     */
+    private float[] position(Timetable.Session s) {
+        if (s.hasCustomTime()) {
+            float a = minutesToPos(Timetable.Session.minutesOf(s.timeStart));
+            float b = minutesToPos(Timetable.Session.minutesOf(s.timeEnd));
+            if (b - a < 0.35f) b = Math.min(totalSections(), a + 0.35f);  // 太短也要能点到
+            return new float[]{a, b};
+        }
+        int st = Math.max(1, Math.min(totalSections(), s.startSection));
+        int en = Math.max(st, Math.min(totalSections(), s.endSection));
+        return new float[]{st - 1, en};
+    }
+
+    /** 某个时刻落在网格的哪里：节内按比例，课间压到相邻边界上。 */
+    private float minutesToPos(int m) {
+        for (int sec = 1; sec <= totalSections(); sec++) {
+            int st = schedule.startMinutes(sec);
+            int en = schedule.endMinutes(sec);
+            if (m <= st) return sec - 1;
+            if (m <= en) return sec - 1 + (m - st) / (float) Math.max(1, en - st);
+        }
+        return totalSections();
+    }
+
+    /** 同一天的时段按重叠分簇，簇内贪心分列；laneOf[s] = {第几列, 共几列}。 */
+    private void assignLanes(List<Timetable.Session> list, java.util.Map<Timetable.Session, int[]> laneOf) {
+        if (list.isEmpty()) return;
+        List<Timetable.Session> sorted = new ArrayList<>(list);
+        sorted.sort((x, y) -> Float.compare(position(x)[0], position(y)[0]));
+        List<Timetable.Session> cluster = new ArrayList<>();
+        List<Float> laneEnds = new ArrayList<>();
+        float clusterEnd = -1;
+        for (Timetable.Session s : sorted) {
+            float[] p = position(s);
+            if (!cluster.isEmpty() && p[0] >= clusterEnd - 0.01f) {
+                for (Timetable.Session c : cluster) laneOf.get(c)[1] = laneEnds.size();
+                cluster.clear();
+                laneEnds.clear();
+            }
+            int lane = -1;
+            for (int i = 0; i < laneEnds.size(); i++) {
+                if (laneEnds.get(i) <= p[0] + 0.01f) { lane = i; break; }
+            }
+            if (lane < 0) { lane = laneEnds.size(); laneEnds.add(p[1]); } else laneEnds.set(lane, p[1]);
+            laneOf.put(s, new int[]{lane, 1});
+            cluster.add(s);
+            clusterEnd = Math.max(clusterEnd, p[1]);
+        }
+        for (Timetable.Session c : cluster) laneOf.get(c)[1] = laneEnds.size();
+    }
+
+    /** 现在线：今天这一列里，按作息时间画一条朱砂发丝线 + 圆点。 */
+    private void drawNowLine(Canvas canvas, float colWidth) {
+        if (!isViewingRealCurrentWeek()) return;
+        if (todayDayOfWeek < 1 || todayDayOfWeek > columnCount()) return;
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        int m = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE);
+        float y = -1;
+        for (int sec = 1; sec <= totalSections(); sec++) {
+            int st = schedule.startMinutes(sec);
+            int en = schedule.endMinutes(sec);
+            float top = sectionTopY(sec);
+            float bottom = sectionBottomY(sec);
+            if (m < st) { y = top; break; }
+            if (m <= en) {
+                y = top + (bottom - top) * (m - st) / (float) Math.max(1, en - st);
+                break;
+            }
+        }
+        if (y < 0 || y <= headerHeight) return;
+        float x0 = timeColWidth + (todayDayOfWeek - 1) * colWidth;
+        for (HitBlock hb : hitBlocks) {
+            // 正在上的课块里已有那条发丝分界线，现在线就不再压过课名
+            if (hb.active && hb.label == null && hb.session.dayOfWeek == todayDayOfWeek
+                    && y >= hb.rect.top && y <= hb.rect.bottom && liveProgress(hb.session) >= 0f) return;
+        }
+        accentPaint.setStyle(Paint.Style.FILL);
+        accentPaint.setColor(G.alarm());
+        canvas.drawRect(x0, y - dp(0.6f), x0 + colWidth, y + dp(0.6f), accentPaint);
+        canvas.drawCircle(x0 + dp(1), y, dp(3), accentPaint);
+    }
+
+    // ==================== 实时：进度 / 倒计时 ====================
+
+    private int nowMinutes = -1;
+
+    private static int nowMinutesOfDay() {
+        java.util.Calendar now = java.util.Calendar.getInstance();
+        return now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE);
+    }
+
+    private int sessionStartMin(Timetable.Session s) {
+        if (s.hasCustomTime()) return Timetable.Session.minutesOf(s.timeStart);
+        return schedule.startMinutes(Math.max(1, Math.min(totalSections(), s.startSection)));
+    }
+
+    private int sessionEndMin(Timetable.Session s) {
+        if (s.hasCustomTime()) return Timetable.Session.minutesOf(s.timeEnd);
+        return schedule.endMinutes(Math.max(1, Math.min(totalSections(), s.endSection)));
+    }
+
+    private boolean isTodayCell(Timetable.Session s) {
+        return isViewingRealCurrentWeek() && s.dayOfWeek == todayDayOfWeek;
+    }
+
+    /** 正在上这节课时返回已上比例 0..1，否则 -1。 */
+    private float liveProgress(Timetable.Session s) {
+        if (nowMinutes < 0 || !isTodayCell(s)) return -1f;
+        int a = sessionStartMin(s), b = sessionEndMin(s);
+        if (a < 0 || b <= a || nowMinutes < a || nowMinutes >= b) return -1f;
+        return liveProgressOf(nowMinutes, a, b);
+    }
+
+    static float liveProgressOf(int now, int start, int end) {
+        if (end <= start || now < start || now >= end) return -1f;
+        return Math.max(0.02f, Math.min(1f, (now - start) / (float) (end - start)));
+    }
+
+    /** 今天还没开始的课，距开始还有几分钟；不是今天或已开始返回 -1。 */
+    private int minutesUntil(Timetable.Session s) {
+        if (nowMinutes < 0 || !isTodayCell(s)) return -1;
+        int a = sessionStartMin(s);
+        return a > nowMinutes ? a - nowMinutes : -1;
+    }
+
+    /**
+     * 下一节课开始前的倒计时：圆环随时间「填满」——越接近上课填得越多，满圈 = 马上上课；
+     * 中间写剩几分钟。课块太矮放不下圆环时，改成右下角一行「N分后」，不让有的课有、有的课没有。
+     */
+    private void drawCountdown(Canvas canvas, RectF rect, int minutes) {
+        int color = G.alarm();
+        float r = dp(8f);
+        float cx = rect.right - r - dp(3f);
+        float cy = rect.bottom - r - dp(3f);
+        subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        subTextPaint.setColor(color);
+        subTextPaint.setAlpha(255);
+        if (cy - r < rect.top + dp(14)) {
+            subTextPaint.setTextSize(sp(8.5f));
+            subTextPaint.setTextAlign(Paint.Align.RIGHT);
+            canvas.drawText(minutes + "分后", rect.right - dp(4f), rect.bottom - dp(4f), subTextPaint);
+            return;
+        }
+        accentPaint.setStyle(Paint.Style.STROKE);
+        accentPaint.setStrokeWidth(dp(1.4f));
+        accentPaint.setColor(G.alpha(INK, 0x22));
+        canvas.drawCircle(cx, cy, r, accentPaint);
+        accentPaint.setColor(color);
+        float sweep = 360f * Math.max(0, 15 - minutes) / 15f;
+        canvas.drawArc(new RectF(cx - r, cy - r, cx + r, cy + r), -90f, Math.max(sweep, 8f), false, accentPaint);
+        accentPaint.setStyle(Paint.Style.FILL);
+        subTextPaint.setTextSize(sp(7.5f));
+        subTextPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText(String.valueOf(minutes), cx, cy + dp(2.6f), subTextPaint);
+        // 圆环左边补一个「分后」，第一次看也不会读反
+        subTextPaint.setTextSize(sp(7f));
+        subTextPaint.setTextAlign(Paint.Align.RIGHT);
+        if (cx - r - dp(2) - subTextPaint.measureText("分后") > rect.left + dp(4)) {
+            canvas.drawText("分后", cx - r - dp(2f), cy + dp(2.4f), subTextPaint);
+        }
+    }
+
+    private final Runnable ticker = new Runnable() {
+        @Override
+        public void run() {
+            invalidate();
+            postDelayed(this, 30_000L);
+        }
+    };
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        removeCallbacks(ticker);
+        postDelayed(ticker, 30_000L);
+    }
+
+    // ==================== 空白处画课 ====================
+
+    /** 正在画的那一段：day > 0 表示进入画课模式。 */
+    private int ghostDay, ghostStart, ghostEnd;
+    /** 长按的那一格：往下拖从它往下长，往上拖从它往上长。 */
+    private int ghostAnchor;
+    private boolean ghostClipped;
+
+    private void drawGhost(Canvas canvas, float colWidth) {
+        if (ghostDay <= 0) return;
+        float l = timeColWidth + (ghostDay - 1) * colWidth + dp(1.6f);
+        float r = l + colWidth - dp(3.2f);
+        RectF g = new RectF(l, sectionTopY(ghostStart) + dp(1.6f), r, sectionBottomY(ghostEnd) - dp(1.6f));
+        float rad = G.GLASS ? dp(10) : dp(3);
+        blockPaint.setStyle(Paint.Style.FILL);
+        blockPaint.setColor(G.alpha(INK, 0x14));
+        canvas.drawRoundRect(g, rad, rad, blockPaint);
+        blockPaint.setStyle(Paint.Style.STROKE);
+        blockPaint.setStrokeWidth(dp(1.2f));
+        blockPaint.setColor(INK);
+        blockPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{dp(4), dp(3)}, 0));
+        canvas.drawRoundRect(g, rad, rad, blockPaint);
+        blockPaint.setPathEffect(null);
+        textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        textPaint.setTextSize(sp(10f));
+        textPaint.setColor(INK);
+        textPaint.setTextAlign(Paint.Align.CENTER);
+        String label = ghostStart == ghostEnd ? ghostStart + "节" : ghostStart + "–" + ghostEnd;
+        canvas.drawText(label, g.centerX(), g.top + dp(16), textPaint);
+    }
+
+    /** 这一格（day, sec）有没有本周的课挡着。 */
+    private boolean occupied(int day, int sec) {
+        float colWidth = columnWidth(getWidth());
+        float x = timeColWidth + (day - 0.5f) * colWidth;
+        float y = (sectionTopY(sec) + sectionBottomY(sec)) / 2f;
+        for (HitBlock b : hitBlocks) if (b.active && b.rect.contains(x, y)) return true;
+        return false;
+    }
+
+    private int sectionAt(float y) {
+        for (int sec = 1; sec <= totalSections(); sec++) {
+            if (y >= sectionTopY(sec) && y <= sectionBottomY(sec)) return sec;
+        }
+        return y < sectionTopY(1) ? 1 : totalSections();
+    }
+
+    private void updateGhost(float y) {
+        int target = sectionAt(y);
+        int a = ghostAnchor, b = ghostAnchor;
+        if (target >= ghostAnchor) {
+            while (b < target && !occupied(ghostDay, b + 1)) b++;
+        } else {
+            while (a > target && !occupied(ghostDay, a - 1)) a--;
+        }
+        // 拖到别的课上：停在它前一节，并轻震一下告诉你「到头了」
+        boolean clipped = target > b || target < a;
+        if (clipped && !ghostClipped) performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        ghostClipped = clipped;
+        if (a != ghostStart || b != ghostEnd) {
+            ghostStart = a;
+            ghostEnd = b;
+            performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            invalidate();
+        }
+    }
+
+    private void drawBlockText(Canvas canvas, RectF rect, Timetable.Course course,
+                               Timetable.Session s, boolean isActive, int textColor, String tag, int liveLeft, int rainLv) {
+        float innerLeft = rect.left + (isActive ? dp(6.2f) : dp(4.0f));
+        float innerRight = rect.right - dp(2.2f);
+        float innerWidth = Math.max(dp(16), innerRight - innerLeft);
+        float innerTop = rect.top + dp(5f);
+        float innerBottom = rect.bottom - dp(4f);
+
+        canvas.save();
+        canvas.clipRect(rect.left + dp(2), Math.max(rect.top + dp(2), headerHeight),
+                rect.right - dp(2), rect.bottom - dp(2));
+
+        textPaint.setTypeface(Typeface.DEFAULT_BOLD);
+        textPaint.setTextSize(sp(10.0f));
+        textPaint.setColor(textColor);
+        textPaint.setTextAlign(Paint.Align.LEFT);
+
+        String title = course.name != null ? course.name : "";
+        if (tag != null) title = tag + title;
+        else if (!isActive) title = "[非本周] " + title;
+        int w = Math.round(innerWidth);
+        StaticLayout titleLayout = textLayout(title, textPaint, w, 3, 1.02f);
+
+        // 下面几行都用真实字体量高度（衬线、加宽字距的系统字体会更高更宽），放不下就按优先级丢：
+        // 优先保留课名和教室，再为选中的课程号、自定义时间、教师和标签分配空间。
+        TextPaint sub = bpSub;
+        sub.set(subTextPaint);
+        sub.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        sub.setTextSize(sp(8.2f));
+        sub.setColor(textColor);
+        sub.setAlpha(isActive ? 215 : 165);
+        sub.setTextAlign(Paint.Align.LEFT);
+        TextPaint mono = bpMono;
+        mono.set(sub);
+        mono.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        mono.setAlpha(isActive ? 235 : 165);
+
+        String loc = ClassroomLabel.compact(s.location, hiddenLocationPhrases);
+        String tl = s.hasCustomTime() ? s.timeStart + "–" + s.timeEnd : "";
+        String teacher = s.teacherFor(currentWeek, course.teacher).trim();
+        float gap = dp(3f);
+        float available = innerBottom - innerTop;
+        boolean hasCode = showCourseCode && course.code != null && !course.code.isEmpty()
+                && !course.code.equals(course.name);
+        float locationSpace = available - titleLayout.getHeight() - gap;
+        if (hasCode) locationSpace -= gap + sub.getFontSpacing();
+        StaticLayout locL = locationLayout(loc, sub, w, locationSpace);
+        StaticLayout timeL = tl.isEmpty() ? null : textLayout(tl, mono, w, 2, 1f);
+        StaticLayout teacherL = teacher.isEmpty() ? null : textLayout(teacher, sub, w, 2, 1f);
+
+        // 正在上：一行标签放在教室正上方。宽够写「● 进行中 · 剩N分」，否则只写「剩N分」，再不行就不写（红框已经说明在上）
+        TextPaint tagCn = bpTagCn;
+        tagCn.set(sub);
+        tagCn.setTypeface(Typeface.DEFAULT_BOLD);
+        tagCn.setColor(G.alarm());
+        tagCn.setAlpha(255);
+        TextPaint tagNum = bpTagNum;
+        tagNum.set(tagCn);
+        tagNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        String tagPre = null;
+        if (liveLeft > 0) {
+            String n = String.valueOf(liveLeft);
+            if (tagWidth("● 进行中 · 剩", n, tagCn, tagNum) <= innerWidth) tagPre = "● 进行中 · 剩";
+            else if (tagWidth("剩", n, tagCn, tagNum) <= innerWidth) tagPre = "剩";
+        }
+        float tagH = tagPre == null ? 0f : tagCn.getFontMetrics().descent - tagCn.getFontMetrics().ascent;
+
+        int titleLines = titleLayout.getLineCount();
+        float[] titleCum = new float[titleLines];
+        for (int i = 0; i < titleLines; i++) titleCum[i] = titleLayout.getLineBottom(i);
+        float roomHeight = locL == null ? 0f : locL.getHeight();
+        StaticLayout codeL = null;
+        if (hasCode) {
+            StaticLayout measured = textLayout(course.code, sub, w, 3, 1f);
+            float codeSpace = available - gap - (roomHeight > 0 ? gap + roomHeight : 0f);
+            if (titleCum[0] + measured.getLineBottom(0) <= codeSpace) {
+                int lines = measured.getLineCount();
+                while (lines > 1 && titleCum[titleLines - 1] + measured.getLineBottom(lines - 1) > codeSpace) lines--;
+                codeL = lines == measured.getLineCount() ? measured : textLayout(course.code, sub, w, lines, 1f);
+            }
+        }
+        float codeHeight = codeL == null ? 0f : gap + codeL.getHeight();
+        int[] plan = blockPlan(available - codeHeight, titleCum, gap,
+                roomHeight,
+                timeL == null ? 0f : timeL.getHeight(),
+                teacherL == null ? 0f : teacherL.getHeight(),
+                tagH);
+        if (plan[0] < titleLines) titleLayout = textLayout(title, textPaint, w, plan[0], 1.02f);
+
+        if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
+            float liveTagW = (plan[1] & 8) != 0 && tagPre != null
+                    ? tagWidth(tagPre, String.valueOf(liveLeft), tagCn, tagNum) : 0f;
+            drawRainStreaks(canvas, rect, course, s, textColor, rainLv,
+                    innerLeft, innerTop, titleLayout.getHeight() + codeHeight, plan[1], gap,
+                    timeL, teacherL, tagH, liveTagW, locL);
+        }
+
+        canvas.translate(innerLeft, innerTop);
+        titleLayout.draw(canvas);
+        float y = titleLayout.getHeight();
+        if (codeL != null) y = drawAt(canvas, codeL, y + gap);
+        if ((plan[1] & 2) != 0) y = drawAt(canvas, timeL, y + gap);
+        if ((plan[1] & 4) != 0) y = drawAt(canvas, teacherL, y + gap);
+        if ((plan[1] & 8) != 0) {
+            float base = y + gap - tagCn.getFontMetrics().ascent;
+            float x = 0f;
+            canvas.drawText(tagPre, x, base, tagCn);
+            x += tagCn.measureText(tagPre);
+            String n = String.valueOf(liveLeft);
+            canvas.drawText(n, x, base, tagNum);
+            x += tagNum.measureText(n);
+            canvas.drawText("分", x, base, tagCn);
+            y += gap + tagH;
+        }
+        if ((plan[1] & 1) != 0) drawAt(canvas, locL, y + gap);
+
+        canvas.restore();
+
+        // 有备注（作业、提醒）：右下角一个朱砂小点（右上角留给冲突角标）
+        if (isActive && course.note != null && !course.note.isEmpty()) {
+            badgePaint.setColor(ACCENT);
+            canvas.drawCircle(rect.right - dp(6f), rect.bottom - dp(6f), dp(2.6f), badgePaint);
+        }
+        // 缺勤快到上限（缺勤安全气囊）：左缘一条朱砂竖线
+        if (isActive && !warnCourses.isEmpty()
+                && warnCourses.contains(com.ecut.campus.data.AbsenceBook.key(course.name))) {
+            badgePaint.setColor(G.alarm());
+            canvas.drawRect(rect.left, rect.top + dp(2f), rect.left + dp(2.4f), rect.bottom - dp(2f), badgePaint);
+        }
+    }
+
+    /**
+     * 3. 斜向静态细雨丝：只画在卡片右半边、课名和教室中间的空白处，上下两端淡出；
+     * 严格避开已排版的课名、时间、教师、进行中标签和教室文字区域。
+     */
+    private void drawRainStreaks(Canvas canvas, RectF rect, Timetable.Course course, Timetable.Session s,
+                                 int textColor, int rainLv, float innerLeft, float innerTop,
+                                 float headingHeight, int mask, float gap,
+                                 @Nullable StaticLayout timeL, @Nullable StaticLayout teacherL,
+                                 float tagH, float liveTagW, @Nullable StaticLayout locL) {
+        int n = com.ecut.campus.data.RainForecast.streakCount(rainLv);
+        if (n <= 0) return;
+        float w = rect.width(), h = rect.height();
+        float topBand = Math.max(rect.top + dp(22f), innerTop + headingHeight + dp(2f));
+        float botBand = rect.bottom - dp(14f);
+        if (botBand - topBand < dp(12f)) return;
+
+        // 收集课块内每一段文字的真实占宽，雨丝遇到文字行时自动往右让开或跳过
+        float[] boxTop = new float[6];
+        float[] boxBot = new float[6];
+        float[] boxRight = new float[6];
+        int boxCount = 0;
+        float curY = innerTop + headingHeight;
+        if ((mask & 2) != 0 && timeL != null) {
+            boxTop[boxCount] = curY + gap - dp(1.5f);
+            boxBot[boxCount] = curY + gap + timeL.getHeight() + dp(1.5f);
+            boxRight[boxCount] = innerLeft + maxLineWidth(timeL) + dp(3f);
+            boxCount++;
+            curY += gap + timeL.getHeight();
+        }
+        if ((mask & 4) != 0 && teacherL != null) {
+            boxTop[boxCount] = curY + gap - dp(1.5f);
+            boxBot[boxCount] = curY + gap + teacherL.getHeight() + dp(1.5f);
+            boxRight[boxCount] = innerLeft + maxLineWidth(teacherL) + dp(3f);
+            boxCount++;
+            curY += gap + teacherL.getHeight();
+        }
+        if ((mask & 8) != 0 && tagH > 0f) {
+            boxTop[boxCount] = curY + gap - dp(1.5f);
+            boxBot[boxCount] = curY + gap + tagH + dp(1.5f);
+            boxRight[boxCount] = innerLeft + liveTagW + dp(3f);
+            boxCount++;
+            curY += gap + tagH;
+        }
+        if ((mask & 1) != 0 && locL != null) {
+            boxTop[boxCount] = curY + gap - dp(1.5f);
+            boxBot[boxCount] = curY + gap + locL.getHeight() + dp(1.5f);
+            boxRight[boxCount] = innerLeft + maxLineWidth(locL) + dp(3f);
+            boxCount++;
+        }
+
+        float baseLen = dp(com.ecut.campus.data.RainForecast.streakLenDp(rainLv));
+        int baseAlpha = com.ecut.campus.data.RainForecast.streakAlpha(rainLv);
+        int seed = ((course.name != null ? course.name.hashCode() : 0) * 31 + s.dayOfWeek * 7 + s.startSection) ^ 0x5A3C;
+        java.util.Random rnd = new java.util.Random(seed);
+        final float cos70 = 0.34202015f;
+        final float sin70 = 0.9396926f;
+
+        rainPaint.setShader(null);
+        rainPaint.setStyle(Paint.Style.STROKE);
+        rainPaint.setStrokeCap(Paint.Cap.ROUND);
+        rainPaint.setStrokeWidth(Math.max(1f, dp(0.9f)));
+        float spanY = botBand - topBand;
+        float maxRight = rect.right - dp(2.4f);
+        for (int i = 0; i < n; i++) {
+            float r1 = rnd.nextFloat();
+            float r2 = rnd.nextFloat();
+            float r3 = rnd.nextFloat();
+            float u = (i + 0.5f) / n;
+            float normY = (u + 0.07f * r1) % 1f;
+            if (normY < 0f) normY += 1f;
+            float sy = topBand + spanY * normY;
+            float sx = rect.left + w * (0.45f + 0.50f * r2);
+            float L = baseLen * (0.7f + 0.3f * r3);
+            float ex = sx - L * cos70;
+            float ey = sy + L * sin70;
+
+            boolean skip = false;
+            for (int b = 0; b < boxCount; b++) {
+                if (ey >= boxTop[b] && sy <= boxBot[b] && ex < boxRight[b]) {
+                    float shiftedSx = Math.max(sx, boxRight[b] + L * cos70 + dp(1.5f));
+                    if (shiftedSx <= maxRight) {
+                        sx = shiftedSx;
+                        ex = sx - L * cos70;
+                    } else {
+                        skip = true;
+                        break;
+                    }
+                }
+            }
+            if (skip || sx > maxRight) continue;
+
+            float t = (sy - topBand) / spanY;
+            float fd = Math.min(1f, t * 4f) * Math.min(1f, (1f - t) * 3f);
+            int a = Math.round(baseAlpha * fd);
+            if (a <= 4) continue;
+            rainPaint.setColor(G.alpha(textColor, a));
+            canvas.drawLine(sx, sy, ex, ey, rainPaint);
+        }
+    }
+
+    private static float maxLineWidth(StaticLayout layout) {
+        float max = 0f;
+        for (int i = 0; i < layout.getLineCount(); i++) {
+            max = Math.max(max, layout.getLineWidth(i));
+        }
+        return max;
+    }
+
+    private static StaticLayout textLayout(String t, TextPaint p, int width, int maxLines, float mult) {
+        return StaticLayout.Builder.obtain(t, 0, t.length(), p, Math.max(1, width))
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setLineSpacing(0f, mult)
+                .setIncludePad(false)
+                .setMaxLines(Math.max(1, maxLines))
+                .setEllipsize(TextUtils.TruncateAt.END)
+                .build();
+    }
+
+    /** 允许长地点使用卡片中的剩余高度；矮卡交给 blockPlan 判断能否保留一行。 */
+    private static StaticLayout locationLayout(String location, TextPaint paint, int width, float height) {
+        if (location.isEmpty()) return null;
+        int maxLines = Math.max(1, (int) Math.ceil(height / paint.getTextSize()) + 1);
+        StaticLayout layout = textLayout(location, paint, width, maxLines, 1f);
+        int lines = layout.getLineCount();
+        while (lines > 1 && layout.getLineBottom(lines - 1) > height) lines--;
+        return lines == layout.getLineCount() ? layout : textLayout(location, paint, width, lines, 1f);
+    }
+
+    private static float drawAt(Canvas canvas, StaticLayout l, float y) {
+        canvas.save();
+        canvas.translate(0, y);
+        l.draw(canvas);
+        canvas.restore();
+        return y + l.getHeight();
+    }
+
+    private static float tagWidth(String pre, String num, TextPaint cn, TextPaint mono) {
+        return cn.measureText(pre) + mono.measureText(num) + cn.measureText("分");
+    }
+
+    /**
+     * 课块里放哪些行。titleCum[i] = 课程名前 i+1 行的高度；items 按优先级排在课程名之后
+     * （0 = 没有这一行），依次是 教室、自定义时间、教师、标签。
+     * 先保证教室：放不下就把课程名往少里压（至少 1 行），再不行才丢教室；其余按顺序能放就放。
+     * 返回 {课程名行数, 位掩码（第 i 位 = 第 i 项显示）}。
+     */
+    static int[] blockPlan(float avail, float[] titleCum, float gap, float... items) {
+        int n = Math.max(1, titleCum.length);
+        float room = items.length > 0 && items[0] > 0f ? gap + items[0] : 0f;
+        while (n > 1 && titleCum[n - 1] + room > avail) n--;
+        float th = titleCum.length == 0 ? 0f : titleCum[n - 1];
+        int mask = 0;
+        if (room > 0f && th + room <= avail) mask |= 1;
+        float used = th + ((mask & 1) != 0 ? room : 0f);
+        for (int i = 1; i < items.length; i++) {
+            if (items[i] > 0f && used + gap + items[i] <= avail) {
+                mask |= 1 << i;
+                used += gap + items[i];
+            }
+        }
+        return new int[]{n, mask};
+    }
+
+    private void drawScrollHint(Canvas canvas, int w, int h) {
+        if (maxScrollOffset <= 0) return;
+        float trackTop = headerHeight + dp(4);
+        float trackBottom = h - dp(4);
+        float trackHeight = trackBottom - trackTop;
+        float thumbHeight = Math.max(dp(24), trackHeight * visibleSections / totalSections());
+        float progress = maxScrollOffset <= 0 ? 0 : Math.max(0f, Math.min(1f, scrollOffset / maxScrollOffset));
+        float thumbTop = trackTop + (trackHeight - thumbHeight) * progress;
+
+        blockPaint.setStyle(Paint.Style.FILL);
+        blockPaint.setColor(G.STROKE);
+        float x = w - dp(3);
+        canvas.drawRoundRect(new RectF(x - dp(1.5f), thumbTop, x + dp(1.5f), thumbTop + thumbHeight),
+                dp(2), dp(2), blockPaint);
+    }
+
+    private void settlePage(int direction, float velocityX) {
+        if (direction == 0 || !canSwipe(direction)) {
+            animatePageTo(0f, direction, false);
+            return;
+        }
+
+        float width = Math.max(1f, pageWidth());
+        boolean commit = shouldCommitPage(dragDx, velocityX, width);
+        if (commit && listener != null) listener.onWeekSettling(direction);
+        animatePageTo(commit ? -direction * width : 0f, direction, commit);
+    }
+
+    private void animatePageTo(float target, int direction, boolean commit) {
+        cancelPageAnimation();
+        final float start = dragDx;
+        final float distance = Math.abs(target - start);
+        pageAnimating = true;
+        pendingCommit = commit ? direction : 0;
+        pageAnimator = ValueAnimator.ofFloat(0f, 1f);
+        pageAnimator.setDuration(pageAnimatorDuration(distance, pageWidth()));
+        pageAnimator.setInterpolator(new PathInterpolator(0.2f, 0f, 0f, 1f));
+        pageAnimator.addUpdateListener(animation -> {
+            float fraction = (float) animation.getAnimatedValue();
+            dragDx = start + (target - start) * fraction;
+            invalidate();
+        });
+        pageAnimator.addListener(new android.animation.AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(android.animation.Animator animation) {
+                pageAnimating = false;
+                pageAnimator = null;
+                pendingCommit = 0;
+                dragDx = 0f;
+                invalidate();
+                if (commit && listener != null) listener.onWeekSwipe(direction);
+            }
+        });
+        pageAnimator.start();
+    }
+
+    private void cancelPageAnimation() {
+        if (pageAnimator != null) {
+            pageAnimator.removeAllListeners();
+            pageAnimator.cancel();
+            pageAnimator = null;
+        }
+        pageAnimating = false;
+        pendingCommit = 0;
+    }
+
+    /** 吸附动画还没走完又开始新手势：立刻提交上一次翻页，避免周数被吞掉。 */
+    private void flushPendingCommit() {
+        int d = pendingCommit;
+        cancelPageAnimation();
+        if (d != 0) {
+            dragDx = 0f;
+            if (listener != null) listener.onWeekSwipe(d);
+        }
+    }
+
+    static long pageAnimatorDuration(float distance, float pageWidth) {
+        if (distance <= 0f || pageWidth <= 0f) return 0L;
+        float fraction = Math.max(0f, Math.min(1f, distance / pageWidth));
+        return Math.round(140L + 120L * Math.sqrt(fraction));
+    }
+
+    static boolean shouldCommitPage(float dx, float velocityX, float pageWidth) {
+        if (dx == 0f || pageWidth <= 0f) return false;
+        int direction = dx < 0f ? -1 : 1;
+        float projected = dx + velocityX * 0.11f;
+        boolean sameDirection = projected != 0f && Math.signum(projected) == direction;
+        return sameDirection && Math.abs(projected) >= pageWidth * 0.22f;
+    }
+
+    private static int pairStart(int section) {
+        int s = Math.max(1, Math.min(ScheduleSettings.MAX_SECTIONS, section));
+        return (s % 2 == 1) ? s : s - 1;
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (velocityTracker == null) velocityTracker = VelocityTracker.obtain();
+        velocityTracker.addMovement(event);
+
+        switch (event.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN:
+                if (pageAnimating) flushPendingCommit();
+                // 惯性/回弹中按下：停在当前位置接着拖
+                if (!scroller.isFinished()) scroller.forceFinished(true);
+                activePointerId = event.getPointerId(0);
+                downX = event.getX();
+                downY = event.getY();
+                lastY = downY;
+                // 从吸附动画中途接管时，保留当前页位置，继续跟手。
+                gestureMode = 0;
+                moved = false;
+                longPressFired = false;
+                removeCallbacks(longPressRunnable);
+                postDelayed(longPressRunnable, android.view.ViewConfiguration.getLongPressTimeout());
+                return true;
+
+            case MotionEvent.ACTION_MOVE: {
+                int pointerIndex = event.findPointerIndex(activePointerId);
+                if (pointerIndex < 0) return true;
+                float dx = event.getX(pointerIndex) - downX;
+                float dy = event.getY(pointerIndex) - downY;
+                if (gestureMode == 3) {
+                    updateGhost(event.getY(pointerIndex));
+                    return true;
+                }
+                if (gestureMode == 0) {
+                    if (Math.abs(dx) > touchSlop && Math.abs(dx) > Math.abs(dy)) {
+                        gestureMode = 1;
+                        moved = true;
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                    } else if (Math.abs(dy) > touchSlop && Math.abs(dy) > Math.abs(dx)) {
+                        gestureMode = 2;
+                        moved = true;
+                        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                }
+                if (gestureMode != 0) removeCallbacks(longPressRunnable);
+                if (gestureMode == 1) {
+                    dragDx = resistDrag(dx);
+                    invalidate();
+                } else if (gestureMode == 2) {
+                    float y = event.getY(pointerIndex);
+                    scrollOffset += rubberBand(-(y - lastY));
+                    lastY = y;
+                    invalidate();
+                }
+                return true;
+            }
+
+            case MotionEvent.ACTION_UP: {
+                removeCallbacks(longPressRunnable);
+                if (gestureMode == 3) {
+                    int d = ghostDay, a = ghostStart, b = ghostEnd;
+                    ghostDay = 0;
+                    invalidate();
+                    finishGesture();
+                    gestureMode = 0;
+                    if (listener != null) listener.onEmptyRangeDrawn(d, a, b);
+                    return true;
+                }
+                if (gestureMode == 2) {
+                    velocityTracker.computeCurrentVelocity(1000, dp(8000));
+                    float vy = velocityTracker.getYVelocity(activePointerId);
+                    if (scrollOffset >= 0 && scrollOffset <= maxScrollOffset && Math.abs(vy) > dp(250)) {
+                        // 惯性滚到头会冲出一小段再弹回
+                        scroller.fling(0, Math.round(scrollOffset), 0, Math.round(-vy), 0, 0,
+                                0, Math.round(maxScrollOffset), 0, Math.round(dp(36)));
+                        postInvalidateOnAnimation();
+                    } else {
+                        springBackIfNeeded();
+                    }
+                }
+                if (gestureMode == 1) {
+                    velocityTracker.computeCurrentVelocity(1000, dp(6000));
+                    float velocityX = velocityTracker.getXVelocity(activePointerId);
+                    settlePage(dragDx < 0 ? 1 : (dragDx > 0 ? -1 : 0), velocityX);
+                } else if (!moved && !longPressFired) {
+                    handleTap(event.getX(), event.getY());
+                }
+                finishGesture();
+                gestureMode = 0;
+                return true;
+            }
+
+            case MotionEvent.ACTION_CANCEL:
+                removeCallbacks(longPressRunnable);
+                if (gestureMode == 3) { ghostDay = 0; invalidate(); }
+                if (gestureMode == 2) springBackIfNeeded();
+                if (gestureMode == 1) settlePage(dragDx < 0 ? 1 : (dragDx > 0 ? -1 : 0), 0f);
+                finishGesture();
+                gestureMode = 0;
+                return true;
+
+            case MotionEvent.ACTION_POINTER_UP: {
+                int upIndex = event.getActionIndex();
+                if (event.getPointerId(upIndex) == activePointerId) {
+                    int newIndex = upIndex == 0 ? 1 : 0;
+                    activePointerId = event.getPointerId(newIndex);
+                    downX = event.getX(newIndex) - dragDx;
+                    downY = event.getY(newIndex);
+                    lastY = downY;
+                }
+                return true;
+            }
+        }
+        return super.onTouchEvent(event);
+    }
+
+    private void finishGesture() {
+        if (velocityTracker != null) {
+            velocityTracker.recycle();
+            velocityTracker = null;
+        }
+        activePointerId = MotionEvent.INVALID_POINTER_ID;
+        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(false);
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        removeCallbacks(ticker);
+        cancelPageAnimation();
+        if (velocityTracker != null) {
+            velocityTracker.recycle();
+            velocityTracker = null;
+        }
+        super.onDetachedFromWindow();
+    }
+
+    private void handleTap(float x, float y) {
+        if (listener == null) return;
+        if (y < headerHeight) return;
+
+        for (int i = hitBlocks.size() - 1; i >= 0; i--) {
+            HitBlock b = hitBlocks.get(i);
+            if (b.rect.contains(x, y)) {
+                if (b.label != null) listener.onMarkedClick(b.course, b.session, b.label, b.adjustId, b.extra);
+                else listener.onSessionClick(b.course, b.session, b.active);
+                return;
+            }
+        }
+
+        if (x > timeColWidth) {
+            float colWidth = columnWidth(getWidth());
+            int day = Math.min(columnCount(), Math.max(1, (int) ((x - timeColWidth) / colWidth) + 1));
+            for (int sec = 1; sec <= totalSections(); sec++) {
+                if (y >= sectionTopY(sec) && y <= sectionBottomY(sec)) {
+                    listener.onEmptySlotClick(day, sec);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void fireLongPress() {
+        if (listener == null || gestureMode != 0 || moved || pageAnimating) return;
+        if (downY < headerHeight) return;
+        for (int i = hitBlocks.size() - 1; i >= 0; i--) {
+            HitBlock b = hitBlocks.get(i);
+            if (b.rect.contains(downX, downY)) {
+                longPressFired = true;
+                performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+                listener.onSessionLongPress(b.course, b.session, b.active, b.label,
+                        b.adjustId, b.extra, currentWeek);
+                return;
+            }
+        }
+        if (downX <= timeColWidth) return;
+        float colWidth = columnWidth(getWidth());
+        int day = Math.min(columnCount(), Math.max(1, (int) ((downX - timeColWidth) / colWidth) + 1));
+        int sec = sectionAt(downY);
+        if (occupied(day, sec)) {
+            longPressFired = true;
+            listener.onHint("这一格被一节课占着，长按那节课可以编辑");
+            return;
+        }
+        longPressFired = true;
+        ghostDay = day;
+        ghostStart = sec;
+        ghostEnd = sec;
+        ghostAnchor = sec;
+        ghostClipped = false;
+        gestureMode = 3;
+        if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+        performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        invalidate();
+    }
+
+    private float dp(float v) {
+        return v * getResources().getDisplayMetrics().density;
+    }
+
+    private float sp(float v) {
+        return v * getResources().getDisplayMetrics().scaledDensity;
+    }
+}

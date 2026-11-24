@@ -1,0 +1,25 @@
+<!doctype html><meta charset="utf-8"><title>教室课表查询</title>
+<form method="post" action="result" target="roomResults">
+  <input type="hidden" name="term" value="2026-2027-1">
+  <label>校区<select name="xqbh">
+    <option value="ALL">全部校区</option><option value="north" selected>北区</option><option value="south">南区</option>
+  </select></label>
+  <label>起始周次<select name="zc">
+    <option value="all">全部周次</option><option value="from-a" selected>第1周</option><option value="from-b">第2周</option>
+  </select></label>
+  <label>结束周次<select name="zc2">
+    <option value="all">全部周次</option><option value="to-a">第1周</option><option value="to-b">第2周</option>
+  </select></label>
+  <label>所在教学楼<select name="jxlbh"><option value="north-A">北区甲楼</option></select></label>
+  <button type="submit">查询</button>
+</form>
+<iframe name="roomResults" title="查询结果"></iframe>
+<script>
+const {xqbh, jxlbh} = document.forms[0].elements;
+xqbh.onchange = () => setTimeout(() => {
+  const options = xqbh.value === 'south'
+    ? [new Option('全部教学楼','ANY'), new Option('南区甲楼','south-A'), new Option('南区乙楼','south-B')]
+    : [new Option('北区甲楼','north-A')];
+  jxlbh.replaceChildren(...options);
+}, 700);
+</script>

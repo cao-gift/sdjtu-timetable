@@ -1,0 +1,90 @@
+plugins {
+    id 'com.android.application'
+}
+
+// CI 可在项目根目录提供签名配置；日常发布复用当前用户目录的密钥。
+def keystorePropsFile = rootProject.file("keystore.properties")
+if (!keystorePropsFile.isFile()) {
+    keystorePropsFile = new File(System.getProperty("user.home"), ".config/lvlv/signing/keystore.properties")
+}
+def keystoreProps = new Properties()
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.withInputStream { keystoreProps.load(it) }
+}
+
+// 项目保留旧 DNS 源码供历史参考，所有构建变体均不编译这三个文件。
+tasks.withType(JavaCompile).configureEach {
+    exclude 'com/ecut/campus/DnsFilterService.java', 'com/ecut/campus/DnsPacket.java', 'com/ecut/campus/DomainRules.java'
+}
+
+android {
+    namespace 'com.ecut.campus'
+    compileSdk 33
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    defaultConfig {
+        applicationId "app.lvlv.timetable"
+        minSdk 24
+        targetSdk 33
+        versionCode 66
+        versionName "1.3.14"
+        buildConfigField "String", "RELEASE_REPOSITORY", groovy.json.JsonOutput.toJson(providers.gradleProperty("lvlvReleaseRepository").getOrElse(""))
+    }
+
+    signingConfigs {
+        release {
+            if (keystorePropsFile.exists()) {
+                storeFile rootProject.file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            // 开启 R8 精简第三方库并优化字节码，冷启动更快、安装包更小；
+            // 本应用代码全部 keep，不混淆（见 proguard-rules.pro）
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystorePropsFile.exists()) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            applicationIdSuffix ".debug"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.9.0'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    // 0.4：后台查成绩、课表二维码
+    implementation 'androidx.work:work-runtime:2.8.1'
+    // 安装后按 baseline-prof.txt 预编译启动路径，冷启动不再全靠解释执行
+    implementation 'androidx.profileinstaller:profileinstaller:1.3.1'
+    implementation 'com.google.zxing:core:3.5.2'
+    implementation('com.journeyapps:zxing-android-embedded:4.3.0') { transitive = false }
+
+    // 单元测试。org.json 在 JVM 上是空壳，必须显式引入真实实现
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20231013'
+}

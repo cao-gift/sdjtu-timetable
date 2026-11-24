@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>考试安排查询</title>
+<div class="Nsb_r_title">考试安排查询</div>
+<form method="post" action="/jsxsd/xsks/final_result" target="examResult">
+  <input type="hidden" name="pageMode" value="student">
+  <label>学年学期：<select name="xnxq01id">
+    <option value="old-F">2030-2031-2</option>
+    <option value="current-F" selected>2031-2032-1</option>
+  </select></label>
+  <label>学期类别：<select name="xqlb">
+    <option value="m">期中</option><option value="q">期末</option>
+  </select></label>
+  <input type="submit" value="查 询"><button type="button" onclick="location.href='print'">打印</button>
+</form>
+<iframe name="examResult" src="previous"></iframe>
