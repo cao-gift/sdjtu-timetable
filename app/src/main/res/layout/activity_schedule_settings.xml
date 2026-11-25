@@ -83,7 +83,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="后续节次按每节时长与课间休息自动顺延"
+                            android:text="后续节次按时长与课间自动顺延"
                             android:textColor="?attr/gMute"
                             android:textSize="11.5sp" />
                     </LinearLayout>

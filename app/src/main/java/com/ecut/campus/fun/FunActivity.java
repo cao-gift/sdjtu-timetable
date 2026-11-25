@@ -38,12 +38,12 @@ public class FunActivity extends AppCompatActivity {
     }
 
     private void render() {
-        LinearLayout col = Ui.page(this, "设置", "小玩意", "都在你手机上算，不联网、不上传");
+        LinearLayout col = Ui.page(this, "设置", "小玩意", "纯本地计算，不联网");
 
         Ui.label(this, col, "GRADES · 成绩");
         LinearLayout grades = Ui.card(this, col);
         boolean on = FunPrefs.verdictOn(this);
-        Ui.row(this, grades, "01", "翻牌批语", "新成绩先翻出一句评语，再点一下才看分数", on ? "开" : "关", v -> {
+        Ui.row(this, grades, "01", "翻牌批语", "新成绩先看批语，再翻分数", on ? "开" : "关", v -> {
             FunPrefs.setVerdictOn(this, !FunPrefs.verdictOn(this));
             render();
         });
@@ -53,21 +53,21 @@ public class FunActivity extends AppCompatActivity {
         double tuition = FunPrefs.tuition(this);
         String priceSub;
         if (tuition <= 0) {
-            priceSub = "填一次每学期学费，课程详情里显示「这节 ¥xx」；不填就不显示";
+            priceSub = "填学期学费，算每节课成本";
         } else {
             int total = ClassPrice.totalSections(TimetableStore.load(this), Prefs.totalWeeks(this));
             double per = ClassPrice.perSection(tuition, total);
-            priceSub = "每学期 ¥" + ClassPrice.yuan(tuition)
-                    + (per > 0 ? " · 本学期 " + total + " 节 · 每节 ¥" + ClassPrice.yuan(per) : " · 课表还是空的");
+            priceSub = "¥" + ClassPrice.yuan(tuition) + "/学期"
+                    + (per > 0 ? " · 约 ¥" + ClassPrice.yuan(per) + "/节" : " · 课表为空");
         }
         Ui.row(this, tt, "01", "这节课值多少钱", priceSub, tuition > 0 ? "改" : "填", v -> editTuition());
-        Ui.row(this, tt, "02", "缺勤安全气囊", "点开课表上的课记请假 / 缺勤 / 被点名；快到 1/3 时课块描红边", "", null);
+        Ui.row(this, tt, "02", "缺勤安全气囊", "记录请假缺勤，近 1/3 描红提醒", "", null);
 
         Ui.label(this, col, "SHARE · 分享卡片");
         LinearLayout share = Ui.card(this, col);
-        Ui.row(this, share, "01", "学期人设卡", "按你的课表和成绩挑一个人设，生成一张图", "›",
+        Ui.row(this, share, "01", "学期人设卡", "按课表和成绩生成人设图", "›",
                 v -> FunCards.showPersona(this));
-        Ui.row(this, share, "02", "双人课表海报", "选一个同学，两人课表叠成一张长图", "›",
+        Ui.row(this, share, "02", "双人课表海报", "两人课表合成一张海报", "›",
                 v -> FunCards.pickFriend(this));
     }
 

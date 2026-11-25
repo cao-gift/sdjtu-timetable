@@ -51,26 +51,26 @@ public class AboutActivity extends AppCompatActivity {
 
         Ui.label(this, col, "FEEDBACK · 上游项目反馈");
         LinearLayout c2 = Ui.card(this, col);
-        Ui.row(this, c2, "00", "一键发送错误日志", "发送给原项目维护者 August Lies", "SEND",
+        Ui.row(this, c2, "00", "一键发送错误日志", "上传至上游维护者", "SEND",
                 v -> DiagLog.upload(this));
-        Ui.row(this, c2, "01", "发邮件反馈", Updater.FEEDBACK_EMAIL + " · 自动附诊断日志", "MAIL", v -> mail());
-        Ui.row(this, c2, "02", "在 GitHub 提 Issue", "需要 GitHub 账号，方便追踪进度", "↗ WEB",
+        Ui.row(this, c2, "01", "发邮件反馈", "发邮件并附诊断日志", "MAIL", v -> mail());
+        Ui.row(this, c2, "02", "在 GitHub 提 Issue", "提交问题并追踪进度", "↗ WEB",
                 v -> Updater.open(this, Updater.ISSUES_URL));
-        Ui.row(this, c2, "03", "复制邮箱地址", "邮件打不开时用", "COPY", v -> {
+        Ui.row(this, c2, "03", "复制邮箱地址", "复制反馈邮箱", "COPY", v -> {
             ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
             cm.setPrimaryClip(ClipData.newPlainText("email", Updater.FEEDBACK_EMAIL));
             Toast.makeText(this, "已复制 " + Updater.FEEDBACK_EMAIL, Toast.LENGTH_SHORT).show();
         });
-        Ui.row(this, c2, "04", "导出诊断日志", "课表不对、同步失败时导出，连同截图一起发来", "EXPORT",
+        Ui.row(this, c2, "04", "导出诊断日志", "导出脱敏日志排查问题", "EXPORT",
                 v -> DiagLog.export(this));
         TextView tip = Ui.text(this, col,
-                "反馈时说清楚哪个页面、做了什么、看到了什么，最好附一张截图。发邮件反馈会自动带上版本号、机型和诊断日志（不含学号、姓名、Cookie），不想发可以在邮件里删掉附件。",
+                "反馈时请说明页面与现象，最好附截图。邮件默认附脱敏日志（不含学号与 Cookie），可自行删去。",
                 12f, G.MUTE);
         tip.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), 0);
 
         Ui.label(this, col, "LICENSE · 许可");
         LinearLayout c3 = Ui.card(this, col);
-        Ui.row(this, c3, "01", "GPL-3.0 开源许可", "可自由使用和修改，改版须同样开源 · © August Lies", "↗ WEB",
+        Ui.row(this, c3, "01", "GPL-3.0 开源许可", "自由使用与修改 · © August Lies", "↗ WEB",
                 v -> Updater.open(this, Updater.UPSTREAM_URL + "/blob/main/LICENSE"));
         TextView note = Ui.text(this, col,
                 "非官方工具，与学校及教务系统厂商无关。教务数据以学校系统为准，成绩计算仅供参考。交院自动登录由你开启，账号密码加密保存在本机，可在设置中删除。",

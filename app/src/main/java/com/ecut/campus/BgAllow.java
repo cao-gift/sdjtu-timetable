@@ -45,8 +45,7 @@ final class BgAllow {
 
     /** 设置里那一行的副标题。 */
     static String status(Context c) {
-        return ignoring(c) ? "已允许后台运行 · 上完课会自己翻页"
-                : "没放行的话，有的手机要打开驴驴课表才刷新，点这里设置";
+        return ignoring(c) ? "已允许后台自动刷新" : "未放行后台，点此设置";
     }
 
     static void show(Activity a) {

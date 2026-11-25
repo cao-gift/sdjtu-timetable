@@ -95,7 +95,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="首次使用请登录统一门户；之后课表与成绩可静默更新"
+                    android:text="登录后可同步课表与成绩"
                     android:textColor="?attr/gSub"
                     android:textSize="12.5sp" />
 
@@ -203,7 +203,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="按校区、教学楼和上课时段找教室" />
+                        android:text="校区 · 教学楼 · 空闲时段" />
                 </LinearLayout>
 
                 <TextView style="@style/G.RowChevron" />
@@ -231,7 +231,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="按学期和课程体系查看计划课程、学分与学时" />
+                        android:text="课程体系 · 学分与学时" />
                 </LinearLayout>
 
                 <TextView style="@style/G.RowChevron" />
@@ -259,7 +259,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="查看本学期的考试时间、考场与座位" />
+                        android:text="考试时间 · 考场与座位" />
                 </LinearLayout>
 
                 <TextView style="@style/G.RowChevron" />
@@ -317,7 +317,7 @@
                     <TextView
                         android:id="@+id/tv_settings_tt_page_sub"
                         style="@style/G.RowSub"
-                        android:text="作息时间 · 显示规则 · 导入导出" />
+                        android:text="作息 · 显示 · 导入导出" />
                 </LinearLayout>
 
                 <TextView
@@ -375,7 +375,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="翻牌批语 · 这节课多少钱 · 人设卡 · 双人海报" />
+                        android:text="批语 · 课价 · 人设 · 海报" />
                 </LinearLayout>
 
                 <TextView
@@ -413,7 +413,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="非官方校园工具。教务数据以学校系统为准，成绩计算仅供参考。交院自动登录默认关闭，启用后账号密码加密保存在本机。"
+                    android:text="非官方校园工具，数据以学校教务为准"
                     android:textColor="?attr/gMute"
                     android:textSize="12sp" />
 
@@ -424,7 +424,7 @@
                     android:layout_marginTop="10dp"
                     android:background="?attr/selectableItemBackground"
                     android:paddingVertical="4dp"
-                    android:text="★ 觉得好用？去 GitHub 点个 Star，让更多同学找到它"
+                    android:text="★ 去 GitHub 点个 Star"
                     android:textColor="?attr/gInk"
                     android:textSize="12sp" />
 
@@ -471,7 +471,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="课表怎么显示、几点上课、数据进出"
+            android:text="显示规则、作息与备份"
             android:textColor="?attr/gSub"
             android:textSize="12.5sp" />
         <TextView
@@ -565,7 +565,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="上课时间段可能下雨时，课程卡片泛起雨雾提醒带伞" />
+                        android:text="上课可能下雨时亮起雨雾提醒" />
                 </LinearLayout>
 
                 <com.google.android.material.materialswitch.MaterialSwitch
@@ -608,7 +608,7 @@
                     <TextView
                         android:id="@+id/tv_ics_sub"
                         style="@style/G.RowSub"
-                        android:text="生成 .ics，系统日历或 WPS 都能打开" />
+                        android:text="生成 .ics 导入系统日历" />
                 </LinearLayout>
 
                 <TextView
@@ -643,7 +643,7 @@
                     <TextView
                         android:id="@+id/tv_export_sub"
                         style="@style/G.RowSub"
-                        android:text="导出 JSON 文件，换机或分享" />
+                        android:text="导出 JSON 备份" />
                 </LinearLayout>
 
                 <TextView
@@ -678,7 +678,7 @@
                     <TextView
                         android:id="@+id/tv_import_sub"
                         style="@style/G.RowSub"
-                        android:text="选择 JSON 文件合并进当前课表" />
+                        android:text="导入 JSON 合并课表" />
                 </LinearLayout>
 
                 <TextView
@@ -722,7 +722,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="外观、本地数据与高级选项"
+            android:text="外观、小组件与通知"
             android:textColor="?attr/gSub"
             android:textSize="12.5sp" />
         <TextView
@@ -795,7 +795,7 @@
                     <TextView
                         android:id="@+id/tv_widget_pin_sub"
                         style="@style/G.RowSub"
-                        android:text="今日课程，4×2 或拉成 2×2，放到桌面一眼就知道" />
+                        android:text="桌面今日课程（4×2 / 2×2）" />
                 </LinearLayout>
 
                 <TextView
@@ -829,7 +829,7 @@
                     <TextView
                         android:id="@+id/tv_widget_bg_allow_sub"
                         style="@style/G.RowSub"
-                        android:text="允许后台运行，上完课不用打开驴驴课表也会刷新" />
+                        android:text="允许后台刷新今日课程" />
                 </LinearLayout>
 
                 <TextView style="@style/G.RowChevron" />
@@ -927,7 +927,7 @@
                         android:id="@+id/tv_widget_bg_hint"
                         style="@style/G.RowSub"
                         android:layout_width="match_parent"
-                        android:text="遮罩越高，字越清楚；字的深浅会跟着图自动换" />
+                        android:text="遮罩越高字越清，文字深浅自动适配" />
 
                     <TextView
                         android:id="@+id/btn_widget_bg_reset"
@@ -975,7 +975,7 @@
 
                         <TextView
                             style="@style/G.RowSub"
-                            android:text="后台约每 6 小时用已登录的门户查一次" />
+                            android:text="每 6 小时后台静默检查" />
                     </LinearLayout>
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -1006,7 +1006,7 @@
                         <TextView
                             android:id="@+id/tv_class_remind_sub"
                             style="@style/G.RowSub"
-                            android:text="提前 10 分钟通知课程和教室" />
+                            android:text="提前 10 分钟提醒" />
                     </LinearLayout>
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -1037,7 +1037,7 @@
                         <TextView
                             android:id="@+id/tv_next_class_notice_sub"
                             style="@style/G.RowSub"
-                            android:text="一条静音的常驻通知：课名、时间、教室" />
+                            android:text="常驻静音通知，显示课名与教室" />
                     </LinearLayout>
 
                     <com.google.android.material.materialswitch.MaterialSwitch

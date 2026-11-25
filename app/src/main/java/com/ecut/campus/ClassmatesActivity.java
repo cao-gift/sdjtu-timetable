@@ -40,39 +40,39 @@ public class ClassmatesActivity extends AppCompatActivity {
     }
 
     private void render() {
-        LinearLayout col = Ui.page(this, "设置", "同学", "互相导入课表，看谁什么时候有空");
+        LinearLayout col = Ui.page(this, "设置", "同学", "导入课表，查看共同空闲");
 
         Ui.label(this, col, "ME · 我的课表");
         LinearLayout me = Ui.card(this, col);
         String name = Prefs.shareName(this);
-        Ui.row(this, me, "01", "分享我的课表", "二维码 / 分享码，只含课程、地点和时间", "›",
+        Ui.row(this, me, "01", "分享我的课表", "生成二维码或分享码", "›",
                 v -> startActivity(new Intent(this, ShareActivity.class)));
-        Ui.row(this, me, "02", "分享时显示的名字", name.isEmpty() ? "未设置（同学那边会显示「同学」）" : name, "改",
+        Ui.row(this, me, "02", "分享时显示的名字", name.isEmpty() ? "未设置（默认显示「同学」）" : name, "改",
                 v -> editName());
 
         Ui.label(this, col, "ADD · 添加同学");
         LinearLayout add = Ui.card(this, col);
-        Ui.row(this, add, "01", "扫同学的二维码", "对方在「分享我的课表」里打开二维码", "SCAN", v -> scan());
-        Ui.row(this, add, "02", "粘贴分享码", "微信里复制整段消息就行，会自动识别", "PASTE", v -> paste());
+        Ui.row(this, add, "01", "扫同学的二维码", "扫描对方课表二维码", "SCAN", v -> scan());
+        Ui.row(this, add, "02", "粘贴分享码", "粘贴整段消息自动识别", "PASTE", v -> paste());
 
         List<FriendStore.Friend> friends = FriendStore.load(this);
         Ui.label(this, col, "FRIENDS · 同学 " + friends.size());
         LinearLayout list = Ui.card(this, col);
         if (friends.isEmpty()) {
-            Ui.row(this, list, "--", "还没有同学", "加上之后，就能看你们的共同空闲", "", null);
+            Ui.row(this, list, "--", "还没有同学", "添加后可查看共同空闲", "", null);
         } else {
             if (friends.size() >= 2) {
-                Ui.row(this, list, "ALL", "大家的共同空闲", friends.size() + 1 + " 人一起，约自习、约饭、排小组作业", "›",
+                Ui.row(this, list, "ALL", "大家的共同空闲", (friends.size() + 1) + " 人共同空闲时段", "›",
                         v -> startActivity(new Intent(this, FreeTimeActivity.class)
                                 .putExtra(FreeTimeActivity.EXTRA_ALL, true)));
             }
-            Ui.row(this, list, "DUO", "双人课表海报", "选一个同学，两人课表叠成一张长图，可存相册", "›",
+            Ui.row(this, list, "DUO", "双人课表海报", "两人课表合成一张海报", "›",
                     v -> com.ecut.campus.fun.FunCards.pickFriend(this));
             int i = 1;
             for (FriendStore.Friend f : friends) {
                 int n = f.shared.timetable.courses.size();
                 android.view.View r = Ui.row(this, list, String.format("%02d", i++), f.name,
-                        "和我的共同空闲 · 对方 " + n + " 门课 · 长按做海报/管理", "›",
+                        n + " 门课 · 点查空闲 · 长按管理", "›",
                         v -> startActivity(new Intent(this, FreeTimeActivity.class)
                                 .putExtra(FreeTimeActivity.EXTRA_FRIEND, f.id)));
                 r.setOnLongClickListener(v -> {

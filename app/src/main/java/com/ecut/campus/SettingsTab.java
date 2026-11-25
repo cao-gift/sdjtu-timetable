@@ -303,8 +303,7 @@ final class SettingsTab {
         if (scheduleSummary != null) {
             ScheduleSettings s = ScheduleSettingsStore.load(a);
             int n = s.sectionCount();
-            scheduleSummary.setText("每天 " + n + " 节  ·  第 1 节 " + s.firstClassStart + " 开始  ·  第 " + n + " 节 "
-                    + s.rangeLabel(n));
+            scheduleSummary.setText("每天 " + n + " 节  ·  " + s.firstClassStart + "–" + s.endTime(n));
         }
 
         TextView timetableSummary = settingsFragment.findViewById(R.id.tv_settings_timetable_summary);
@@ -347,20 +346,19 @@ final class SettingsTab {
         autoLogin.setEnabled(!SdjtuCredentials.isUpdating());
 
         if (Prefs.sessionExpired(a)) {
-            status.setText(saved ? "请打开统一门户完成验证。密码已更改时，可在下方更新。"
-                    : "请点「登录统一门户」重新登录。");
+            status.setText(saved ? "需打开门户验证，或更新密码" : "登录已过期，请重新登录");
             badge.setText(saved ? "● 需验证" : "● 登录已过期");
             badge.setTextColor(G.ACCENT);
         } else if (saved) {
-            status.setText("已启用自动登录。点「同步课表」即可使用本机保存的账号。");
+            status.setText("已启用自动登录，可直接同步");
             badge.setText(connected ? "● 已登录" : "○ 待同步");
             badge.setTextColor(G.INK);
         } else if (connected) {
-            status.setText("教务系统已登录，可以同步课表和成绩。");
+            status.setText("会话有效，可直接同步");
             badge.setText("● 已登录");
             badge.setTextColor(G.INK);
         } else {
-            status.setText("点击「登录统一门户」，完成认证后打开教务系统。");
+            status.setText("登录后可同步课表与成绩");
             badge.setText("○ 待连接");
             badge.setTextColor(G.MUTE);
         }
@@ -420,7 +418,7 @@ final class SettingsTab {
         TextView mtv = settingsFragment.findViewById(R.id.tv_widget_mask);
         if (mtv != null) mtv.setText(mask + "%");
         TextView sub = settingsFragment.findViewById(R.id.tv_widget_bg_sub);
-        if (sub != null) sub.setText(img ? "自选图片 · 遮罩 " + mask + "%" : "默认纸色，跟着浅色 / 深色走");
+        if (sub != null) sub.setText(img ? "自选图片 · 遮罩 " + mask + "%" : "默认纸色，随深浅色切换");
         TextView hint = settingsFragment.findViewById(R.id.tv_widget_bg_hint);
         if (hint != null && img) {
             double g = WidgetBg.headerGray(a);
@@ -430,14 +428,14 @@ final class SettingsTab {
             double mg = com.ecut.campus.data.WidgetLook.gray(WidgetBg.maskColor(night));
             int want = g < 0 ? mask : com.ecut.campus.data.WidgetLook.suggestedMask(g, mg, mask);
             hint.setText(want > mask
-                    ? "这张图标题那块明暗混杂，遮罩调到 " + want + "% 左右字会更清楚"
-                    : "遮罩越高，字越清楚；字的深浅会跟着图自动换");
+                    ? "标题处明暗混杂，建议遮罩调至 " + want + "%"
+                    : "遮罩越高字越清，文字深浅自动适配");
         }
         TextView pinSub = settingsFragment.findViewById(R.id.tv_widget_pin_sub);
         if (pinSub != null) {
             int n = ClassWidget.placedCount(a);
-            pinSub.setText(n > 0 ? "已放了 " + n + " 个 · 今日课程，4×2 或拉成 2×2"
-                    : "今日课程，4×2 或拉成 2×2，放到桌面一眼就知道");
+            pinSub.setText(n > 0 ? "已添加 " + n + " 个 · 今日课程"
+                    : "桌面今日课程（4×2 / 2×2）");
         }
         TextView allowSub = settingsFragment.findViewById(R.id.tv_widget_bg_allow_sub);
         if (allowSub != null) allowSub.setText(BgAllow.status(a));
@@ -466,9 +464,9 @@ final class SettingsTab {
         if (sw == null) return;
         Runnable label = () -> {
             if (sub == null) return;
-            String t = "提前 " + Prefs.classRemindLead(a) + " 分钟通知课程和教室";
-            if (Prefs.classRemind(a) && !ClassReminder.canNotify(a)) t += " · 通知被关了，收不到";
-            else if (Prefs.classRemind(a)) t += " · 点这里改时间";
+            String t = "提前 " + Prefs.classRemindLead(a) + " 分钟提醒";
+            if (Prefs.classRemind(a) && !ClassReminder.canNotify(a)) t += " · 通知未开";
+            else if (Prefs.classRemind(a)) t += " · 点此改时间";
             sub.setText(t);
         };
         sw.setOnCheckedChangeListener(null);
@@ -520,9 +518,8 @@ final class SettingsTab {
 
     private void renderNextClassNoticeSub(TextView sub) {
         if (sub == null) return;
-        String t = "一条静音的常驻通知：课名、时间、教室";
-        if (Prefs.nextClassNotice(a) && !ClassReminder.canNotify(a)) t += " · 通知被关了，显示不出来";
-        else if (Prefs.nextClassNotice(a)) t += " · 今天上完显示明天第一节";
+        String t = "常驻静音通知，显示课名与教室";
+        if (Prefs.nextClassNotice(a) && !ClassReminder.canNotify(a)) t = "通知未开启，无法显示";
         sub.setText(t);
     }
 }
