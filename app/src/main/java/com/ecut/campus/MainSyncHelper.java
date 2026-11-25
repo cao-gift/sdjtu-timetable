@@ -64,7 +64,8 @@ final class MainSyncHelper {
         boolean autoLogin = !Prefs.hasPortalSession(a) || Prefs.sessionExpired(a);
         Toast.makeText(a, (autoLogin ? "正在自动登录并同步" : "正在后台同步") + kind.label + "…",
                 Toast.LENGTH_SHORT).show();
-        a.activeSync = CampusSyncClient.start(a.newWebViewForSync(), kind,
+        a.activeSync = CampusSyncClient.startLazy(a,
+                () -> (a.isFinishing() || a.isDestroyed()) ? null : a.newWebViewForSync(), kind,
                 new CampusSyncClient.Callback() {
                     @Override
                     public void onSuccess(int count) {

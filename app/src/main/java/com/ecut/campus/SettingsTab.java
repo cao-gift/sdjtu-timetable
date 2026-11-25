@@ -24,6 +24,9 @@ final class SettingsTab {
 
     private final MainActivity a;
     private final View settingsFragment;
+    private boolean probingSession;
+    private com.ecut.campus.data.SdjtuSessionCheck.State lastProbeState =
+            com.ecut.campus.data.SdjtuSessionCheck.State.UNKNOWN;
 
     SettingsTab(MainActivity a, View root) {
         this.a = a;
@@ -39,6 +42,7 @@ final class SettingsTab {
         if (versionTv != null) {
             versionTv.setText("驴驴课表 · v" + BuildConfig.VERSION_NAME);
         }
+        refreshAboutBadge();
         View aboutCard = settingsFragment.findViewById(R.id.card_about);
         if (aboutCard != null) aboutCard.setOnClickListener(v ->
                 a.startActivity(new Intent(a, AboutActivity.class)));
@@ -327,6 +331,7 @@ final class SettingsTab {
         }
 
         bindAccountStatus();
+        refreshAboutBadge();
 
         TextView summaryTv = settingsFragment.findViewById(R.id.tv_settings_data_summary);
         if (summaryTv != null) {
@@ -339,6 +344,20 @@ final class SettingsTab {
         }
     }
 
+    void refreshAboutBadge() {
+        if (settingsFragment == null) return;
+        TextView badge = settingsFragment.findViewById(R.id.tv_about_update_badge);
+        if (badge == null) return;
+        String tag = Updater.availableUpdateTag(a);
+        if (!tag.isEmpty()) {
+            badge.setText("● 新版本 " + tag);
+            badge.setTextColor(G.alarm());
+            badge.setVisibility(View.VISIBLE);
+        } else {
+            badge.setVisibility(View.GONE);
+        }
+    }
+
     private void openStudy(SdjtuAcademicPages.Feature feature) {
         a.startActivity(new Intent(a, SdjtuStudyActivity.class)
                 .putExtra(WebShellActivity.EXTRA_TARGET_KEY, feature.target));
@@ -348,22 +367,62 @@ final class SettingsTab {
         TextView autoLogin = settingsFragment.findViewById(R.id.btn_sdjtu_auto_login);
         TextView status = settingsFragment.findViewById(R.id.host_status_text);
         TextView badge = settingsFragment.findViewById(R.id.tv_settings_node_badge);
+        if (Prefs.hasPortalSession(a) && !SdjtuSessionProbe.hasSchoolCookie(a)) {
+            Prefs.setPortalSession(a, false);
+            Prefs.setSessionExpired(a, true);
+        }
         boolean saved = SdjtuCredentials.isSaved(a);
         boolean connected = Prefs.hasPortalSession(a);
+        boolean expired = Prefs.sessionExpired(a);
+        boolean paused = SdjtuAutoLogin.isPaused(a);
         autoLogin.setText(saved ? "管理统一门户自动登录" : "设置统一门户自动登录");
         autoLogin.setEnabled(!SdjtuCredentials.isUpdating());
 
-        if (Prefs.sessionExpired(a)) {
-            status.setText(saved ? "需打开门户验证，或更新密码" : "登录已过期，请重新登录");
-            badge.setText(saved ? "● 需验证" : "● 登录已过期");
+        long verifiedAt = Prefs.portalSessionVerifiedAt(a);
+        long age = verifiedAt > 0 ? Math.max(0L, System.currentTimeMillis() - verifiedAt) : Long.MAX_VALUE;
+        if (connected && !expired && !probingSession && age > SdjtuSessionProbe.RECHECK_INTERVAL_MS) {
+            probingSession = true;
+            SdjtuSessionProbe.probeAsync(a, state -> {
+                probingSession = false;
+                lastProbeState = state;
+                if (a.isFinishing() || a.isDestroyed()) return;
+                bindAccountStatus();
+                if (state == com.ecut.campus.data.SdjtuSessionCheck.State.EXPIRED) {
+                    a.refreshTimetableTab();
+                }
+            });
+        }
+
+        if (expired) {
+            if (saved && paused) {
+                status.setText("需打开门户验证，或更新密码");
+                badge.setText("● 需验证");
+            } else if (saved) {
+                status.setText("会话已失效，同步时将自动登录");
+                badge.setText("● 登录已失效");
+            } else {
+                status.setText("登录已过期，请重新登录");
+                badge.setText("● 登录已过期");
+            }
             badge.setTextColor(G.ACCENT);
+        } else if (connected) {
+            if (probingSession && age > SdjtuSessionProbe.STALE_THRESHOLD_MS) {
+                status.setText(saved ? "已启用自动登录，正在校验会话…" : "正在校验登录状态…");
+                badge.setText("○ 校验中");
+                badge.setTextColor(G.MUTE);
+            } else if (lastProbeState == com.ecut.campus.data.SdjtuSessionCheck.State.UNKNOWN
+                    && age > SdjtuSessionProbe.OFFLINE_STALE_MS) {
+                status.setText(saved ? "已启用自动登录，暂无法联网校验" : "暂无法联网确认登录状态");
+                badge.setText("○ 待确认");
+                badge.setTextColor(G.MUTE);
+            } else {
+                status.setText(saved ? "已启用自动登录，可直接同步" : "会话有效，可直接同步");
+                badge.setText("● 已登录");
+                badge.setTextColor(G.INK);
+            }
         } else if (saved) {
             status.setText("已启用自动登录，可直接同步");
-            badge.setText(connected ? "● 已登录" : "○ 待同步");
-            badge.setTextColor(G.INK);
-        } else if (connected) {
-            status.setText("会话有效，可直接同步");
-            badge.setText("● 已登录");
+            badge.setText("○ 待同步");
             badge.setTextColor(G.INK);
         } else {
             status.setText("登录后可同步课表与成绩");

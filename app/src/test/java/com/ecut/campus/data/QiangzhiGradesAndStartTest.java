@@ -73,6 +73,15 @@ public class QiangzhiGradesAndStartTest {
         Grades capped = QiangzhiGrades.parseHtml(many.toString());
         assertEquals(QiangzhiGrades.MAX_PAGES, capped.totalCourseCount());
         assertTrue(QiangzhiGrades.extractionJs().contains("MAX_PAGES=" + QiangzhiGrades.MAX_PAGES));
+
+        assertEquals("kksj=&kcxz=&kcmc=&xsfs=all", QiangzhiGrades.pageQueryBody(1));
+        assertEquals("kksj=&kcxz=&kcmc=&xsfs=all&pageNum=3&pageIndex=3", QiangzhiGrades.pageQueryBody(3));
+        assertEquals(3, QiangzhiGrades.totalPages("<div>共 3 页</div>"));
+        assertEquals(QiangzhiGrades.MAX_PAGES, QiangzhiGrades.totalPages("<div>1 / 99 页</div>"));
+        assertTrue(QiangzhiGrades.hasValidHeader(p1));
+        assertFalse(QiangzhiGrades.hasValidHeader("<table id='dataList'><tr><th>序号</th></tr></table>"));
+        assertTrue(QiangzhiGrades.isNoPermission("<html><body>请先完成评教后再查看成绩</body></html>"));
+        assertFalse(QiangzhiGrades.isNoPermission(p1));
     }
 
     @Test

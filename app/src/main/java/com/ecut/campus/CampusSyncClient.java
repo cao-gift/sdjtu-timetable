@@ -61,32 +61,33 @@ public final class CampusSyncClient {
     private static final long SDJTU_NAVIGATION_TIMEOUT_MS = 65_000L;
     private static final long DATA_TIMEOUT_MS = 20_000L;
     private final Context appContext;
-    private final WebView webView;
+    private final java.util.function.Supplier<WebView> webViewFactory;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Kind kind;
     private final Callback callback;
     private final String targetXnm;
     private final String targetXqm;
-    private final SdjtuSyncSession sdjtu;
+    private final java.util.concurrent.atomic.AtomicBoolean directCancelled =
+            new java.util.concurrent.atomic.AtomicBoolean(false);
 
+    private WebView webView;
+    private SdjtuSyncSession sdjtu;
+    private boolean webViewStarted;
     private boolean finished;
     private boolean dataRequested;
 
     private final Runnable timeout = () -> fail("同步超时，请确认统一门户登录仍有效");
 
-    private CampusSyncClient(WebView view, Kind kind, String xnm, String xqm, Callback callback) {
-        this.webView = view;
-        this.appContext = view.getContext().getApplicationContext();
+    private CampusSyncClient(Context ctx, WebView existingView,
+                             java.util.function.Supplier<WebView> webViewFactory,
+                             Kind kind, String xnm, String xqm, Callback callback) {
+        this.appContext = ctx.getApplicationContext();
+        this.webView = existingView;
+        this.webViewFactory = webViewFactory;
         this.kind = kind;
         this.callback = callback;
         this.targetXnm = xnm;
         this.targetXqm = xqm;
-        this.sdjtu = new SdjtuSyncSession(view, handler, kind, new SdjtuSyncSession.Listener() {
-            @Override public void ready() { requestData(); }
-            @Override public void fail(String message, boolean loginRequired) {
-                CampusSyncClient.this.fail(message, loginRequired);
-            }
-        });
     }
 
     /** 必须在主线程调用，并先把 WebView 附着到当前 Activity 的不可见容器。 */
@@ -95,16 +96,27 @@ public final class CampusSyncClient {
     }
 
     /**
+     * 延迟创建 WebView 的同步入口：成绩同步在会话仍有效时优先走直连 HTTP 通道，
+     * 命中则完全免去 WebView 冷启动与页面渲染开销；仅在需要登录或兜底时才调用工厂创建 WebView。
+     */
+    public static CampusSyncClient startLazy(Context ctx, java.util.function.Supplier<WebView> webViewFactory,
+                                             Kind kind, Callback callback) {
+        CampusSyncClient client = new CampusSyncClient(ctx, null, webViewFactory, kind, null, null, callback);
+        DiagLog.log(ctx, "sync", "开始同步 " + kind.label + " · " + SdjtuPortal.NAME);
+        client.load();
+        return client;
+    }
+
+    /**
      * 指定学年学期同步。xnm/xqm 为教务参数（如 2025 / 3），
      * 传 null 时跟随教务页面当前选中的学期。
      */
     public static CampusSyncClient start(WebView view, Kind kind,
                                          String xnm, String xqm, Callback callback) {
-        CampusSyncClient client = new CampusSyncClient(view, kind, xnm, xqm, callback);
+        CampusSyncClient client = new CampusSyncClient(view.getContext(), view, null, kind, xnm, xqm, callback);
         DiagLog.log(view.getContext(), "sync", "开始同步 " + kind.label
                 + (xnm != null ? " xnm=" + xnm + " xqm=" + xqm : "")
                 + " · " + SdjtuPortal.NAME);
-        client.configure();
         client.load();
         return client;
     }
@@ -201,8 +213,63 @@ public final class CampusSyncClient {
     }
 
     private void load() {
+        if (kind == Kind.GRADES
+                && Prefs.hasPortalSession(appContext)
+                && !Prefs.sessionExpired(appContext)
+                && SdjtuSessionProbe.hasSchoolCookie(appContext)) {
+            handler.postDelayed(timeout, DATA_TIMEOUT_MS);
+            SdjtuDirectGrades.fetchAsync(appContext, Prefs.sdjtuAcademicBase(appContext),
+                    directCancelled, outcome -> {
+                        if (finished) return;
+                        dlog("GRADE_DIRECT(pre): " + outcome.status + " " + outcome.detail);
+                        switch (outcome.status) {
+                            case SUCCESS:
+                                saveGrades(outcome.grades);
+                                return;
+                            case EMPTY_CONFIRMED:
+                                fail("成绩表是空的：这个账号暂时还没有成绩", false);
+                                return;
+                            case NO_PERMISSION:
+                                fail("教务系统没开放成绩查询（可能评教没做完或查询未开放），在教务网页里能查到后再同步", false);
+                                return;
+                            case EXPIRED:
+                                Prefs.setPortalSession(appContext, false);
+                                Prefs.setSessionExpired(appContext, true);
+                                if (WebShellActivity.needsManualLoginFirst(appContext)) {
+                                    fail("教务登录已失效，请重新登录统一门户", true);
+                                    return;
+                                }
+                                startWebViewSync();
+                                return;
+                            default:
+                                startWebViewSync();
+                        }
+                    });
+            return;
+        }
+        startWebViewSync();
+    }
+
+    private void startWebViewSync() {
+        if (finished || webViewStarted) return;
+        webViewStarted = true;
+        if (webView == null && webViewFactory != null) {
+            webView = webViewFactory.get();
+        }
+        if (webView == null) {
+            cancel();
+            return;
+        }
+        sdjtu = new SdjtuSyncSession(webView, handler, kind, new SdjtuSyncSession.Listener() {
+            @Override public void ready() { requestData(); }
+            @Override public void fail(String message, boolean loginRequired) {
+                CampusSyncClient.this.fail(message, loginRequired);
+            }
+        });
+        configure();
+        handler.removeCallbacks(timeout);
         handler.postDelayed(timeout, SDJTU_NAVIGATION_TIMEOUT_MS);
-        handler.post(() -> { if (!finished) sdjtu.start(Prefs.sdjtuAcademicBase(appContext)); });
+        handler.post(() -> { if (!finished && sdjtu != null) sdjtu.start(Prefs.sdjtuAcademicBase(appContext)); });
     }
 
     private void requestData() {
@@ -324,8 +391,31 @@ public final class CampusSyncClient {
     }
 
     private void extractGrades() {
+        CookieManager.getInstance().flush();
+        String activeBase = sdjtu != null ? sdjtu.currentBase() : Prefs.sdjtuAcademicBase(appContext);
+        SdjtuDirectGrades.fetchAsync(appContext, activeBase, directCancelled, outcome -> {
+            if (finished || (sdjtu != null && !sdjtu.current())) return;
+            dlog("GRADE_DIRECT(post): " + outcome.status + " " + outcome.detail);
+            switch (outcome.status) {
+                case SUCCESS:
+                    saveGrades(outcome.grades);
+                    return;
+                case EMPTY_CONFIRMED:
+                    fail("成绩表是空的：这个账号暂时还没有成绩", false);
+                    return;
+                case NO_PERMISSION:
+                    fail("教务系统没开放成绩查询（可能评教没做完或查询未开放），在教务网页里能查到后再同步", false);
+                    return;
+                default:
+                    extractGradesViaWebView();
+            }
+        });
+    }
+
+    private void extractGradesViaWebView() {
+        if (finished || webView == null || (sdjtu != null && !sdjtu.current())) return;
         webView.evaluateJavascript(QiangzhiGrades.extractionJs(), raw -> {
-            if (finished || !sdjtu.current()) return;
+            if (finished || (sdjtu != null && !sdjtu.current())) return;
             String html = WebShellActivity.unwrapJsString(raw);
             if ("__NOPERM__".equals(html)) {
                 fail("教务系统没开放成绩查询（可能评教没做完或查询未开放），在教务网页里能查到后再同步");
@@ -350,7 +440,7 @@ public final class CampusSyncClient {
     }
 
     private boolean retrySdjtuAfterMissingTable() {
-        if (!sdjtu.reopenPortalForMissingTable()) return false;
+        if (sdjtu == null || !sdjtu.reopenPortalForMissingTable()) return false;
         dataRequested = false;
         handler.removeCallbacks(timeout);
         handler.postDelayed(timeout, SDJTU_NAVIGATION_TIMEOUT_MS);
@@ -358,7 +448,7 @@ public final class CampusSyncClient {
     }
 
     private void saveGrades(Grades parsed) {
-        if (finished || !sdjtu.current()) return;
+        if (finished || (sdjtu != null && !sdjtu.current())) return;
         // 教务成绩是全量权威数据。直接覆盖而不是合并，避免旧演示数据
         // 或已撤销课程永久残留。
         parsed.updatedAt = new SimpleDateFormat(
@@ -396,7 +486,7 @@ public final class CampusSyncClient {
 
     private void finishSuccess(int count) {
         if (finished) return;
-        sdjtu.success();
+        if (sdjtu != null) sdjtu.success();
         finished = true;
         Prefs.setSessionExpired(appContext, false);
         DiagLog.log(appContext, "sync", kind.label + " 成功: " + count);
@@ -413,6 +503,11 @@ public final class CampusSyncClient {
     /** 解析失败时在释放 WebView 前抓一份脱敏页面结构快照，方便学校改版时直接做成测试用例。 */
     private void captureParseSnapshotThenFail(String message, boolean loginRequired, String rawHint) {
         if (finished) return;
+        if (webView == null) {
+            DiagLog.saveParseFailureSnapshot(appContext, kind.name(), message, "", rawHint);
+            fail(message, loginRequired);
+            return;
+        }
         try {
             webView.evaluateJavascript(com.ecut.campus.data.PageSample.collectJs(), raw -> {
                 if (finished) return;
@@ -436,6 +531,7 @@ public final class CampusSyncClient {
         Log.w(TAG, kind.label + " failed: " + message);
         DiagLog.log(appContext, "sync", kind.label + " 失败: " + message);
         if (loginRequired || (message != null && message.contains("登录已失效"))) {
+            Prefs.setPortalSession(appContext, false);
             Prefs.setSessionExpired(appContext, true);
         }
         cleanup();
@@ -444,17 +540,21 @@ public final class CampusSyncClient {
     }
 
     private void cleanup() {
-        sdjtu.stop();
-        webView.setWebViewClient(new WebViewClient());
-        webView.setWebChromeClient(null);
-        webView.stopLoading();
+        directCancelled.set(true);
+        if (sdjtu != null) sdjtu.stop();
         handler.removeCallbacksAndMessages(null);
-        CookieManager.getInstance().flush();
-        if (webView.getParent() instanceof android.view.ViewGroup) {
-            ((android.view.ViewGroup) webView.getParent()).removeView(webView);
+        if (webView != null) {
+            webView.setWebViewClient(new WebViewClient());
+            webView.setWebChromeClient(null);
+            webView.stopLoading();
+            CookieManager.getInstance().flush();
+            if (webView.getParent() instanceof android.view.ViewGroup) {
+                ((android.view.ViewGroup) webView.getParent()).removeView(webView);
+            }
+            webView.loadUrl("about:blank");
+            webView.destroy();
+            webView = null;
         }
-        webView.loadUrl("about:blank");
-        webView.destroy();
     }
 
     /** Activity 销毁时静默取消，不触发失败回调，避免向已销毁页面弹 Toast。 */

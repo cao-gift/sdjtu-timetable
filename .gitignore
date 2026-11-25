@@ -40,10 +40,11 @@ dns-test/out/
 # ---- 验证产物不进仓库（留在本地）----
 artifacts/
 
+# ---- 官网目录（独立托管于 site 分支，主分支不上传）----
+site/
+
 # ---- EdgeOne CLI 本地状态与凭据 ----
 .edgeone/
-site/.edgeone/
-site/.env
 
 # ---- 本地开发交接与工作文档（不上传仓库）----
 docs/

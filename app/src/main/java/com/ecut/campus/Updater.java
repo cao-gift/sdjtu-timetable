@@ -26,8 +26,9 @@ public final class Updater {
     public static final String REPO_URL = "https://github.com/" + REPO;
     public static final String RELEASES_URL = REPO_URL + "/releases";
     public static final String FEEDBACK_EMAIL = "3514088137@qq.com";
-    private static final long AUTO_INTERVAL = 6L * 60 * 60 * 1000;
+    private static final long AUTO_INTERVAL = 10L * 60 * 1000;
     private static final int MAX_BODY_BYTES = 512 * 1024;
+    private static volatile boolean autoChecking = false;
 
     public static final class Release {
         public String tag, name, notes, pageUrl, apkUrl;
@@ -150,6 +151,30 @@ public final class Updater {
         return UpdateManifest.isNewer(info, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE);
     }
 
+    /** 当前是否存在可用网络连接（Wi-Fi、移动流量、以太网等均可）。 */
+    public static boolean hasNetwork(Context c) {
+        if (c == null) return false;
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager)
+                    c.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                return nc != null
+                        && nc.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        && (nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+                        || nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR)
+                        || nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+                        || nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_VPN));
+            }
+            @SuppressWarnings("deprecation")
+            android.net.NetworkInfo ni = cm.getActiveNetworkInfo();
+            return ni != null && ni.isConnected();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     /** 当前是否处于 Wi-Fi 网络环境。 */
     public static boolean isOnWifi(Context c) {
         if (c == null) return false;
@@ -169,24 +194,66 @@ public final class Updater {
         }
     }
 
-    /** 打开 App 时静默检查，6 小时最多一次；勾了「不再提示」的版本不再弹。 */
+    /** 记录或清除最新发现的可更新版本（用于设置底栏与关于卡片红点角标）。 */
+    public static void recordCheckResult(Context c, Release r) {
+        if (c == null || r == null) return;
+        Context app = c.getApplicationContext();
+        Prefs.setUpdateCheckedAt(app, System.currentTimeMillis());
+        if (isNewer(r)) {
+            Prefs.setAvailableUpdate(app, r.tag == null ? "" : r.tag, r.versionCode);
+        } else {
+            Prefs.setAvailableUpdate(app, "", 0);
+        }
+    }
+
+    /** 返回当前仍高于本机版本的新版本标签；若已安装到最新则返回空串并清理缓存。 */
+    public static String availableUpdateTag(Context c) {
+        if (c == null) return "";
+        String tag = Prefs.availableUpdateTag(c);
+        if (tag == null || tag.trim().isEmpty()) return "";
+        UpdateManifest.ReleaseInfo info = new UpdateManifest.ReleaseInfo();
+        info.tag = tag;
+        info.versionCode = Prefs.availableUpdateCode(c);
+        if (!UpdateManifest.isNewer(info, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE)) {
+            Prefs.setAvailableUpdate(c, "", 0);
+            return "";
+        }
+        return tag;
+    }
+
+    public static boolean hasAvailableUpdate(Context c) {
+        return !availableUpdateTag(c).isEmpty();
+    }
+
+    /** 只要有网（Wi-Fi 或移动流量）就静默检查更新，不弹框，仅更新角标状态。 */
     public static void autoCheck(Activity a) {
+        autoCheck(a, null);
+    }
+
+    public static void autoCheck(Activity a, Runnable onStateChanged) {
+        if (a == null) return;
         try { UpdateInstaller.cleanup(a); } catch (Exception ignored) {}
-        if (!hasUpdateSource() || !Prefs.updateAutoCheck(a)) return;
+        if (!hasUpdateSource() || !Prefs.updateAutoCheck(a) || !hasNetwork(a)) return;
         long now = System.currentTimeMillis();
         if (now - Prefs.updateCheckedAt(a) < AUTO_INTERVAL) return;
+        if (autoChecking) return;
+        autoChecking = true;
+        Context app = a.getApplicationContext();
         fetchLatest(r -> {
+            autoChecking = false;
             if (r == null) return;
-            Prefs.setUpdateCheckedAt(a.getApplicationContext(), System.currentTimeMillis());
-            if (a.isFinishing() || a.isDestroyed() || !isNewer(r)) return;
-            if (r.tag.equals(Prefs.updateSkippedTag(a))) return;
-            boolean hasApk = (r.apkUrl != null && !r.apkUrl.isEmpty())
-                    || (r.fallbackApkUrl != null && !r.fallbackApkUrl.isEmpty());
-            if (hasApk && Prefs.updateWifiBackground(a) && isOnWifi(a) && !UpdateInstaller.isReady(a, r)) {
-                UpdateInstaller.startBackground(a, r, true);
-                return;
+            recordCheckResult(app, r);
+            if (isNewer(r)) {
+                boolean hasApk = (r.apkUrl != null && !r.apkUrl.isEmpty())
+                        || (r.fallbackApkUrl != null && !r.fallbackApkUrl.isEmpty());
+                if (hasApk && Prefs.updateWifiBackground(app) && isOnWifi(app)
+                        && !UpdateInstaller.isReady(app, r)) {
+                    UpdateInstaller.startBackground(a, r, true);
+                }
             }
-            showDialog(a, r, true);
+            if (onStateChanged != null && !a.isFinishing() && !a.isDestroyed()) {
+                onStateChanged.run();
+            }
         });
     }
 

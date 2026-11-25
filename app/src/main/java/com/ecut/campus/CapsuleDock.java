@@ -38,7 +38,9 @@ public class CapsuleDock extends View {
     private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint pillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Drawable[] icons = new Drawable[ICONS.length];
+    private final boolean[] badges = new boolean[LABELS.length];
     private final RectF tmp = new RectF();
     private final float density;
 
@@ -111,6 +113,13 @@ public class CapsuleDock extends View {
 
     public int selectedTab() {
         return selected;
+    }
+
+    /** 控制指定页签的红点角标（如设置页签的新版本提醒）。 */
+    public void setBadge(int index, boolean show) {
+        if (index < 0 || index >= badges.length || badges[index] == show) return;
+        badges[index] = show;
+        invalidate();
     }
 
     private void animateTo(int index) {
@@ -276,6 +285,13 @@ public class CapsuleDock extends View {
             Paint.FontMetrics fm = textPaint.getFontMetrics();
             float baseline = h / 2f - (fm.ascent + fm.descent) / 2f;
             canvas.drawText(LABELS[i], startX + iconSize + gap + textW / 2f, baseline, textPaint);
+            if (badges[i]) {
+                badgePaint.setColor(G.alarm());
+                float dotR = 3.5f * density;
+                float dotX = startX + total + 5f * density;
+                float dotY = h / 2f - 6.5f * density;
+                canvas.drawCircle(dotX, dotY, dotR, badgePaint);
+            }
         }
     }
 }

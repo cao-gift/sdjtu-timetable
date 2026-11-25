@@ -81,6 +81,10 @@ final class SdjtuSyncSession {
         return true;
     }
 
+    String currentBase() {
+        return base;
+    }
+
     private String target() {
         return base + (kind == CampusSyncClient.Kind.TIMETABLE ? QiangzhiSource.TIMETABLE_PATH : QiangzhiGrades.GRADES_PATH);
     }
@@ -203,9 +207,15 @@ final class SdjtuSyncSession {
                 }
                 reading = true;
                 listener.ready();
-            } else if (!found.isEmpty() && SdjtuPortal.isSchoolUrl(found) && !targetAfterSso) {
-                targetAfterSso = true;
-                web.loadUrl(target());
+            } else if (!found.isEmpty() && SdjtuPortal.isSchoolUrl(found)) {
+                if (kind == CampusSyncClient.Kind.GRADES) {
+                    // 成绩查询可直接复用已建立的教务根路径与 Cookie 发起 POST，不必再完整渲染 cjcx_list 页面。
+                    reading = true;
+                    listener.ready();
+                } else if (!targetAfterSso) {
+                    targetAfterSso = true;
+                    web.loadUrl(target());
+                }
             } else if (dashboard && !ssoOpened
                     && (autoLogin.attempted()
                     || (!"academic".equals(stage) && elapsed > 300)

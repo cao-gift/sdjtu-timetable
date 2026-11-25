@@ -51,13 +51,40 @@ public final class Prefs {
         sp(ctx).edit().putString("update_skipped", tag).apply();
     }
 
+    /** 静默检查发现的可更新版本标签与版本号（仅用于设置与关于页红点角标提示）。 */
+    public static String availableUpdateTag(Context ctx) {
+        return sp(ctx).getString("update_available_tag", "");
+    }
+
+    public static int availableUpdateCode(Context ctx) {
+        return sp(ctx).getInt("update_available_code", 0);
+    }
+
+    public static void setAvailableUpdate(Context ctx, String tag, int versionCode) {
+        sp(ctx).edit()
+                .putString("update_available_tag", tag == null ? "" : tag)
+                .putInt("update_available_code", Math.max(0, versionCode))
+                .apply();
+    }
+
     /** 是否已经在设置页完成统一门户/办事大厅会话初始化 */
     public static boolean hasPortalSession(Context ctx) {
         return sp(ctx).getBoolean(KEY_PORTAL_SESSION, false);
     }
 
     public static void setPortalSession(Context ctx, boolean ready) {
-        sp(ctx).edit().putBoolean(KEY_PORTAL_SESSION, ready).apply();
+        SharedPreferences.Editor ed = sp(ctx).edit().putBoolean(KEY_PORTAL_SESSION, ready);
+        ed.putLong("portal_session_verified_at", ready ? System.currentTimeMillis() : 0L);
+        ed.apply();
+    }
+
+    /** 最近一次确认统一门户/教务会话有效的时间戳（毫秒）。 */
+    public static long portalSessionVerifiedAt(Context ctx) {
+        return sp(ctx).getLong("portal_session_verified_at", 0L);
+    }
+
+    public static void setPortalSessionVerifiedAt(Context ctx, long timeMs) {
+        sp(ctx).edit().putLong("portal_session_verified_at", Math.max(0L, timeMs)).apply();
     }
 
     /** 用户当前查看/锚定的教学周 */
@@ -350,23 +377,14 @@ public final class Prefs {
         if ("benben".equals(saved)) return "com.ecut.campus.LauncherBenben";
         return "com.ecut.campus.LauncherPear";
     }
-    /** 上次打开时的 versionCode（「新版本说明」用），没记过为 0。 */
-    public static int lastSeenVersionCode(Context ctx) { return sp(ctx).getInt("last_seen_vc", 0); }
-    public static void setLastSeenVersionCode(Context ctx, int vc) { sp(ctx).edit().putInt("last_seen_vc", vc).apply(); }
     /** 小组件上次「不靠打开 App」自己刷新的时间（闹钟 / 兜底 / 系统），诊断日志用。 */
     public static long widgetBgRefreshAt(Context ctx) { return sp(ctx).getLong("widget_bg_refresh_at", 0L); }
     public static void markWidgetBgRefresh(Context ctx) { sp(ctx).edit().putLong("widget_bg_refresh_at", System.currentTimeMillis()).apply(); }
-    /** 「允许后台刷新」引导是否已经主动弹过（只主动弹一次，设置里随时能再点）。 */
-    public static boolean bgGuideShown(Context ctx) { return sp(ctx).getBoolean("bg_guide_shown", false); }
-    public static void setBgGuideShown(Context ctx) { sp(ctx).edit().putBoolean("bg_guide_shown", true).apply(); }
 
     // ===== 1.2.10：课块下雨提示 =====
     /** 课块下雨提示开关，默认开启。 */
     public static boolean rainHint(Context ctx) { return sp(ctx).getBoolean("rain_hint", true); }
     public static void setRainHint(Context ctx, boolean on) { sp(ctx).edit().putBoolean("rain_hint", on).apply(); }
-    /** 是否已首次主动询问过定位权限（拒绝后不再纠缠）。 */
-    public static boolean rainPermAsked(Context ctx) { return sp(ctx).getBoolean("rain_perm_asked", false); }
-    public static void setRainPermAsked(Context ctx, boolean v) { sp(ctx).edit().putBoolean("rain_perm_asked", v).apply(); }
     /** 上次成功拉取天气预报的时间戳（毫秒）。 */
     public static long rainFetchedAt(Context ctx) { return sp(ctx).getLong("rain_fetched_at", 0L); }
     public static void setRainFetchedAt(Context ctx, long t) { sp(ctx).edit().putLong("rain_fetched_at", t).apply(); }

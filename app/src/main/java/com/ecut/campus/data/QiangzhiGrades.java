@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 public final class QiangzhiGrades {
 
     public static final String GRADES_PATH = "kscj/cjcx_list";
+    public static final String QUERY_FORM_BODY = "kksj=&kcxz=&kcmc=&xsfs=all";
     /** 分页拉取上限，避免学校改版导致死循环分页。 */
     public static final int MAX_PAGES = 20;
     /** 单次解析最大行数保护。 */
@@ -27,8 +28,65 @@ public final class QiangzhiGrades {
     private static final Pattern TR = Pattern.compile("<tr\\b[^>]*>(.*?)(?=<tr\\b|</table>|$)", FLAGS);
     private static final Pattern CELL = Pattern.compile("<(td|th)\\b[^>]*>(.*?)(?=<td\\b|<th\\b|</tr>|$)", FLAGS);
     private static final Pattern TERM_ID = Pattern.compile("(\\d{4})-(\\d{4})-(\\d)");
+    private static final Pattern TOTAL_PAGES_CN = Pattern.compile("共\\s*(\\d+)\\s*页");
+    private static final Pattern TOTAL_PAGES_SLASH = Pattern.compile("/\\s*(\\d+)\\s*页");
+    private static final Pattern NO_PERM_TEXT = Pattern.compile("无(操作)?权限|未开放|评教");
 
     private QiangzhiGrades() {}
+
+    /** 构造强智全量成绩查询的表单体；page <= 1 为首页。 */
+    public static String pageQueryBody(int page) {
+        if (page <= 1) return QUERY_FORM_BODY;
+        return QUERY_FORM_BODY + "&pageNum=" + page + "&pageIndex=" + page;
+    }
+
+    /** 从成绩查询页 HTML 中提取 #dataList 完整表格标签，未找到返回空串。 */
+    public static String extractDataListTable(String html) {
+        if (html == null || html.isEmpty()) return "";
+        Matcher m = TABLE.matcher(html);
+        return m.find() ? m.group(0) : "";
+    }
+
+    /** 从分页提示文案解析总页数，范围收敛在 [1, MAX_PAGES]。 */
+    public static int totalPages(String html) {
+        if (html == null || html.isEmpty()) return 1;
+        String plain = QiangzhiSource.text(html);
+        Matcher m = TOTAL_PAGES_CN.matcher(plain);
+        boolean matched = m.find();
+        if (!matched) {
+            m = TOTAL_PAGES_SLASH.matcher(plain);
+            matched = m.find();
+        }
+        if (matched) {
+            try {
+                int n = Integer.parseInt(m.group(1));
+                if (n > 1) return Math.min(n, MAX_PAGES);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 1;
+    }
+
+    /** 判断成绩页是否明确提示无查询权限或未完成评教。 */
+    public static boolean isNoPermission(String html) {
+        if (html == null || html.isEmpty() || !extractDataListTable(html).isEmpty()) return false;
+        String plain = QiangzhiSource.text(html);
+        return plain.length() < 2000 && NO_PERM_TEXT.matcher(plain).find();
+    }
+
+    /** 判断成绩表是否包含有效表头（至少同时存在课程名称与成绩列），用于区分“真实 0 门成绩”与结构异常。 */
+    public static boolean hasValidHeader(String html) {
+        if (html == null || html.isEmpty()) return false;
+        Matcher tm = TABLE.matcher(html);
+        String body = tm.find() ? tm.group(1) : html;
+        Matcher rm = TR.matcher(body);
+        while (rm.find()) {
+            List<String> cells = cells(rm.group(1));
+            if (cells.isEmpty()) continue;
+            return header(cells)[C_NAME] >= 0;
+        }
+        return false;
+    }
 
     /**
      * 当前页面有 #dataList 就直接用；否则同步 POST 查全部学期成绩。

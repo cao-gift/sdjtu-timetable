@@ -111,16 +111,10 @@ public class MainActivity extends AppCompatActivity {
             if (tab == TAB_SETTINGS && page > 0 && page != R.id.settings_page_root) settings.showPage(page, false);
         }
         ThemeReveal.play(this);
-        // 从老版本升上来的第一次打开：先弹「新版本说明」，这次就不再弹检查更新，免得两个弹窗叠在一起
-        boolean whatsNew = maybeShowWhatsNew(container);
-        // 桌面放了小组件、但驴驴课表还没被允许后台运行：主动提示一次（不和「新版本说明」叠着弹）
-        boolean bgGuide = !whatsNew && BgAllow.shouldAutoShow(this);
-        if (bgGuide) container.postDelayed(() -> {
-            if (!isFinishing()) BgAllow.autoShow(this);
-        }, 900);
-        // 首帧画完再去查更新（联网 + 可能弹窗），不挡冷启动
-        if (!whatsNew && !bgGuide) container.postDelayed(() -> {
-            if (!isFinishing()) Updater.autoCheck(this);
+        refreshUpdateBadges();
+        // 首帧画完再静默查更新（Wi-Fi 与流量均可，不弹框，仅刷新红点角标）
+        container.postDelayed(() -> {
+            if (!isFinishing()) Updater.autoCheck(this, this::refreshUpdateBadges);
         }, 1500);
         Intent launch = getIntent();
         if (launch != null && launch.hasExtra(EXTRA_ACTION)) {
@@ -128,34 +122,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    void refreshDockBlur() {
-        if (dockBlur != null) dockBlur.markDirty();
+    void refreshUpdateBadges() {
+        if (textDock != null) {
+            textDock.setBadge(TAB_SETTINGS, Updater.hasAvailableUpdate(this));
+        }
+        if (settings != null) {
+            settings.refreshAboutBadge();
+        }
     }
 
-    /**
-     * 更新后第一次打开的「新版本说明」（只给从老版本升上来的人，新装不弹）。文案在 res/values/strings.xml 的 whats_new_*。
-     * 不管弹不弹，都记下这次的 versionCode。返回 true 表示要弹。
-     */
-    private boolean maybeShowWhatsNew(View anchor) {
-        boolean upgraded = false;
-        try {
-            android.content.pm.PackageInfo pi = getPackageManager().getPackageInfo(getPackageName(), 0);
-            upgraded = com.ecut.campus.data.WhatsNew.isUpgrade(pi.firstInstallTime, pi.lastUpdateTime);
-        } catch (Exception ignored) {
-        }
-        boolean show = com.ecut.campus.data.WhatsNew.shouldShow(Prefs.lastSeenVersionCode(this),
-                BuildConfig.VERSION_CODE, upgraded);
-        Prefs.setLastSeenVersionCode(this, BuildConfig.VERSION_CODE);
-        if (!show) return false;
-        anchor.postDelayed(() -> {
-            if (isFinishing()) return;
-            new androidx.appcompat.app.AlertDialog.Builder(this)
-                    .setTitle(R.string.whats_new_title)
-                    .setMessage(R.string.whats_new_body)
-                    .setPositiveButton(R.string.whats_new_ok, null)
-                    .show();
-        }, 700);
-        return true;
+    void refreshDockBlur() {
+        if (dockBlur != null) dockBlur.markDirty();
     }
 
     @Override
@@ -223,15 +200,6 @@ public class MainActivity extends AppCompatActivity {
         contentContainer.addView(settingsFragment);
         settings = new SettingsTab(this, settingsFragment);
         settings.bind();
-    }
-
-    /** 第一次看到有课的课表时，提示一次「长按空白处画课」。 */
-    private void maybeShowDrawTip(com.ecut.campus.data.Timetable t) {
-        if (t == null || t.courses.isEmpty()) return;
-        android.content.SharedPreferences sp = getSharedPreferences(STARTUP_PREFS, MODE_PRIVATE);
-        if (sp.getBoolean("tip_draw_course", false)) return;
-        sp.edit().putBoolean("tip_draw_course", true).apply();
-        Toast.makeText(this, "小技巧：长按空白格子再上下拖，可以直接画一节课", Toast.LENGTH_LONG).show();
     }
 
     private void showTab(int tab) {
@@ -460,7 +428,6 @@ public class MainActivity extends AppCompatActivity {
 
     void refreshTimetableTab() {
         currentTimetable = TimetableStore.load(this);
-        maybeShowDrawTip(currentTimetable);
         scheduleSettings = ScheduleSettingsStore.load(this);
         // 导入的课用到了后面的节次就自动扩展，只增不减。
         int usedMax = ScheduleSettings.maxSectionUsed(currentTimetable);
@@ -515,11 +482,6 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         if (dockBlur != null) dockBlur.markDirty();
-        boolean hasCourses = currentTimetable != null && currentTimetable.courses != null
-                && !currentTimetable.courses.isEmpty();
-        if (currentTab == TAB_TIMETABLE) {
-            RainWeather.maybeAskPermissionOnce(this, hasCourses);
-        }
         RainWeather.refreshIfNeeded(this, false, () -> {
             if (!isFinishing() && timetableView != null) timetableView.invalidate();
         });
@@ -651,10 +613,12 @@ public class MainActivity extends AppCompatActivity {
             lastShownDay = today;
             Prefs.setCurrentWeek(this, actualCurrentWeek());
         }
-        // 刚从统一门户登录回来：第一次弹出上手引导
-        LoginGuide.maybeShow(this, this::syncTimetable);
+        refreshUpdateBadges();
         boolean justCreated = skipNextResumeRefresh;
         skipNextResumeRefresh = false;
+        if (!justCreated) {
+            Updater.autoCheck(this, this::refreshUpdateBadges);
+        }
         // onCreate 刚刷新过一遍，冷启动不重复读盘重绘
         if (justCreated && !dayChanged) return;
         if (currentTab == TAB_TIMETABLE) refreshTimetableTab();

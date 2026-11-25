@@ -60,8 +60,13 @@ public class AboutActivity extends AppCompatActivity {
                     v -> Updater.open(this, Updater.SITE_URL));
         }
         if (Updater.hasUpdateSource()) {
-            View upd = Ui.row(this, c1, rowIndex(idx++), "检查更新", "正在检查…", "…", v -> check(true));
+            String cachedTag = Updater.availableUpdateTag(this);
+            boolean hasCached = !cachedTag.isEmpty();
+            View upd = Ui.row(this, c1, rowIndex(idx++), "检查更新",
+                    hasCached ? ("新版本 " + cachedTag + " 可以下载") : "正在检查…",
+                    hasCached ? "● NEW" : "…", v -> check(true));
             bindUpdateRow(upd);
+            if (hasCached) setUpdate("新版本 " + cachedTag + " 可以下载", "● NEW", G.alarm());
         }
         if (Updater.hasReleaseRepository()) {
             Ui.row(this, c1, rowIndex(idx++), "GitHub 项目主页", Updater.REPO_URL, "↗ WEB",
@@ -70,14 +75,14 @@ public class AboutActivity extends AppCompatActivity {
                     v -> Updater.open(this, Updater.RELEASES_URL));
         }
         if (Updater.hasUpdateSource()) {
-            Ui.row(this, c1, rowIndex(idx++), "自动检查更新", "打开应用时检查新版本",
+            Ui.row(this, c1, rowIndex(idx++), "自动检查更新", "联网时静默检查并以角标提醒",
                     Prefs.updateAutoCheck(this) ? "ON" : "OFF", v -> {
                         Prefs.setUpdateAutoCheck(this, !Prefs.updateAutoCheck(this));
                         recreate();
                     });
         }
         Ui.row(this, c1, rowIndex(idx++), "使用指南", "同步课表和成绩", "?",
-                v -> LoginGuide.show(this, null));
+                v -> LoginGuide.show(this));
 
         Ui.label(this, col, "CONTACT · 联系与赞赏");
         LinearLayout c2 = Ui.card(this, col);
@@ -124,9 +129,9 @@ public class AboutActivity extends AppCompatActivity {
                         : "连不上更新源，稍后再试", "重试", G.MUTE);
                 return;
             }
-            Prefs.setUpdateCheckedAt(this, System.currentTimeMillis());
+            Updater.recordCheckResult(this, r);
             if (Updater.isNewer(r)) {
-                setUpdate("新版本 " + r.tag + " 可以下载", "● NEW", G.ACCENT);
+                setUpdate("新版本 " + r.tag + " 可以下载", "● NEW", G.alarm());
                 if (userTap) Updater.showDialog(this, r, false);
             } else {
                 setUpdate("已是最新版本", "✓", G.MUTE);

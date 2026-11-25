@@ -19,7 +19,6 @@ import android.os.Handler;
 import android.os.Looper;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -142,32 +141,11 @@ public final class RainWeather {
         return Prefs.rainFetchedAt(ctx);
     }
 
-    /**
-     * 第一次需要时（课表里有课、开关开着、还没问过定位权限）弹一句简短说明再请求定位权限。
-     * 用户拒绝或点「暂不」后不再自动打扰。
-     */
-    public static void maybeAskPermissionOnce(Activity a, boolean hasCourses) {
-        if (a == null || a.isFinishing() || !hasCourses) return;
-        if (!Prefs.rainHint(a) || hasPermission(a) || Prefs.rainPermAsked(a)) return;
-        Prefs.setRainPermAsked(a, true);
-        showPermissionReasonDialog(a);
-    }
-
     /** 用户在设置里手动打开「课块下雨提示」且还没给定位权限时调用。 */
     public static void askPermissionFromSetting(Activity a) {
         if (a == null || a.isFinishing() || hasPermission(a)) return;
-        Prefs.setRainPermAsked(a, true);
-        showPermissionReasonDialog(a);
-    }
-
-    private static void showPermissionReasonDialog(Activity a) {
-        new AlertDialog.Builder(a)
-                .setTitle("课块下雨提示")
-                .setMessage("需要大致位置（城市级）来看看你上课那几个小时会不会下雨，在课块上泛起雨雾提醒带伞。\n\n拒绝也没关系，随时可以在设置里关掉。")
-                .setNegativeButton("暂不", null)
-                .setPositiveButton("去开启", (d, w) -> ActivityCompat.requestPermissions(
-                        a, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_LOCATION))
-                .show();
+        ActivityCompat.requestPermissions(
+                a, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, REQ_LOCATION);
     }
 
     /**

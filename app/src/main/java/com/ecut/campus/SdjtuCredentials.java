@@ -163,6 +163,7 @@ final class SdjtuCredentials {
             try {
                 encryptAndWrite(ctx, name, password);
                 Prefs.setSessionExpired(ctx, false);
+                Prefs.setPortalSessionVerifiedAt(ctx, 0L);
                 state(ctx).edit().putBoolean("enabled", true).apply();
                 saved = true;
             } catch (IOException | GeneralSecurityException | RuntimeException unavailable) {

@@ -62,8 +62,8 @@ public class GradeCheckWorker extends Worker {
         main.post(() -> {
             if (aborted.get()) return;
             try {
-                WebView view = new WebView(ctx);
-                client[0] = CampusSyncClient.start(view, CampusSyncClient.Kind.GRADES, new CampusSyncClient.Callback() {
+                client[0] = CampusSyncClient.startLazy(ctx, () -> new WebView(ctx),
+                        CampusSyncClient.Kind.GRADES, new CampusSyncClient.Callback() {
                     @Override public void onSuccess(int count) { done.countDown(); }
                     @Override public void onFailure(String message) { done.countDown(); }
                 });

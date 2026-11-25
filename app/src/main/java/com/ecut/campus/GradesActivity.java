@@ -372,15 +372,9 @@ public class GradesActivity extends AppCompatActivity {
             WebShellActivity.startManualLoginForSync(this, WebShellActivity.REQ_SDJTU_GRADES, "成绩", null);
             return;
         }
-        ViewGroup host = findViewById(R.id.grades_sync_host);
-        WebView view = new WebView(this);
-        view.setLayoutParams(new ViewGroup.LayoutParams(1, 1));
-        view.setAlpha(0f);
-        host.addView(view);
-
         boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
         Toast.makeText(this, autoLogin ? "正在自动登录并同步成绩…" : "正在后台同步成绩…", Toast.LENGTH_SHORT).show();
-        activeSync = CampusSyncClient.start(view, CampusSyncClient.Kind.GRADES,
+        activeSync = CampusSyncClient.startLazy(this, this::newWebViewForSync, CampusSyncClient.Kind.GRADES,
                 new CampusSyncClient.Callback() {
                     @Override
                     public void onSuccess(int count) {
@@ -412,6 +406,18 @@ public class GradesActivity extends AppCompatActivity {
                     }
                 });
         refresh();
+    }
+
+    @Nullable
+    private WebView newWebViewForSync() {
+        if (isFinishing() || isDestroyed()) return null;
+        ViewGroup host = findViewById(R.id.grades_sync_host);
+        if (host == null) return null;
+        WebView view = new WebView(this);
+        view.setLayoutParams(new ViewGroup.LayoutParams(1, 1));
+        view.setAlpha(0f);
+        host.addView(view);
+        return view;
     }
 
     @Override

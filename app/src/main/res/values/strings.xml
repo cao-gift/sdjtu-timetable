@@ -7,7 +7,4 @@
     <string name="widget_countdown_desc">2×2 下一节课倒计时：大号等宽倒计时、课名与教室</string>
     <string name="widget_progress_desc">4×1 今日进度条：一眼看清今天上了几节课与下一节</string>
     <string name="widget_preview_title">今日周二，还有 <font color="#FF4A1C">2</font> 门课要上</string>
-    <string name="whats_new_title">驴驴课表 1.4.1</string>
-    <string name="whats_new_body">大幅提速交院统一门户自动登录与同步，未登录时点击成绩/空教室/培养方案/考试安排可直接跳转登录并续接同步；修复课表 .ics 导出到手机日历缺失日期与冲突的问题；放宽课表卡片课名换行高度；精简移除小玩意中的分享卡片。</string>
-    <string name="whats_new_ok">知道了</string>
 </resources>

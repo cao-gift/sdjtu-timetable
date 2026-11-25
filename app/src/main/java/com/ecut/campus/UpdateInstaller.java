@@ -83,11 +83,13 @@ public final class UpdateInstaller {
                         err = verify(app, part, r);
                         if (err == null && part.renameTo(done)) {
                             postBgReady(app, r);
-                            main.post(() -> {
-                                if (!a.isFinishing() && !a.isDestroyed()) {
-                                    Updater.showDialog(a, r, true);
-                                }
-                            });
+                            if (!silent) {
+                                main.post(() -> {
+                                    if (!a.isFinishing() && !a.isDestroyed()) {
+                                        Updater.showDialog(a, r, true);
+                                    }
+                                });
+                            }
                             return;
                         }
                     }

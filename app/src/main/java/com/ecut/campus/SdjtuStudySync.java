@@ -375,7 +375,10 @@ final class SdjtuStudySync {
 
     private void fail(String message, boolean loginRequired) {
         if (finished) return;
-        if (loginRequired) Prefs.setSessionExpired(activity, true);
+        if (loginRequired) {
+            Prefs.setPortalSession(activity, false);
+            Prefs.setSessionExpired(activity, true);
+        }
         cancel();
         callback.onFailure(message, loginRequired);
     }

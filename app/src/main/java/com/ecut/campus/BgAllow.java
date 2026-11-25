@@ -33,16 +33,6 @@ final class BgAllow {
         }
     }
 
-    /** 放了小组件、还没放行、也没主动弹过：打开 App 时主动弹一次。 */
-    static boolean shouldAutoShow(Context c) {
-        return !Prefs.bgGuideShown(c) && ClassWidget.placedCount(c) > 0 && !ignoring(c);
-    }
-
-    static void autoShow(Activity a) {
-        Prefs.setBgGuideShown(a);
-        show(a);
-    }
-
     /** 设置里那一行的副标题。 */
     static String status(Context c) {
         return ignoring(c) ? "已允许后台自动刷新" : "未放行后台，点此设置";
