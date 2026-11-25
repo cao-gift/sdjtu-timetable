@@ -1,6 +1,6 @@
 # 驴驴课表 · Lǘlǘ Timetable
 
-**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.4.0 (72)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
+**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.4.1 (73)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
 
 [简体中文](README.md) | **English**
 

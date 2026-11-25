@@ -47,11 +47,23 @@ final class MainSyncHelper {
     }
 
     static void startSilentSync(MainActivity a, CampusSyncClient.Kind kind) {
+        startSilentSync(a, kind, true);
+    }
+
+    static void startSilentSync(MainActivity a, CampusSyncClient.Kind kind, boolean allowLoginRedirect) {
         if (a.activeSync != null && a.activeSync.isRunning()) {
             Toast.makeText(a, "正在同步，请稍候", Toast.LENGTH_SHORT).show();
             return;
         }
-        Toast.makeText(a, "正在后台同步" + kind.label + "…", Toast.LENGTH_SHORT).show();
+        int requestCode = kind == CampusSyncClient.Kind.TIMETABLE
+                ? WebShellActivity.REQ_SDJTU_TIMETABLE : WebShellActivity.REQ_SDJTU_GRADES;
+        if (allowLoginRedirect && WebShellActivity.needsManualLoginFirst(a)) {
+            WebShellActivity.startManualLoginForSync(a, requestCode, kind.label, null);
+            return;
+        }
+        boolean autoLogin = !Prefs.hasPortalSession(a) || Prefs.sessionExpired(a);
+        Toast.makeText(a, (autoLogin ? "正在自动登录并同步" : "正在后台同步") + kind.label + "…",
+                Toast.LENGTH_SHORT).show();
         a.activeSync = CampusSyncClient.start(a.newWebViewForSync(), kind,
                 new CampusSyncClient.Callback() {
                     @Override
@@ -78,7 +90,11 @@ final class MainSyncHelper {
                     public void onLoginRequired(String message) {
                         a.activeSync = null;
                         a.refreshSettingsTab();
-                        WebShellActivity.offerSdjtuLogin(a, kind, message);
+                        if (allowLoginRedirect) {
+                            WebShellActivity.startManualLoginForSync(a, requestCode, kind.label, message);
+                        } else {
+                            WebShellActivity.offerSdjtuLogin(a, kind, message);
+                        }
                     }
 
                     @Override

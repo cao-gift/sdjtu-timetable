@@ -549,9 +549,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     void openPortal() {
-        Intent i = new Intent(this, WebShellActivity.class);
-        i.putExtra(WebShellActivity.EXTRA_TARGET_KEY, "portal");
-        startActivity(i);
+        WebShellActivity.openManualPortal(this);
     }
 
     void exportIcs() {
@@ -568,7 +566,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startSilentSync(CampusSyncClient.Kind kind) {
-        MainSyncHelper.startSilentSync(this, kind);
+        MainSyncHelper.startSilentSync(this, kind, true);
     }
 
 
@@ -595,8 +593,8 @@ public class MainActivity extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == WebShellActivity.REQ_SDJTU_TIMETABLE || requestCode == WebShellActivity.REQ_SDJTU_GRADES) {
             if (resultCode == Activity.RESULT_OK) {
-                startSilentSync(requestCode == WebShellActivity.REQ_SDJTU_TIMETABLE
-                        ? CampusSyncClient.Kind.TIMETABLE : CampusSyncClient.Kind.GRADES);
+                MainSyncHelper.startSilentSync(this, requestCode == WebShellActivity.REQ_SDJTU_TIMETABLE
+                        ? CampusSyncClient.Kind.TIMETABLE : CampusSyncClient.Kind.GRADES, false);
             }
         } else if (requestCode == TimetableFiles.REQ_IMPORT_JSON && resultCode == Activity.RESULT_OK && data != null) {
             if (TimetableFiles.importFrom(this, data.getData())) {

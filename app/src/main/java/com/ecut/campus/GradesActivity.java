@@ -29,6 +29,7 @@ public class GradesActivity extends AppCompatActivity {
     private Grades currentGrades = new Grades();
     private String selectedSemesterFilter = "ALL";
     private CampusSyncClient activeSync;
+    private boolean awaitingLogin;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -208,6 +209,17 @@ public class GradesActivity extends AppCompatActivity {
         View emptyCard = findViewById(R.id.empty_grades_card);
         View skeleton = findViewById(R.id.grades_skeleton);
         boolean syncing = activeSync != null && activeSync.isRunning();
+        boolean busy = syncing || awaitingLogin;
+        TextView syncBtn = findViewById(R.id.btn_sync_grades);
+        if (syncBtn != null) {
+            syncBtn.setEnabled(!busy);
+            syncBtn.setText(syncing ? "同步中…" : "↻ 同步");
+        }
+        TextView emptySyncBtn = findViewById(R.id.btn_empty_sync_grades);
+        if (emptySyncBtn != null) {
+            emptySyncBtn.setEnabled(!busy);
+            emptySyncBtn.setText(syncing ? "同步中…" : "同步成绩");
+        }
         if (skeleton != null) {
             skeleton.setVisibility(syncing && displayCourses.isEmpty() ? View.VISIBLE : View.GONE);
         }
@@ -346,8 +358,18 @@ public class GradesActivity extends AppCompatActivity {
     }
 
     private void syncGrades() {
-        if (activeSync != null && activeSync.isRunning()) {
+        syncGrades(true);
+    }
+
+    private void syncGrades(boolean allowLoginRedirect) {
+        if ((activeSync != null && activeSync.isRunning()) || awaitingLogin) {
             Toast.makeText(this, "正在同步，请稍候", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (allowLoginRedirect && WebShellActivity.needsManualLoginFirst(this)) {
+            awaitingLogin = true;
+            refresh();
+            WebShellActivity.startManualLoginForSync(this, WebShellActivity.REQ_SDJTU_GRADES, "成绩", null);
             return;
         }
         ViewGroup host = findViewById(R.id.grades_sync_host);
@@ -356,7 +378,8 @@ public class GradesActivity extends AppCompatActivity {
         view.setAlpha(0f);
         host.addView(view);
 
-        Toast.makeText(this, "正在后台同步成绩…", Toast.LENGTH_SHORT).show();
+        boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
+        Toast.makeText(this, autoLogin ? "正在自动登录并同步成绩…" : "正在后台同步成绩…", Toast.LENGTH_SHORT).show();
         activeSync = CampusSyncClient.start(view, CampusSyncClient.Kind.GRADES,
                 new CampusSyncClient.Callback() {
                     @Override
@@ -370,8 +393,15 @@ public class GradesActivity extends AppCompatActivity {
                     @Override
                     public void onLoginRequired(String message) {
                         activeSync = null;
-                        refresh();
-                        WebShellActivity.offerSdjtuLogin(GradesActivity.this, CampusSyncClient.Kind.GRADES, message);
+                        if (allowLoginRedirect) {
+                            awaitingLogin = true;
+                            refresh();
+                            WebShellActivity.startManualLoginForSync(GradesActivity.this,
+                                    WebShellActivity.REQ_SDJTU_GRADES, "成绩", message);
+                        } else {
+                            refresh();
+                            WebShellActivity.offerSdjtuLogin(GradesActivity.this, CampusSyncClient.Kind.GRADES, message);
+                        }
                     }
 
                     @Override
@@ -387,7 +417,15 @@ public class GradesActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == WebShellActivity.REQ_SDJTU_GRADES && resultCode == RESULT_OK) syncGrades();
+        if (requestCode == WebShellActivity.REQ_SDJTU_GRADES) {
+            awaitingLogin = false;
+            if (resultCode == RESULT_OK) {
+                syncGrades(false);
+            } else {
+                refresh();
+                Toast.makeText(this, "登录已取消，可重新点击同步", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     @Override

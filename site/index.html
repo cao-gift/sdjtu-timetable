@@ -508,7 +508,7 @@
       <div class="hero-head">
         <div>
           <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span>LATEST RELEASE · 国内直连分发</span></div>
-          <div class="ver-numeral" id="verTag">v1.4.0</div>
+          <div class="ver-numeral" id="verTag">v1.4.1</div>
           <p class="hero-desc">一次登录学校 WebVPN 教务系统，本地离线保存课表、成绩、空教室、培养方案与考试安排。应用内检查更新与下载均优先走本站节点。</p>
         </div>
       </div>
@@ -518,7 +518,7 @@
       <div class="meta-grid">
         <div class="meta-cell">
           <div class="meta-k">BUILD</div>
-          <div class="meta-v" id="verBuild">72</div>
+          <div class="meta-v" id="verBuild">73</div>
         </div>
         <div class="meta-cell">
           <div class="meta-k">SIZE</div>
@@ -535,9 +535,9 @@
       </div>
 
       <div class="cta-row">
-        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.4.0.apk" download>
+        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.4.1.apk" download>
           <span>下载安装包 APK</span>
-          <span class="mono" id="downloadName">lvlv-v1.4.0.apk</span>
+          <span class="mono" id="downloadName">lvlv-v1.4.1.apk</span>
         </a>
         <a class="btn-outline" id="githubBtn" href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">
           <span>GitHub Releases ↗</span>
@@ -545,17 +545,18 @@
       </div>
 
       <div class="sha-bar">
-        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">14ee7a060b71b7e9713f10608a4c757f5799143772f111cb45b8d9bb76da02e7</span></div>
+        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">e7ac49dafcd48ff4684449f84b8693af88432d8e331a033970da0f626f3ce3d0</span></div>
         <button class="ghost-btn" id="copyShaBtn" type="button">COPY</button>
       </div>
     </section>
 
     <div class="section-label">RELEASE NOTES · 本次更新</div>
     <section class="card">
-      <div class="notes-body" id="verNotes">1. 新增 2×2「下一节课倒计时」与 4×1「今日进度条」纸墨风桌面小组件，以及系统下拉快捷设置磁贴（下一节课 / 今日空教室）。
-2. 新增考试倒计时、考前 1 天/1 小时提醒、考试日历 .ics 导出及课表叠加展示；新增课程作业与待办管理，未完成项随提醒推送。
-3. 升级课表「现在」按秒刻度线、上课进度脊与下课前 5 分钟提示，成绩页新增极简墨线学期 GPA 趋势图与翻牌动效，升级实况通知进度与全量本地备份/恢复。
-4. 官网新增完整更新日志页与脱敏界面预览，应用内更新弹窗支持展示完整说明与 Wi-Fi 后台下载。</div>
+      <div class="notes-body" id="verNotes">1. 大幅提速交院统一门户自动登录与同步链路：未登录直接进入统一门户跳过无效教务往返，提前探测 CAS 表单并取消人为等待，认证后直达教务 SSO。
+2. 修复未登录状态下点击同步成绩、查空教室、培养方案与考试安排无反应的问题：已保存凭据自动快速登录并同步，未保存则立即跳转登录并在进入教务系统后自动返回续接同步。
+3. 设置页「登录统一门户」按钮更名为「手动登录」，点击先弹框提示登录门户后需点击进入「教务系统」待加载完成后返回。
+4. 修复课表与考试 .ics 导出到手机日历缺失日期与全部冲突的问题（改用标准 UTC 时间戳、按时间升序排列、去重与确定性 UID）。
+5. 放宽课表卡片课程名称换行高度，按剩余空间尽量完整显示课名；移除小玩意与同学中的「学期人设卡」「双人课表海报」分享卡片功能。</div>
     </section>
 
     <div class="section-label">PREVIEW · 界面一览</div>
@@ -728,14 +729,14 @@
   <script>
     (function () {
       const FALLBACK = {
-        tag: "v1.4.0",
-        versionCode: 72,
-        fileName: "lvlv-v1.4.0.apk",
-        apkUrl: "/downloads/lvlv-v1.4.0.apk",
-        size: 3678061,
-        sha256: "14ee7a060b71b7e9713f10608a4c757f5799143772f111cb45b8d9bb76da02e7",
-        publishedAt: "2026-11-25T11:11:12.968Z",
-        notes: "1. 新增 2×2「下一节课倒计时」与 4×1「今日进度条」纸墨风桌面小组件，以及系统下拉快捷设置磁贴（下一节课 / 今日空教室）。\n2. 新增考试倒计时、考前 1 天/1 小时提醒、考试日历 .ics 导出及课表叠加展示；新增课程作业与待办管理，未完成项随提醒推送。\n3. 升级课表「现在」按秒刻度线、上课进度脊与下课前 5 分钟提示，成绩页新增极简墨线学期 GPA 趋势图与翻牌动效，升级实况通知进度与全量本地备份/恢复。\n4. 官网新增完整更新日志页与脱敏界面预览，应用内更新弹窗支持展示完整说明与 Wi-Fi 后台下载。"
+        tag: "v1.4.1",
+        versionCode: 73,
+        fileName: "lvlv-v1.4.1.apk",
+        apkUrl: "/downloads/lvlv-v1.4.1.apk",
+        size: 3672001,
+        sha256: "e7ac49dafcd48ff4684449f84b8693af88432d8e331a033970da0f626f3ce3d0",
+        publishedAt: "2026-11-25T12:03:25.338Z",
+        notes: "1. 大幅提速交院统一门户自动登录与同步链路：未登录直接进入统一门户跳过无效教务往返，提前探测 CAS 表单并取消人为等待，认证后直达教务 SSO。\n2. 修复未登录状态下点击同步成绩、查空教室、培养方案与考试安排无反应的问题：已保存凭据自动快速登录并同步，未保存则立即跳转登录并在进入教务系统后自动返回续接同步。\n3. 设置页「登录统一门户」按钮更名为「手动登录」，点击先弹框提示登录门户后需点击进入「教务系统」待加载完成后返回。\n4. 修复课表与考试 .ics 导出到手机日历缺失日期与全部冲突的问题（改用标准 UTC 时间戳、按时间升序排列、去重与确定性 UID）。\n5. 放宽课表卡片课程名称换行高度，按剩余空间尽量完整显示课名；移除小玩意与同学中的「学期人设卡」「双人课表海报」分享卡片功能。"
       };
 
       const el = (id) => document.getElementById(id);

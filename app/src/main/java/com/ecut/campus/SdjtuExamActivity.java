@@ -33,7 +33,7 @@ public final class SdjtuExamActivity extends AppCompatActivity {
     private JSONObject cached, shown;
     private long syncedAt;
     private String message = "";
-    private boolean partial, loginRequired, awaitingLogin;
+    private boolean partial, loginRequired, awaitingLogin, allowLoginPrompt = true;
 
     @Override protected void onCreate(@Nullable Bundle saved) {
         super.onCreate(saved);
@@ -51,7 +51,7 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         scope.setTypeface(Typeface.MONOSPACE);
         status = Ui.text(this, header, "", 14, G.INK);
         status.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-        login = Ui.button(this, "登录统一门户", false, v -> openLogin());
+        login = Ui.button(this, "登录统一门户", false, v -> openLogin(null));
         LinearLayout.LayoutParams loginLp = new LinearLayout.LayoutParams(-2, -2);
         loginLp.topMargin = dp(10);
         header.addView(login, loginLp);
@@ -95,15 +95,26 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         if (saved != null) {
             awaitingLogin = saved.getBoolean("awaitingLogin");
             loginRequired = saved.getBoolean("loginRequired");
+            allowLoginPrompt = saved.getBoolean("allowLoginPrompt", true);
         }
         render();
-        if (saved != null && saved.getBoolean("syncing")) sync();
+        if (saved != null && saved.getBoolean("syncing")) sync(allowLoginPrompt);
     }
 
     private void sync() {
+        sync(true);
+    }
+
+    private void sync(boolean promptForLogin) {
         if (query != null || awaitingLogin) return;
+        allowLoginPrompt = promptForLogin;
+        if (promptForLogin && WebShellActivity.needsManualLoginFirst(this)) {
+            openLogin(null);
+            return;
+        }
         loginRequired = false;
-        message = "正在查询考试安排…";
+        boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
+        message = autoLogin ? "正在自动登录并查询考试安排…" : "正在查询考试安排…";
         query = SdjtuExamQuery.start(this, findViewById(R.id.study_sync_host), new SdjtuExamQuery.Callback() {
             @Override public void onSuccess(JSONObject data) {
                 query = null;
@@ -131,6 +142,7 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                     message += " 当前显示上次完整结果。";
                 }
                 render();
+                if (needsLogin && allowLoginPrompt) openLogin(reason);
             }
 
             @Override public void onFailure(String reason, boolean needsLogin) {
@@ -140,26 +152,24 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                 shown = cached;
                 message = reason + (cached != null ? " 当前显示上次完整结果。" : "");
                 render();
+                if (needsLogin && allowLoginPrompt) openLogin(reason);
             }
         });
         render();
     }
 
-    private void openLogin() {
-        if (awaitingLogin || query != null) return;
+    private void openLogin(@Nullable String reason) {
+        if (awaitingLogin || query != null || isFinishing() || isDestroyed()) return;
         awaitingLogin = true;
         render();
-        Intent intent = new Intent(this, WebShellActivity.class);
-        intent.putExtra(WebShellActivity.EXTRA_TARGET_KEY, "portal");
-        intent.putExtra(WebShellActivity.EXTRA_RETURN_AFTER_SDJTU_LOGIN, true);
-        startActivityForResult(intent, LOGIN);
+        WebShellActivity.startManualLoginForSync(this, LOGIN, "考试安排", reason);
     }
 
     @Override protected void onActivityResult(int code, int result, @Nullable Intent data) {
         super.onActivityResult(code, result, data);
         if (code != LOGIN || !awaitingLogin) return;
         awaitingLogin = false;
-        if (result == RESULT_OK) sync();
+        if (result == RESULT_OK) sync(false);
         else {
             message = "登录已取消。可重新登录后同步。";
             if (shown != null && shown == cached) message += " 当前显示上次完整结果。";
@@ -296,6 +306,7 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         state.putBoolean("syncing", query != null);
         state.putBoolean("awaitingLogin", awaitingLogin);
         state.putBoolean("loginRequired", loginRequired);
+        state.putBoolean("allowLoginPrompt", allowLoginPrompt);
     }
 
 

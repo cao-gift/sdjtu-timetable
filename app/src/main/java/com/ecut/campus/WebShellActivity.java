@@ -52,23 +52,73 @@ public class WebShellActivity extends AppCompatActivity {
     static final String EXTRA_LOCATE_STUDY = "locate_study";
     static final String EXTRA_STUDY_SAVED = "study_saved";
     static final String EXTRA_RETURN_AFTER_SDJTU_LOGIN = "return_after_sdjtu_login";
+    static final String EXTRA_LOGIN_PROMPT = "login_prompt";
 
     static final int REQ_SDJTU_TIMETABLE = 4071;
     static final int REQ_SDJTU_GRADES = 4072;
 
+    static final String MANUAL_PORTAL_PROMPT =
+            "登录统一门户后，请点击进入「教务系统」，待教务页面加载完成后再返回应用，登录状态才会生效。";
+    private static final String MANUAL_PORTAL_HINT =
+            "登录统一门户后，请点击进入「教务系统」，页面加载完成后返回即可。";
+
+    /** 纯逻辑判断：未登录（或会话已过期）且无法使用自动登录时，先走手动登录。 */
+    static boolean shouldOpenManualLoginFirst(boolean hasSession, boolean sessionExpired,
+                                              boolean hasSavedCredentials, boolean autoLoginPaused) {
+        boolean sessionReady = hasSession && !sessionExpired;
+        boolean canAutoLogin = hasSavedCredentials && !autoLoginPaused;
+        return !sessionReady && !canAutoLogin;
+    }
+
+    /** 未登录且无法自动登录时，点击同步应直接引导登录，而不是后台空等失败。 */
+    static boolean needsManualLoginFirst(android.content.Context ctx) {
+        return shouldOpenManualLoginFirst(
+                Prefs.hasPortalSession(ctx),
+                Prefs.sessionExpired(ctx),
+                SdjtuCredentials.isSaved(ctx),
+                SdjtuAutoLogin.isPaused(ctx));
+    }
+
+    /** 设置页「手动登录」：先弹框提示操作步骤，再打开统一门户。 */
+    static void openManualPortal(Activity caller) {
+        if (caller.isFinishing() || caller.isDestroyed()) return;
+        new androidx.appcompat.app.AlertDialog.Builder(caller)
+                .setTitle("登录提示")
+                .setMessage(MANUAL_PORTAL_PROMPT)
+                .setNegativeButton("取消", null)
+                .setPositiveButton("前往登录", (dialog, which) -> {
+                    Intent portal = new Intent(caller, WebShellActivity.class);
+                    portal.putExtra(EXTRA_TARGET_KEY, "login");
+                    portal.putExtra(EXTRA_HINT, MANUAL_PORTAL_HINT);
+                    caller.startActivity(portal);
+                }).show();
+    }
+
+    /** 同步前需要登录：直接打开统一门户并弹框提示，进入教务系统后自动返回继续同步。 */
+    static void startManualLoginForSync(Activity caller, int requestCode, String syncLabel,
+                                        @Nullable String reason) {
+        if (caller.isFinishing() || caller.isDestroyed()) return;
+        String target = (syncLabel == null || syncLabel.isEmpty()) ? "数据" : syncLabel;
+        String prompt = (reason != null && !reason.isEmpty() ? reason + "\n\n" : "")
+                + "登录统一门户后，请点击进入「教务系统」，页面加载完成后会自动返回并继续同步" + target + "。";
+        Intent portal = new Intent(caller, WebShellActivity.class);
+        portal.putExtra(EXTRA_TARGET_KEY, "login");
+        portal.putExtra(EXTRA_RETURN_AFTER_SDJTU_LOGIN, true);
+        portal.putExtra(EXTRA_LOGIN_PROMPT, prompt);
+        portal.putExtra(EXTRA_HINT, "登录统一门户后，请点击进入「教务系统」，加载完成将自动返回同步。");
+        caller.startActivityForResult(portal, requestCode);
+    }
+
     static void offerSdjtuLogin(Activity caller, CampusSyncClient.Kind kind, String message) {
         if (caller.isFinishing() || caller.isDestroyed()) return;
         new androidx.appcompat.app.AlertDialog.Builder(caller)
-                .setTitle("请在统一门户完成登录")
-                .setMessage(message + "\n\n进入教务系统后，应用会继续同步" + kind.label + "。")
+                .setTitle("请登录统一门户")
+                .setMessage(message + "\n\n登录统一门户后请点击进入「教务系统」，页面加载完成后会自动返回并继续同步" + kind.label + "。")
                 .setNegativeButton("稍后", null)
-                .setPositiveButton("打开统一门户", (dialog, which) -> {
-                    Intent portal = new Intent(caller, WebShellActivity.class);
-                    portal.putExtra(EXTRA_TARGET_KEY, "login");
-                    portal.putExtra(EXTRA_RETURN_AFTER_SDJTU_LOGIN, true);
-                    caller.startActivityForResult(portal, kind == CampusSyncClient.Kind.TIMETABLE
-                            ? REQ_SDJTU_TIMETABLE : REQ_SDJTU_GRADES);
-                }).show();
+                .setPositiveButton("前往登录", (dialog, which) ->
+                        startManualLoginForSync(caller, kind == CampusSyncClient.Kind.TIMETABLE
+                                ? REQ_SDJTU_TIMETABLE : REQ_SDJTU_GRADES, kind.label, null))
+                .show();
     }
 
     private WebView webView;
@@ -85,7 +135,7 @@ public class WebShellActivity extends AppCompatActivity {
     private SdjtuAcademicPages sdjtuPages;
     private SdjtuAcademicPages.Feature academicFeature = SdjtuAcademicPages.Feature.PORTAL;
     private boolean webResumed;
-    private boolean loginForStudySync, locatingStudy;
+    private boolean loginForStudySync, locatingStudy, academicNotified;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -102,11 +152,21 @@ public class WebShellActivity extends AppCompatActivity {
         locatingStudy = isAcademicLookup() && getIntent().getBooleanExtra(EXTRA_LOCATE_STUDY, false);
         sdjtuPages = new SdjtuAcademicPages(webView, academicFeature, loginForStudySync, locatingStudy, new SdjtuAcademicPages.Listener() {
             @Override public void onAcademic() {
+                CookieManager.getInstance().flush();
                 if (loginForStudySync) {
-                    CookieManager.getInstance().flush();
                     setResult(RESULT_OK);
+                    if (!academicNotified) {
+                        academicNotified = true;
+                        Toast.makeText(WebShellActivity.this, "已进入教务系统，正在继续同步…", Toast.LENGTH_SHORT).show();
+                    }
                     finish();
                     return;
+                }
+                if (!academicNotified) {
+                    academicNotified = true;
+                    View hintBox = findViewById(R.id.web_hint);
+                    if (hintBox != null) hintBox.setVisibility(View.GONE);
+                    Toast.makeText(WebShellActivity.this, "已进入教务系统，登录状态已保存，现在可以返回了", Toast.LENGTH_LONG).show();
                 }
                 if (!isAcademicLookup()) findViewById(R.id.btn_import_page).setVisibility(View.VISIBLE);
             }
@@ -167,6 +227,17 @@ public class WebShellActivity extends AppCompatActivity {
 
         configureWebView();
         webView.loadUrl(targetUrl);
+
+        if (savedInstanceState == null) {
+            String loginPrompt = getIntent().getStringExtra(EXTRA_LOGIN_PROMPT);
+            if (loginPrompt != null && !loginPrompt.isEmpty()) {
+                new androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("登录提示")
+                        .setMessage(loginPrompt)
+                        .setPositiveButton("知道了", null)
+                        .show();
+            }
+        }
     }
 
     private void captureStudy() {
@@ -194,8 +265,11 @@ public class WebShellActivity extends AppCompatActivity {
     }
 
     private String initialUrl(String key) {
-        if (locatingStudy || (loginForStudySync && !"login".equals(key))) {
+        if (locatingStudy) {
             return SdjtuPortal.STUDENT_HOME;
+        }
+        if (loginForStudySync || "login".equals(key) || "portal".equals(key)) {
+            return SdjtuPortal.LOGIN;
         }
         if (Prefs.hasPortalSession(this) && ("timetable".equals(key) || "grades".equals(key))) {
             String base = SdjtuPortal.academicBase(SdjtuPortal.studentHome(Prefs.sdjtuAcademicBase(this)));

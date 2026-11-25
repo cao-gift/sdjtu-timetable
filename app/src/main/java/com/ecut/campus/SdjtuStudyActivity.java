@@ -132,7 +132,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         message.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         header.addView(message);
         loginButton = button("登录统一门户");
-        loginButton.setOnClickListener(v -> openLogin());
+        loginButton.setOnClickListener(v -> openLogin(null));
         header.addView(loginButton, wrap());
         locateButton = button("在教务中定位");
         locateButton.setOnClickListener(v -> feature.locate(this, LOCATE_PAGE));
@@ -193,9 +193,17 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
     private void startSync(boolean promptForLogin) {
         if (sync != null || awaitingLogin) return;
         allowLoginPrompt = promptForLogin;
+        if (promptForLogin && WebShellActivity.needsManualLoginFirst(this)) {
+            openLogin(null);
+            return;
+        }
         canLocate = false;
-        notice = rooms() ? ("query".equals(request.optString("roomAction")) ? "正在查询教室…" : "正在读取查询条件…")
-                : "正在同步" + feature.title + "…";
+        boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
+        notice = rooms()
+                ? ("query".equals(request.optString("roomAction"))
+                        ? (autoLogin ? "正在自动登录并查询教室…" : "正在查询教室…")
+                        : (autoLogin ? "正在自动登录并读取查询条件…" : "正在读取查询条件…"))
+                : (autoLogin ? "正在自动登录并同步" : "正在同步") + feature.title + "…";
         needsLogin = false;
         sync = SdjtuStudySync.start(this, findViewById(R.id.study_sync_host), feature, request,
                 new SdjtuStudySync.Callback() {
@@ -228,7 +236,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
                 canLocate = !loginRequired;
                 notice = reason;
                 render();
-                if (loginRequired && allowLoginPrompt) openLogin();
+                if (loginRequired && allowLoginPrompt) openLogin(reason);
             }
             @Override public void onChoose(String reason, JSONObject options) {
                 sync = null;
@@ -248,13 +256,11 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         render();
     }
 
-    private void openLogin() {
+    private void openLogin(@Nullable String reason) {
         if (awaitingLogin || isFinishing() || isDestroyed()) return;
         awaitingLogin = true;
-        Intent portal = new Intent(this, WebShellActivity.class);
-        portal.putExtra(WebShellActivity.EXTRA_TARGET_KEY, "portal");
-        portal.putExtra(WebShellActivity.EXTRA_RETURN_AFTER_SDJTU_LOGIN, true);
-        startActivityForResult(portal, SIGN_IN);
+        render();
+        WebShellActivity.startManualLoginForSync(this, SIGN_IN, feature.title, reason);
     }
 
     @Override protected void onActivityResult(int code, int result, @Nullable Intent details) {
@@ -336,7 +342,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
 
     private void render() {
         boolean busy = sync != null;
-        syncButton.setEnabled(!busy);
+        syncButton.setEnabled(!busy && !awaitingLogin);
         if (rooms()) syncButton.setText(busy ? "请稍候…" : "选择条件");
         else syncButton.setText(busy ? "同步中…" : "同步");
         timestamp.setText(syncedAt == 0 ? "尚未同步" : "上次同步  " +

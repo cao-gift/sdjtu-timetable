@@ -41,12 +41,47 @@ public class IcsExporterTest {
         // 1-16 周 → 16 个事件
         int events = ics.split("BEGIN:VEVENT", -1).length - 1;
         assertTrue(events == 16);
-        // 第 1 周周二 = 2026-09-08，双节课 08:30 → 第 2 节下课 10:00
-        assertTrue(ics.contains("DTSTART;TZID=Asia/Shanghai:20260908T083000"));
-        assertTrue(ics.contains("DTEND;TZID=Asia/Shanghai:20260908T100000"));
+        assertTrue(ics.contains("METHOD:PUBLISH"));
+        assertTrue(ics.contains("X-WR-TIMEZONE:Asia/Shanghai"));
+        // 第 1 周周二 = 2026-09-08，东八区 08:30–10:00 → UTC 00:30Z–02:00Z
+        assertTrue(ics.contains("DTSTART:20260908T003000Z"));
+        assertTrue(ics.contains("DTEND:20260908T020000Z"));
         assertTrue(ics.contains("SUMMARY:矿床学"));
         assertTrue(ics.contains("LOCATION:4-620"));
-        assertTrue(ics.contains("DESCRIPTION:教师A"));
+        assertTrue(ics.contains("DESCRIPTION:第 1 周 周二 · 教师A"));
+        // 东八区 07:30 跨前一日 UTC 23:30Z
+        assertTrue("20260831T233000Z".equals(IcsExporter.toUtcStamp("2026-09-01", 7 * 60 + 30)));
+    }
+
+    @Test
+    public void sortsEventsChronologicallyAndUsesDeterministicUid() {
+        Timetable t = timetableWithOneCourse();
+        t.semester.totalWeeks = 2;
+        t.courses.get(0).sessions.get(0).weeks.clear();
+        t.courses.get(0).sessions.get(0).weeks.add(1);
+        // 加一门排在后面的周一课，应排在周二课之前
+        Timetable.Course mon = new Timetable.Course();
+        mon.name = "高等数学";
+        Timetable.Session ms = new Timetable.Session();
+        ms.dayOfWeek = 1;
+        ms.startSection = 1;
+        ms.endSection = 2;
+        ms.weeks.add(1);
+        ms.location = "1-101";
+        mon.sessions.add(ms);
+        t.courses.add(mon);
+        // 重复的同一时段记录应自动去重
+        t.courses.add(mon);
+
+        String ics1 = IcsExporter.export(t, ScheduleSettings.createDefault(), "排序测试");
+        String ics2 = IcsExporter.export(t, ScheduleSettings.createDefault(), "排序测试");
+        assertNotNull(ics1);
+        assertTrue(ics1.split("BEGIN:VEVENT", -1).length - 1 == 2);
+        assertTrue(ics1.indexOf("20260907T003000Z") < ics1.indexOf("20260908T003000Z"));
+        // 两次导出的 UID 保持一致，避免重复导入产生冲突
+        String uid1 = ics1.substring(ics1.indexOf("UID:"), ics1.indexOf("\r\n", ics1.indexOf("UID:")));
+        String uid2 = ics2.substring(ics2.indexOf("UID:"), ics2.indexOf("\r\n", ics2.indexOf("UID:")));
+        assertTrue(uid1.equals(uid2));
     }
 
     @Test
@@ -107,10 +142,11 @@ public class IcsExporterTest {
         assertNotNull(ics);
         // 原 4 节 - 1 停课 - 1 调走 + 1 调来 = 3 个事件
         assertTrue(ics.split("BEGIN:VEVENT", -1).length - 1 == 3);
-        assertTrue(!ics.contains("20260310T080000"));
-        assertTrue(!ics.contains("20260317T080000"));
-        assertTrue(ics.contains("DTSTART;TZID=Asia/Shanghai:20260328T190000"));
-        assertTrue(ics.contains("DTEND;TZID=Asia/Shanghai:20260328T203000"));
+        assertTrue(!ics.contains("20260310T003000Z"));
+        assertTrue(!ics.contains("20260317T003000Z"));
+        // 2026-03-28 东八区 19:00–20:30 → UTC 11:00Z–12:30Z
+        assertTrue(ics.contains("DTSTART:20260328T110000Z"));
+        assertTrue(ics.contains("DTEND:20260328T123000Z"));
         assertTrue(ics.contains("LOCATION:3-201"));
     }
 }

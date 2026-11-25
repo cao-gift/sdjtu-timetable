@@ -171,7 +171,7 @@
     academic.forEach(function (doc) {
         var path = doc.location.pathname, idx = path.search(academicPath);
         var menu = doc.querySelector("#LeftMenu1_divChildMenu,#divFirstMenuClass,#Top1_divLoginName,.Nsb_top,.Nsb_menu_pw");
-        if (menu || doc.querySelector("#mxh,#kbtable") ||
+        if (menu || doc.querySelector("#mxh,#kbtable,#dataList") ||
             (/\/jsxsd\/(framework\/|xsMain)/i.test(path) && doc.querySelector("frame,iframe,#dataList")) ||
             findAction(doc,["我的课表","教室课表查询","学期理论课表","培养方案","培养管理"])) {
             base = doc.location.origin + path.slice(0,idx) + "/jsxsd/";

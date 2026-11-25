@@ -25,6 +25,7 @@ final class SdjtuAutoLogin {
     private final boolean pausedWhenStarted;
     private boolean attempted;
     private long submittedAt;
+    private long readySince;
 
     SdjtuAutoLogin(Context context) {
         this.context = context.getApplicationContext();
@@ -39,6 +40,14 @@ final class SdjtuAutoLogin {
                 .getLong(PAUSED_GENERATION, -1) == SdjtuCredentials.generation(context);
     }
 
+    static boolean canAttempt(Context context) {
+        return SdjtuCredentials.isSaved(context) && !isPaused(context);
+    }
+
+    void resetPage() {
+        readySince = 0;
+    }
+
     boolean credentialsChanged() {
         return SdjtuCredentials.isUpdating() || generation != SdjtuCredentials.generation(context);
     }
@@ -48,6 +57,20 @@ final class SdjtuAutoLogin {
     }
 
     void inspectAndSubmit(WebView web, long pageSince, BooleanSupplier stillSamePage, Callback cb) {
+        if (!attempted) {
+            if (signingIn != null && signingIn != this) {
+                cb.busy("另一项同步正在登录统一门户，请稍后再同步");
+                return;
+            }
+            if (!SdjtuCredentials.isSaved(context)) {
+                cb.manual("请登录山东交通学院统一门户，或在设置中保存门户账号密码");
+                return;
+            }
+            if (attempts.getLong(PAUSED_GENERATION, -1) == generation) {
+                cb.manual("自动登录已暂停，请手动登录统一门户，或在设置中更新账号密码");
+                return;
+            }
+        }
         SdjtuLoginForm.inspect(web, state -> {
             if (!stillSamePage.getAsBoolean()) return;
             onForm(web, state, pageSince, stillSamePage, cb);
@@ -62,7 +85,7 @@ final class SdjtuAutoLogin {
         }
         long now = SystemClock.elapsedRealtime();
         if (attempted) {
-            if (now - submittedAt < 10_000) cb.waitMore(600);
+            if (now - submittedAt < 10_000) cb.waitMore(250);
             else {
                 pause();
                 cb.manual("登录后仍停留在认证页面，请打开统一门户完成验证或更新保存的密码");
@@ -70,12 +93,18 @@ final class SdjtuAutoLogin {
             return;
         }
         if (!SdjtuLoginForm.READY.equals(state)) {
-            if (now - pageSince < 12_000) cb.waitMore(500);
+            readySince = 0;
+            if (now - pageSince < 10_000) cb.waitMore(150);
             else cb.manual("认证页面未显示可用的账号密码表单，请打开统一门户继续");
             return;
         }
-        if (now - pageSince < 1_000) {
-            cb.waitMore(450);
+        if (readySince == 0) {
+            readySince = now;
+            cb.waitMore(150);
+            return;
+        }
+        if (now - readySince < 120) {
+            cb.waitMore(150 - (now - readySince));
             return;
         }
         if (signingIn != null && signingIn != this) {
@@ -102,7 +131,7 @@ final class SdjtuAutoLogin {
         submittedAt = now;
         SdjtuLoginForm.submit(web, account.username, account.password, submission -> {
             if (!stillSamePage.getAsBoolean()) return;
-            if (SdjtuLoginForm.SUBMITTED.equals(submission)) cb.waitMore(650);
+            if (SdjtuLoginForm.SUBMITTED.equals(submission)) cb.waitMore(250);
             else {
                 pause();
                 cb.manual("门户登录表单已变化，请打开统一门户完成验证");

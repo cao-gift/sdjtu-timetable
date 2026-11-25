@@ -116,9 +116,15 @@ final class SdjtuStudySync {
             String saved = SdjtuStudyRoute.load(activity, feature);
             handler.postDelayed(() -> fail(sawAcademic
                     ? "已进入旧版强智教务，但未取得查询结果，请打开教务原页核对。"
-                    : "同步超时，请检查学校门户连接后重试。", false), 60_000L);
-            if (saved != null && !saved.isEmpty()) loadEntry(Entry.SAVED_PAGE, saved);
-            else openStudentHome();
+                    : "同步超时，请检查学校门户连接后重试。",
+                    !sawAcademic && (!Prefs.hasPortalSession(activity) || Prefs.sessionExpired(activity))), 60_000L);
+            if (!Prefs.hasPortalSession(activity) || Prefs.sessionExpired(activity)) {
+                loadEntry(Entry.PORTAL, SdjtuPortal.LOGIN);
+            } else if (saved != null && !saved.isEmpty()) {
+                loadEntry(Entry.SAVED_PAGE, saved);
+            } else {
+                openStudentHome();
+            }
         } catch (IOException | RuntimeException e) {
             fail("无法启动教务同步，请检查系统 WebView 后重试", false);
         }
@@ -159,14 +165,22 @@ final class SdjtuStudySync {
             if (finished) return;
             document++;
             installed = evaluating = false;
+            autoLogin.resetPage();
             loginSince = 0;
             pageSince = SystemClock.elapsedRealtime();
             handler.removeCallbacks(inspect);
-            if (!allowed(url)) fail("学校门户跳转到了无法用于同步的页面", false);
+            if (!allowed(url)) {
+                fail("学校门户跳转到了无法用于同步的页面", false);
+                return;
+            }
+            if (SdjtuLoginForm.isLoginPage(url) || SdjtuPortal.isDashboard(url)
+                    || !SdjtuPortal.academicBase(url).isEmpty()) {
+                schedule(200);
+            }
         }
 
         @Override public void onPageFinished(WebView view, String url) {
-            if (!finished && allowed(view.getUrl())) schedule(100);
+            if (!finished && allowed(view.getUrl())) schedule(30);
         }
 
         @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
@@ -206,7 +220,7 @@ final class SdjtuStudySync {
         pageSince = SystemClock.elapsedRealtime();
         handler.removeCallbacks(inspect);
         handler.removeCallbacks(retryEntry);
-        if (next != Entry.PORTAL) handler.postDelayed(retryEntry, next == Entry.SAVED_PAGE ? 12_000L : 22_000L);
+        if (next != Entry.PORTAL) handler.postDelayed(retryEntry, next == Entry.SAVED_PAGE ? 8_000L : 14_000L);
         web.loadUrl(url);
     }
 
@@ -262,7 +276,8 @@ final class SdjtuStudySync {
             request.put("submitted", submitted);
             if (submittedContext != null) request.put("context", submittedContext);
             String arguments = request.toString().replace("\u2028", "\\u2028").replace("\u2029", "\\u2029");
-            String js = "(function(){if(location.protocol!=='https:'||!/(^|\\.)sdjtu\\.edu\\.cn$/i"
+            String js = "(function(){if(document.readyState==='loading'||!document.body)return {};"
+                    + "if(location.protocol!=='https:'||!/(^|\\.)sdjtu\\.edu\\.cn$/i"
                     + ".test(location.hostname))return {};"
                     + (installed ? "" : install)
                     + "var a=document.__lvlvStudySync;return a?a.portal('" + mode
@@ -299,7 +314,10 @@ final class SdjtuStudySync {
             long now = SystemClock.elapsedRealtime();
             if (loginSince == 0) loginSince = now;
             // WebVPN 会在指纹页与 CAS 之间自动跳转，稳定停留在登录墙才要求操作。
-            long grace = autoLogin.attempted() ? 10_000L : 3_000L;
+            String currentUrl = web == null ? "" : web.getUrl();
+            boolean fingerprint = currentUrl != null
+                    && currentUrl.toLowerCase(java.util.Locale.ROOT).contains("fingerprint");
+            long grace = autoLogin.attempted() ? 10_000L : (fingerprint ? 8_000L : 1_500L);
             if (now - loginSince >= grace) {
                 if (entry != Entry.PORTAL && !submitted) useNextEntry();
                 else fail("请先登录山东交通学院统一门户，完成验证后再同步", true);
@@ -309,12 +327,16 @@ final class SdjtuStudySync {
             loginSince = 0;
         }
         String base = SdjtuPortal.academicBase(result.optString("base"));
+        long elapsed = SystemClock.elapsedRealtime() - pageSince;
         if (!base.isEmpty()) {
             sawAcademic = true;
             autoLogin.onSuccess();
             if (!base.equals(Prefs.sdjtuAcademicBase(activity))) Prefs.setSdjtuAcademicBase(activity, base);
         } else if (SdjtuPortal.isDashboard(web.getUrl()) && !"login".equals(stage) && !"error".equals(stage)
-                && !stage.isEmpty() && !ssoOpened && SystemClock.elapsedRealtime() - pageSince > 3_500L) {
+                && !stage.isEmpty() && !ssoOpened
+                && (autoLogin.attempted()
+                || (!"academic".equals(stage) && elapsed > 300L)
+                || elapsed > 1_200L)) {
             ssoOpened = true;
             handler.removeCallbacks(retryEntry);
             web.loadUrl(SdjtuPortal.ACADEMIC_SSO);
@@ -347,7 +369,7 @@ final class SdjtuStudySync {
                 else fail(result.optString("message","教务暂未返回可识别的结果"), false);
                 return;
             default:
-                schedule(650);
+                schedule(stage.isEmpty() ? 150 : 220);
         }
     }
 

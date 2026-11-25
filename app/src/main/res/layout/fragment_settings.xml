@@ -125,7 +125,7 @@
                         android:layout_marginStart="10dp"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
-                        android:text="登录统一门户"
+                        android:text="手动登录"
                         android:textSize="13sp" />
                 </LinearLayout>
 
@@ -375,7 +375,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="批语 · 课价 · 人设 · 海报" />
+                        android:text="批语 · 课价 · 缺勤" />
                 </LinearLayout>
 
                 <TextView

@@ -71,6 +71,19 @@ public class TimetableLayoutTest {
         assertTrue("outward drag damped", Math.abs(resisted) < 10f && resisted < 0f);
     }
 
+    @Test
+    public void blockPlanUsesRemainingHeightForLongCourseNamesBeforeEllipsizing() {
+        float[] fiveLineTitle = {14f, 28f, 42f, 56f, 70f};
+        // 高度充足（120px）：5 行课名 + 教室 + 教师全部完整保留
+        int[] roomy = TimetableLayout.blockPlan(120f, fiveLineTitle, 3f, 20f, 0f, 20f, 0f);
+        assertEquals(5, roomy[0]);
+        assertEquals(1 | 4, roomy[1]);
+        // 高度不足（68px）：优先保教室，课名按剩余空间截断到 3 行
+        int[] tight = TimetableLayout.blockPlan(68f, fiveLineTitle, 3f, 20f, 0f, 20f, 0f);
+        assertEquals(3, tight[0]);
+        assertEquals(1, tight[1]);
+    }
+
     private static Timetable.Session session(int start, int end) {
         Timetable.Session s = new Timetable.Session();
         s.dayOfWeek = 1;

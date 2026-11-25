@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Set;
 
-/** vc33 小玩意的纯逻辑：翻牌批语、每节课价格、缺勤上限、双人海报统计、学期人设。 */
+/** 小玩意的纯逻辑：翻牌批语、每节课价格、缺勤上限。 */
 public class FunStatsTest {
 
     static Timetable.Session ses(int day, int start, int end, int fromWeek, int toWeek, String loc) {
@@ -29,17 +29,6 @@ public class FunStatsTest {
         c.key = "k_" + name + "_" + ss.length;
         c.sessions.addAll(Arrays.asList(ss));
         return c;
-    }
-
-    /** 8:00 起每节 45 分钟；第 5 节下午 14:00，第 9 节晚上 19:00。 */
-    static int[][] schedule(int n) {
-        int[] st = new int[n + 1], en = new int[n + 1];
-        int[] starts = {0, 480, 535, 600, 655, 840, 895, 960, 1015, 1140, 1195, 1250, 1305};
-        for (int i = 1; i <= n; i++) {
-            st[i] = starts[i];
-            en[i] = starts[i] + 45;
-        }
-        return new int[][]{st, en};
     }
 
     // ---------- GradeVerdict ----------
@@ -193,182 +182,5 @@ public class FunStatsTest {
         assertFalse(b.rename("英语", "英语听说", t));
         assertEquals(1, b.get("英语").used());
         assertFalse(b.rename("不存在", "x", t));
-    }
-
-    // ---------- PairStats ----------
-    @Test
-    public void buildingNames() {
-        assertEquals("N1", PairStats.building("N1-305"));
-        assertEquals("3", PairStats.building("3-201"));
-        assertEquals("三教A", PairStats.building("三教A201"));
-        assertEquals("致远楼", PairStats.building("致远楼305"));
-        assertEquals("理科楼", PairStats.building("（本部）理科楼204"));
-        assertEquals("第一教学楼", PairStats.building("第一教学楼-201"));
-        assertEquals("", PairStats.building("201"));
-        assertEquals("", PairStats.building(null));
-    }
-
-    @Test
-    public void pairOverlapBuildingAndMeals() {
-        int[][] sc = schedule(10);
-        Timetable me = new Timetable(), you = new Timetable();
-        me.courses.add(course("高数", ses(1, 1, 2, 1, 16, "三教A201")));
-        me.courses.add(course("英语", ses(2, 3, 4, 1, 16, "致远楼101")));
-        you.courses.add(course("线代", ses(1, 1, 2, 1, 16, "三教A305")));
-        you.courses.add(course("体育", ses(3, 5, 6, 1, 16, "操场")));
-        PairStats.Result r = PairStats.compute(me, you, 3, 5, sc[0], sc[1]);
-        assertEquals(4, r.mySections);
-        assertEquals(4, r.theirSections);
-        assertEquals(2, r.both);
-        assertEquals(6, r.either);
-        assertEquals(33, r.overlapPct);
-        assertEquals(2, r.sameBuildingSections);
-        assertEquals("三教A", r.topBuilding);
-        // 周四周五两人都没课，整段都空，也算能一起吃
-        assertEquals(Arrays.asList(1, 2, 3, 4, 5), r.lunchDays);
-        assertEquals("干饭搭子认证", r.title);
-        assertEquals("一半的课一起熬，饭也一起吃", r.subtitle);
-        PairStats.Result r3 = PairStats.compute(me, you, 3, 3, sc[0], sc[1]);
-        assertEquals("半个同桌", r3.title);
-    }
-
-    @Test
-    public void pairLunchGapAndEmptyTitle() {
-        int[][] sc = schedule(10);
-        Timetable me = new Timetable(), you = new Timetable();
-        // 第 4-5 节（10:55-11:40、14:00-14:45）中间留出 11:40-14:00，照样能一起吃午饭
-        me.courses.add(course("跨午", ses(1, 4, 5, 1, 16, "")));
-        PairStats.Result r = PairStats.compute(me, you, 1, 5, sc[0], sc[1]);
-        assertEquals(Arrays.asList(1, 2, 3, 4, 5), r.lunchDays);
-        assertTrue(r.dinnerDays.contains(1));
-        PairStats.Result empty = PairStats.compute(new Timetable(), new Timetable(), 1, 5, sc[0], sc[1]);
-        assertEquals("两张白纸", empty.title);
-        assertEquals(0, empty.overlapPct);
-        PairStats.Result oneSide = PairStats.compute(me, new Timetable(), 1, 5, sc[0], sc[1]);
-        assertEquals("等 TA 交课表", oneSide.title);
-        assertEquals("先交你的课表", PairStats.compute(new Timetable(), me, 1, 5, sc[0], sc[1]).title);
-    }
-
-    @Test
-    public void mealWindowNeedsForty() {
-        int[] st = {0, 660, 760};
-        int[] en = {0, 760, 840};
-        String[] a = {null, "x", null};
-        String[] b = {null, null, "y"};
-        assertEquals(0, PairStats.commonFree(a, b, st, en, PairStats.LUNCH_FROM, PairStats.LUNCH_TO));
-        String[] c = {null, null, null};
-        assertEquals(180, PairStats.commonFree(c, c, st, en, PairStats.LUNCH_FROM, PairStats.LUNCH_TO));
-    }
-
-    // ---------- SemesterPersona ----------
-    @Test
-    public void personaEarlyEight() {
-        int[][] sc = schedule(10);
-        Timetable t = new Timetable();
-        for (int d = 1; d <= 4; d++) t.courses.add(course("早课" + d, ses(d, 1, 2, 1, 16, "")));
-        t.courses.add(course("周五", ses(5, 3, 4, 1, 16, "")));
-        SemesterPersona.Card c = SemesterPersona.pick(SemesterPersona.stats(t, 1, sc[0], sc[1], null));
-        assertEquals("早八渡劫散仙", c.title);
-        assertEquals("早八 4/5 天", c.lines.get(0));
-        assertEquals(3, c.lines.size());
-    }
-
-    @Test
-    public void personaFreeDayGpaAndEmpty() {
-        int[][] sc = schedule(10);
-        Timetable t = new Timetable();
-        t.courses.add(course("A", ses(1, 3, 4, 1, 16, "")));
-        t.courses.add(course("B", ses(2, 3, 4, 1, 16, "")));
-        t.courses.add(course("C", ses(4, 3, 4, 1, 16, "")));
-        t.courses.add(course("D", ses(5, 3, 4, 1, 16, "")));
-        SemesterPersona.Stats s = SemesterPersona.stats(t, 1, sc[0], sc[1], null);
-        assertEquals(Arrays.asList(3), s.freeWeekdays);
-        assertEquals("周三空课神仙", SemesterPersona.pick(s).title);
-        assertEquals("满绩卷王预备役", SemesterPersona.pick(SemesterPersona.stats(t, 1, sc[0], sc[1], 3.85)).title);
-        assertEquals("空白课表观察员", SemesterPersona.pick(SemesterPersona.stats(new Timetable(), 1, sc[0], sc[1], null)).title);
-        assertEquals("空白课表观察员", SemesterPersona.pick(SemesterPersona.stats(null, 1, sc[0], sc[1], 3.9)).title);
-    }
-
-    @Test
-    public void personaEveningMarathonAndDefault() {
-        int[][] sc = schedule(10);
-        Timetable t = new Timetable();
-        t.courses.add(course("晚1", ses(1, 9, 10, 1, 16, "")));
-        t.courses.add(course("晚2", ses(3, 9, 10, 1, 16, "")));
-        for (int d = 1; d <= 5; d++) t.courses.add(course("课" + d, ses(d, 3, 4, 1, 16, "")));
-        assertEquals("夜行听课侠", SemesterPersona.pick(SemesterPersona.stats(t, 1, sc[0], sc[1], null)).title);
-
-        Timetable m = new Timetable();
-        m.courses.add(course("连堂", ses(2, 3, 8, 1, 16, "")));
-        for (int d = 1; d <= 5; d++) if (d != 2) m.courses.add(course("x" + d, ses(d, 3, 4, 1, 16, "")));
-        // 默认作息 3-4 节和 5-8 节中间隔着午休：不算连上 6 节
-        SemesterPersona.Stats ms = SemesterPersona.stats(m, 1, sc[0], sc[1], null);
-        assertEquals(4, ms.maxRun);
-        assertFalse("连堂铁人".equals(SemesterPersona.pick(ms).title));
-        // 课间都只有 10 分钟的作息：同样 6 节就是连堂
-        int[] st = new int[11], en = new int[11];
-        for (int i = 1; i <= 10; i++) { st[i] = 480 + (i - 1) * 55; en[i] = st[i] + 45; }
-        SemesterPersona.Stats tight = SemesterPersona.stats(m, 1, st, en, null);
-        assertEquals(6, tight.maxRun);
-        assertEquals("连堂铁人", SemesterPersona.pick(tight).title);
-
-        Timetable d = new Timetable();
-        for (int k = 1; k <= 5; k++) {
-            d.courses.add(course("m" + k, ses(k, 3, 4, 1, 16, "")));
-            d.courses.add(course("n" + k, ses(k, 5, 6, 1, 16, "")));
-        }
-        SemesterPersona.Card dc = SemesterPersona.pick(SemesterPersona.stats(d, 1, sc[0], sc[1], 2.8));
-        assertEquals("均衡发展型选手", dc.title);
-        assertEquals("每周 20 节 · 10 门课", dc.lines.get(0));
-        assertTrue(dc.lines.contains("平均绩点 2.80"));
-    }
-
-    @Test
-    public void personaReviewFixes() {
-        int[][] sc = schedule(10);
-        // 白纸只留一行，不补「连上 0 节」
-        SemesterPersona.Card blank = SemesterPersona.pick(SemesterPersona.stats(new Timetable(), 1, sc[0], sc[1], null));
-        assertEquals(Arrays.asList("本周 0 节课"), blank.lines);
-        // 第 1 节 10:00 开始的作息不算早八
-        Timetable t = new Timetable();
-        for (int d = 1; d <= 4; d++) t.courses.add(course("早课" + d, ses(d, 1, 2, 1, 16, "")));
-        int[] st = sc[0].clone(), en = sc[1].clone();
-        st[1] = 600; en[1] = 645; st[2] = 655; en[2] = 700;
-        assertEquals(0, SemesterPersona.stats(t, 1, st, en, null).earlyDays);
-        // 课多（≥26 节）但周五空着：苦行僧优先
-        Timetable busy = new Timetable();
-        for (int d = 1; d <= 4; d++) {
-            busy.courses.add(course("a" + d, ses(d, 3, 4, 1, 16, "")));
-            busy.courses.add(course("b" + d, ses(d, 5, 8, 1, 16, "")));
-            busy.courses.add(course("c" + d, ses(d, 9, 10, 1, 16, "")));
-        }
-        SemesterPersona.Stats bs = SemesterPersona.stats(busy, 1, sc[0], sc[1], 2.5);
-        bs.eveningDays = 0; // 只看优先级
-        assertEquals("课表苦行僧", SemesterPersona.pick(bs).title);
-        // 绩点 0（全挂）≠ 没成绩
-        Grades g = new Grades();
-        Grades.SemesterGrades sem = new Grades.SemesterGrades();
-        Grades.CourseGrade c = new Grades.CourseGrade();
-        c.credit = 3;
-        c.gradePoint = 0.0;
-        c.isPassed = false;
-        sem.courses.add(c);
-        g.semesters.add(sem);
-        g.recomputeAll();
-        assertEquals(0.0, SemesterPersona.gpa(g), 1e-9);
-        Grades passOnly = new Grades();
-        Grades.SemesterGrades s2 = new Grades.SemesterGrades();
-        Grades.CourseGrade p = new Grades.CourseGrade();
-        p.credit = 2;
-        s2.courses.add(p);
-        passOnly.semesters.add(s2);
-        assertNull(SemesterPersona.gpa(passOnly));
-        assertNull(SemesterPersona.gpa(null));
-        Timetable d = new Timetable();
-        for (int k = 1; k <= 5; k++) {
-            d.courses.add(course("m" + k, ses(k, 3, 4, 1, 16, "")));
-            d.courses.add(course("n" + k, ses(k, 5, 6, 1, 16, "")));
-        }
-        assertEquals("逆风翻盘候选人", SemesterPersona.pick(SemesterPersona.stats(d, 1, sc[0], sc[1], 0.0)).title);
     }
 }

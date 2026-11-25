@@ -1105,10 +1105,12 @@ public class TimetableView extends View {
         if (tag != null) title = tag + title;
         else if (!isActive) title = "[非本周] " + title;
         int w = Math.round(innerWidth);
-        StaticLayout titleLayout = textLayout(title, textPaint, w, 3, 1.02f);
+        float available = innerBottom - innerTop;
+        int maxTitleLines = Math.max(3, (int) Math.ceil(available / Math.max(1f, textPaint.getTextSize())) + 2);
+        StaticLayout titleLayout = textLayout(title, textPaint, w, maxTitleLines, 1.02f);
 
         // 下面几行都用真实字体量高度（衬线、加宽字距的系统字体会更高更宽），放不下就按优先级丢：
-        // 优先保留课名和教室，再为选中的课程号、自定义时间、教师和标签分配空间。
+        // 优先让课程名称尽量显示完整并保留教室，再为选中的课程号、自定义时间、教师和标签分配空间。
         TextPaint sub = bpSub;
         sub.set(subTextPaint);
         sub.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
@@ -1125,11 +1127,13 @@ public class TimetableView extends View {
         String tl = s.hasCustomTime() ? s.timeStart + "–" + s.timeEnd : "";
         String teacher = s.teacherFor(currentWeek, course.teacher).trim();
         float gap = dp(3f);
-        float available = innerBottom - innerTop;
         boolean hasCode = showCourseCode && course.code != null && !course.code.isEmpty()
                 && !course.code.equals(course.name);
         float locationSpace = available - titleLayout.getHeight() - gap;
         if (hasCode) locationSpace -= gap + sub.getFontSpacing();
+        float minRoomReserve = Math.min(Math.max(0f, available - titleLayout.getLineBottom(0) - gap),
+                sub.getFontSpacing() * 2f);
+        if (locationSpace < minRoomReserve) locationSpace = minRoomReserve;
         StaticLayout locL = locationLayout(loc, sub, w, locationSpace);
         StaticLayout timeL = tl.isEmpty() ? null : textLayout(tl, mono, w, 2, 1f);
         StaticLayout teacherL = teacher.isEmpty() ? null : textLayout(teacher, sub, w, 2, 1f);

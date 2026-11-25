@@ -64,9 +64,12 @@ final class SdjtuSyncSession {
         }
         String home = SdjtuPortal.studentHome(cachedBase);
         base = SdjtuPortal.academicBase(SdjtuPortal.isSchoolUrl(home) ? home : SdjtuPortal.STUDENT_HOME);
-        // The WebView cookie jar can outlive the app's session flag. A direct read is also
-        // possible on a fresh install because the school has a known academic root.
-        web.loadUrl(target());
+        // 明确未登录或会话已过期时直接走统一门户，省去先访问教务再被拦截等待的往返耗时。
+        if (!Prefs.hasPortalSession(context) || Prefs.sessionExpired(context)) {
+            openPortal();
+        } else {
+            web.loadUrl(target());
+        }
     }
 
     boolean current() {
@@ -95,13 +98,21 @@ final class SdjtuSyncSession {
         if (!current()) return;
         document++;
         evaluating = false;
+        autoLogin.resetPage();
         pageSince = SystemClock.elapsedRealtime();
         handler.removeCallbacks(poll);
-        if (!SdjtuPortal.isSchoolUrl(url)) listener.fail("同步跳转到了学校 HTTPS 入口以外的页面，请打开统一门户核对", true);
+        if (!SdjtuPortal.isSchoolUrl(url)) {
+            listener.fail("同步跳转到了学校 HTTPS 入口以外的页面，请打开统一门户核对", true);
+            return;
+        }
+        if (!reading && (SdjtuLoginForm.isLoginPage(url) || SdjtuPortal.isDashboard(url)
+                || !SdjtuPortal.academicBase(url).isEmpty())) {
+            schedule(200);
+        }
     }
 
     void pageFinished(String url) {
-        if (current() && !reading && url != null && url.equals(web.getUrl())) schedule(80);
+        if (current() && !reading && url != null && url.equals(web.getUrl())) schedule(30);
     }
 
     private void schedule(long delay) {
@@ -158,14 +169,14 @@ final class SdjtuSyncSession {
             try {
                 result = new JSONObject(WebShellActivity.unwrapJsString(raw));
             } catch (JSONException e) {
-                schedule(500);
+                schedule(180);
                 return;
             }
             String stage = result.optString("stage");
             if ("login".equals(stage)) {
                 // WebVPN fingerprint and ticket redirects can briefly look like login pages.
-                long grace = path != null && path.toLowerCase(Locale.ROOT).contains("fingerprint") ? 12_000 : 4_000;
-                if (SystemClock.elapsedRealtime() - pageSince < grace) schedule(550);
+                long grace = path != null && path.toLowerCase(Locale.ROOT).contains("fingerprint") ? 10_000 : 1_500;
+                if (SystemClock.elapsedRealtime() - pageSince < grace) schedule(220);
                 else if (!portalOpened) openPortal();
                 else requireLogin("门户需要你完成身份验证，请打开统一门户继续");
                 return;
@@ -175,7 +186,7 @@ final class SdjtuSyncSession {
                 else listener.fail("学校教务暂时无法提供查询，请稍后重试", false);
                 return;
             }
-            if (stage.isEmpty()) { schedule(500); return; }
+            if (stage.isEmpty()) { schedule(180); return; }
 
             if (dashboard) portalOpened = true;
             String found = SdjtuPortal.academicBase(result.optString("base"));
@@ -184,9 +195,10 @@ final class SdjtuSyncSession {
                 if (!base.equals(Prefs.sdjtuAcademicBase(context))) Prefs.setSdjtuAcademicBase(context, base);
                 success();
             }
+            long elapsed = SystemClock.elapsedRealtime() - pageSince;
             if (targetPage(url, kind)) {
-                if (found.isEmpty() && SystemClock.elapsedRealtime() - pageSince < 1_200) {
-                    schedule(400);
+                if (found.isEmpty() && elapsed < 350) {
+                    schedule(120);
                     return;
                 }
                 reading = true;
@@ -194,16 +206,18 @@ final class SdjtuSyncSession {
             } else if (!found.isEmpty() && SdjtuPortal.isSchoolUrl(found) && !targetAfterSso) {
                 targetAfterSso = true;
                 web.loadUrl(target());
-            } else if (dashboard && !ssoOpened && SystemClock.elapsedRealtime() - pageSince > 3_500) {
+            } else if (dashboard && !ssoOpened
+                    && (autoLogin.attempted()
+                    || (!"academic".equals(stage) && elapsed > 300)
+                    || elapsed > 1_200)) {
                 ssoOpened = true;
                 web.loadUrl(SdjtuPortal.ACADEMIC_SSO);
-            } else if (dashboard && SystemClock.elapsedRealtime() - pageSince > 15_000) {
+            } else if (dashboard && elapsed > 12_000) {
                 requireLogin("未能从门户资源页进入教务系统，请在统一门户中打开「教务系统」");
-            } else if (!dashboard && !portalOpened && !autoLogin.attempted()
-                    && SystemClock.elapsedRealtime() - pageSince > 5_000) {
+            } else if (!dashboard && !portalOpened && !autoLogin.attempted() && elapsed > 2_500) {
                 openPortal();
             } else {
-                schedule(600);
+                schedule(220);
             }
         });
     }

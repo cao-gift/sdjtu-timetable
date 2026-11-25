@@ -88,4 +88,18 @@ public class SdjtuPortalTest {
         assertEquals("", SdjtuPortal.academicBase("https://name@wwebvpn.sdjtu.edu.cn/jsxsd/"));
         assertEquals("", SdjtuPortal.academicBase(SdjtuPortal.LOGIN + "../jsxsd/"));
     }
+
+    @Test public void unauthenticatedSyncRedirectsToManualLoginOnlyWhenAutoLoginUnavailable() {
+        // 已登录且未过期：直接同步
+        assertFalse(WebShellActivity.shouldOpenManualLoginFirst(true, false, false, false));
+        assertFalse(WebShellActivity.shouldOpenManualLoginFirst(true, false, true, true));
+        // 未登录但已保存可用自动登录凭据：走快速后台自动登录
+        assertFalse(WebShellActivity.shouldOpenManualLoginFirst(false, false, true, false));
+        assertFalse(WebShellActivity.shouldOpenManualLoginFirst(true, true, true, false));
+        // 未登录（或过期）且无凭据或自动登录已暂停：直接引导手动登录
+        assertTrue(WebShellActivity.shouldOpenManualLoginFirst(false, false, false, false));
+        assertTrue(WebShellActivity.shouldOpenManualLoginFirst(true, true, false, false));
+        assertTrue(WebShellActivity.shouldOpenManualLoginFirst(false, false, true, true));
+        assertTrue(WebShellActivity.shouldOpenManualLoginFirst(true, true, true, true));
+    }
 }

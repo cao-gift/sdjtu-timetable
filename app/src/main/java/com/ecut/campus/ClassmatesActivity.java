@@ -66,8 +66,6 @@ public class ClassmatesActivity extends AppCompatActivity {
                         v -> startActivity(new Intent(this, FreeTimeActivity.class)
                                 .putExtra(FreeTimeActivity.EXTRA_ALL, true)));
             }
-            Ui.row(this, list, "DUO", "双人课表海报", "两人课表合成一张海报", "›",
-                    v -> com.ecut.campus.fun.FunCards.pickFriend(this));
             int i = 1;
             for (FriendStore.Friend f : friends) {
                 int n = f.shared.timetable.courses.size();
@@ -170,11 +168,9 @@ public class ClassmatesActivity extends AppCompatActivity {
     }
 
     private void manage(FriendStore.Friend f, android.view.View anchor) {
-        new GaugeMenu(this).add("双人海报").add("改名").divider().add("删除")
+        new GaugeMenu(this).add("改名").divider().add("删除")
                 .show(anchor, t -> {
-                    if ("双人海报".equals(t)) {
-                        com.ecut.campus.fun.FunCards.showPair(this, f);
-                    } else if ("删除".equals(t)) {
+                    if ("删除".equals(t)) {
                         new AlertDialog.Builder(this).setTitle("删除「" + f.name + "」？")
                                 .setMessage("只会删掉你手机上的这份课表。")
                                 .setNegativeButton("取消", null)

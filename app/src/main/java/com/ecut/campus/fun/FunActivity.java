@@ -16,7 +16,7 @@ import com.ecut.campus.Ui;
 import com.ecut.campus.data.ClassPrice;
 import com.ecut.campus.data.TimetableStore;
 
-/** 二级页「小玩意」：翻牌批语开关、学费（这节课值多少钱）、学期人设卡、双人课表海报。全部本地。 */
+/** 二级页「小玩意」：翻牌批语开关、学费（这节课值多少钱）、缺勤安全气囊。全部本地。 */
 public class FunActivity extends AppCompatActivity {
 
     /** 从课程详情点「填一下学费」进来：直接弹学费框。 */
@@ -62,13 +62,6 @@ public class FunActivity extends AppCompatActivity {
         }
         Ui.row(this, tt, "01", "这节课值多少钱", priceSub, tuition > 0 ? "改" : "填", v -> editTuition());
         Ui.row(this, tt, "02", "缺勤安全气囊", "记录请假缺勤，近 1/3 描红提醒", "", null);
-
-        Ui.label(this, col, "SHARE · 分享卡片");
-        LinearLayout share = Ui.card(this, col);
-        Ui.row(this, share, "01", "学期人设卡", "按课表和成绩生成人设图", "›",
-                v -> FunCards.showPersona(this));
-        Ui.row(this, share, "02", "双人课表海报", "两人课表合成一张海报", "›",
-                v -> FunCards.pickFriend(this));
     }
 
     private void editTuition() {
