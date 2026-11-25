@@ -35,7 +35,7 @@ public class UpdateManifestTest {
         assertTrue(eps.get(1).url.startsWith("https://ghfast.top/https://github.com/cao-gift/sdjtu-timetable/"));
         assertTrue(eps.get(2).url.startsWith("https://gh-proxy.com/https://github.com/cao-gift/sdjtu-timetable/"));
         assertTrue(eps.get(3).url.startsWith("https://gh-proxy.org/https://github.com/cao-gift/sdjtu-timetable/"));
-        assertEquals("https://fastly.jsdelivr.net/gh/cao-gift/sdjtu-timetable@main/site/latest.json", eps.get(4).url);
+        assertEquals("https://fastly.jsdelivr.net/gh/cao-gift/sdjtu-timetable@site/latest.json", eps.get(4).url);
         assertEquals("https://api.github.com/repos/cao-gift/sdjtu-timetable/releases/latest", eps.get(5).url);
         assertEquals(UpdateManifest.KIND_GITHUB_API, eps.get(5).kind);
     }

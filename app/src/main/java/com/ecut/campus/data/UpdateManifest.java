@@ -109,7 +109,7 @@ public final class UpdateManifest {
                 out.add(new Endpoint("加速镜像 " + (i + 1), GITHUB_MIRRORS[i] + releaseManifest, site, KIND_OFFICIAL_JSON));
             }
             out.add(new Endpoint("CDN 镜像",
-                    "https://fastly.jsdelivr.net/gh/" + repo + "@main/site/latest.json",
+                    "https://fastly.jsdelivr.net/gh/" + repo + "@site/latest.json",
                     site, KIND_OFFICIAL_JSON));
             out.add(new Endpoint("GitHub API",
                     "https://api.github.com/repos/" + repo + "/releases/latest",
