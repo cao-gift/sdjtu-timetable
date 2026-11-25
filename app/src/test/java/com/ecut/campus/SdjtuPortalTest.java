@@ -61,6 +61,22 @@ public class SdjtuPortalTest {
         assertTrue(SdjtuPortal.isSchoolUrl("https://sso.sdjtu.edu.cn/cas/login"));
         assertFalse(SdjtuPortal.isSchoolUrl("https://sso.sdjtu.edu.cn.untrusted.example/"));
         assertFalse(SdjtuPortal.isSchoolUrl("https://ehall.ecut.edu.cn/"));
+        assertTrue(SdjtuPortal.isSchoolUrl(SdjtuPortal.ACADEMIC_SSO));
+        assertTrue(SdjtuPortal.ACADEMIC_SSO.startsWith(SdjtuPortal.LOGIN + "http/"));
+        assertTrue(SdjtuPortal.ACADEMIC_SSO.endsWith("/sso.jsp"));
+    }
+
+    @Test public void dashboardDetectionExcludesLoginAndProxiedSubsystems() {
+        assertTrue(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/"));
+        assertTrue(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/portal/"));
+        assertTrue(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/#/home"));
+        assertFalse(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/login"));
+        assertFalse(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/login?cas_login=true&ticket=ST-1"));
+        assertFalse(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/fingerprint"));
+        assertFalse(SdjtuPortal.isDashboard("https://wwebvpn.sdjtu.edu.cn/set-fingerprint?fingerprint=demo"));
+        assertFalse(SdjtuPortal.isDashboard(SdjtuPortal.ACADEMIC_SSO));
+        assertFalse(SdjtuPortal.isDashboard(SdjtuPortal.STUDENT_HOME));
+        assertFalse(SdjtuPortal.isDashboard("https://zhjwgl.sdjtu.edu.cn/"));
     }
 
     @Test public void academicRootRetainsOnlyTheSchoolHostAndProxyPrefix() {

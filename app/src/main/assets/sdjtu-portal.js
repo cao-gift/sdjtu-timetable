@@ -94,7 +94,7 @@
         });
     }
     function findAction(doc, labels, entry) {
-        var elements = doc.querySelectorAll("a,button,input[type=button],input[type=submit],img,[onclick],[role=button],[role=menuitem],li,span,div,h3,h4");
+        var elements = doc.querySelectorAll("a,button,input[type=button],input[type=submit],img,[onclick],[role=button],[role=menuitem],li,span,div,p,h1,h2,h3,h4,h5,h6,label,strong,b");
         var hiddenLink = null;
         for (var i=0; i<elements.length; i++) {
             var el = elements[i];
@@ -121,15 +121,15 @@
                 }
                 node = node.parentElement;
             }
-            // The mobile WebVPN dashboard also renders Vue resource tiles. Their title has
-            // no href, onclick attribute or pointer cursor. A click bubbles to the tile.
+            // The mobile WebVPN dashboard also renders Vue resource tiles. Their title (often <p> or <div>)
+            // has no href, onclick attribute or pointer cursor. A click bubbles to the tile.
             if (navigate && doc === document && doc.location.hostname === "wwebvpn.sdjtu.edu.cn" &&
                 !/^\/https?\//i.test(doc.location.pathname) && labels.indexOf("教务系统") >= 0 &&
                 plain(el.textContent) === "教务系统" && !el.closest("a,button,form")) {
                 var card = el.parentElement;
-                for (var depth = 0; card && card !== doc.body && depth < 4; depth++, card = card.parentElement) {
+                for (var depth = 0; card && card !== doc.body && depth < 6; depth++, card = card.parentElement) {
                     var label = plain(card.textContent);
-                    if (label.length <= 110 && /https?:\/\/[^\s<>]+\/sso\.jsp(?:[?#]|$)/i.test(label))
+                    if (label.length <= 180 && /https?:\/\/[^\s<>]+\/sso\.jsp(?:[?#]|$|[^a-zA-Z0-9_./-])/i.test(label))
                         return el;
                 }
             }
@@ -170,7 +170,7 @@
     var base = result.base || "", entryPage = result.entryPage || "";
     academic.forEach(function (doc) {
         var path = doc.location.pathname, idx = path.search(academicPath);
-        var menu = doc.querySelector("#LeftMenu1_divChildMenu,#divFirstMenuClass");
+        var menu = doc.querySelector("#LeftMenu1_divChildMenu,#divFirstMenuClass,#Top1_divLoginName,.Nsb_top,.Nsb_menu_pw");
         if (menu || doc.querySelector("#mxh,#kbtable") ||
             (/\/jsxsd\/(framework\/|xsMain)/i.test(path) && doc.querySelector("frame,iframe,#dataList")) ||
             findAction(doc,["我的课表","教室课表查询","学期理论课表","培养方案","培养管理"])) {

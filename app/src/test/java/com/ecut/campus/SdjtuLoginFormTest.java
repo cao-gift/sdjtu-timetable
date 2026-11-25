@@ -15,6 +15,9 @@ public class SdjtuLoginFormTest {
         assertTrue(SdjtuLoginForm.isLoginPage(PAGE + SERVICE));
         assertTrue(SdjtuLoginForm.isLoginPage(PAGE + SERVICE.replace("%3A", ":")));
         assertTrue(SdjtuLoginForm.isLoginPage("https://" + HOST + ":443" + PATH + SERVICE));
+        assertTrue(SdjtuLoginForm.isLoginPage(PAGE + "?service=http%3A%2F%2F192.168.253.164%2Fsso.jsp"));
+        assertTrue(SdjtuLoginForm.isLoginPage(PAGE + "?service=https%3A%2F%2Fwwebvpn.sdjtu.edu.cn%2Fhttp%2F77726476706e69737468656265737421a1ae13d27666301e2c5ddae2c90377%2Fsso.jsp"));
+        assertTrue(SdjtuLoginForm.isLoginPage(PAGE + "?service=https%3A%2F%2Fzhjwgl.sdjtu.edu.cn%2Fjsxsd%2Fframework%2FxsMain.jsp"));
     }
 
     @Test public void otherApplicationsAndMalformedRedirectsCannotReceiveCredentials() {
@@ -29,7 +32,10 @@ public class SdjtuLoginFormTest {
                 PAGE.replace("/cas/login", "/other/../cas/login") + SERVICE,
                 PAGE.replace("/cas/login", "/cas/%6cogin") + SERVICE,
                 PAGE.replace("f3f652cd", "00000000") + SERVICE,
-                "https://cas1.sdjtu.edu.cn/cas/login" + SERVICE
+                "https://cas1.sdjtu.edu.cn/cas/login" + SERVICE,
+                PAGE + "?service=http%3A%2F%2F192.168.253.193%2Fzxcas",
+                PAGE + "?service=https%3A%2F%2Fzhjwgl.sdjtu.edu.cn%2Fjsxsd%2F..%2Fother",
+                PAGE + "?service=https%3A%2F%2Fzhjwgl.sdjtu.edu.cn%2Fjsxsd%2Fframework%2FxsMain.jsp%3Fnext%3Dhttps%3A%2F%2Fevil.example"
         };
         for (String url : denied) assertFalse(SdjtuLoginForm.isLoginPage(url));
     }

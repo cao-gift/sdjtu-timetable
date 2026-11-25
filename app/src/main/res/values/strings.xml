@@ -5,7 +5,7 @@
     <string name="widget_classes_placeholder_hint">点一下打开驴驴课表</string>
     <string name="widget_classes_desc">今天还要上的课，一门一条；上完了显示明天第一节</string>
     <string name="widget_preview_title">今日周二，还有 <font color="#FF4A1C">2</font> 门课要上</string>
-    <string name="whats_new_title">驴驴课表 1.3.15</string>
-    <string name="whats_new_body">默认启用磨砂玻璃主题（可在「设置 → 通用 → 主题」切换回纸墨）；统一各页面按钮、选择块、卡片描边与触控高度；精简移除 AI 改课表指令与旧 DNS 残留代码。</string>
+    <string name="whats_new_title">驴驴课表 1.3.16</string>
+    <string name="whats_new_body">补全交院统一门户自动登录链路：登录 WebVPN 后自动进入「教务系统」单点登录并继续同步课表、成绩、空教室、培养方案与考试安排；从设置打开「登录统一门户」也会自动登录并进入教务系统。</string>
     <string name="whats_new_ok">知道了</string>
 </resources>

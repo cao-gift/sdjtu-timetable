@@ -79,7 +79,12 @@ module.exports = async function legacyPortal(browser, portal) {
         const dashboard = wrap('<h2>研究生、本专科生教务应用</h2>' +
             '<section id="resource"><div><h3>教务系统</h3><span>http://192.0.2.12/sso.jsp</span></div></section>' +
             '<script>resource.addEventListener("click", () => location.assign("'+sso+'"))</script>');
+        const vueMobileDashboard = wrap('<h2>研究生、本专科生教务应用</h2>' +
+            '<div id="tile" class="block-group__item"><div class="inner"><div class="content"><div class="meta">' +
+            '<p class="title">教务系统</p></div><p class="url">http://192.0.2.12/sso.jsp</p><span>收藏</span></div></div></div>' +
+            '<script>tile.addEventListener("click", () => location.assign("'+sso+'"))</script>');
         demo['/resource'] = dashboard;
+        demo['/resource-vue'] = vueMobileDashboard;
         demo[sso] = wrap('<script>location.replace("'+main+'")</script>');
         demo['/other'] = dashboard.replace('192.0.2.12/sso.jsp', '192.0.2.12/unrelated.jsp');
         demo['/challenge'] = dashboard.replace('<h2>', '<input type=password><h2>');
@@ -88,14 +93,17 @@ module.exports = async function legacyPortal(browser, portal) {
             assert.equal((await inspect('portal')).stage,stage);
             assert.equal(page.url(),origin+path);
         }
-        await page.goto(origin+'/resource');
-        const schoolHome = page.waitForURL(origin+main,{timeout:5000});
-        assert.equal((await inspect('portal')).stage,'academic');
-        await schoolHome;
-        await page.frameLocator('frame[name=menu]').locator('h4').waitFor();
-        const authenticated = await page.evaluate('('+portal+')("portal",false,false,null,{sync:true})');
-        assert.equal(authenticated.base,origin+root);
-        assert.equal(requests.filter(u=>u===origin+sso).length,1);
+        for (const path of ['/resource', '/resource-vue']) {
+            const before = requests.filter(u=>u===origin+sso).length;
+            await page.goto(origin+path);
+            const schoolHome = page.waitForURL(origin+main,{timeout:5000});
+            assert.equal((await inspect('portal')).stage,'academic');
+            await schoolHome;
+            await page.frameLocator('frame[name=menu]').locator('h4').waitFor();
+            const authenticated = await page.evaluate('('+portal+')("portal",false,false,null,{sync:true})');
+            assert.equal(authenticated.base,origin+root);
+            assert.equal(requests.filter(u=>u===origin+sso).length,before+1);
+        }
         assert.equal(requests.some(u=>u.startsWith('http:')),false);
         assert.equal(requests.some(u=>u.includes('192.0.2.12')),false);
         console.log('PASS: mobile resource tile, portal SSO, legacy academic root, ignored unrelated tile and login challenge.');

@@ -211,7 +211,7 @@ public class WebShellActivity extends AppCompatActivity {
         WebSettings s = webView.getSettings();
         s.setJavaScriptEnabled(true);
         s.setSupportMultipleWindows(true);
-        s.setJavaScriptCanOpenWindowsAutomatically(isAcademicLookup() || loginForStudySync);
+        s.setJavaScriptCanOpenWindowsAutomatically(true);
         s.setDomStorageEnabled(true);
         s.setDatabaseEnabled(true);
         s.setLoadWithOverviewMode(true);
@@ -272,7 +272,7 @@ public class WebShellActivity extends AppCompatActivity {
             @Override
             public boolean onCreateWindow(WebView view, boolean isDialog,
                                           boolean isUserGesture, Message resultMsg) {
-                if (popupWindow != null) return false;
+                if (popupWindow != null) closePopup();
                 WebView temp = new WebView(WebShellActivity.this);
                 popupWindow = temp;
                 temp.getSettings().setAllowFileAccess(false);
@@ -531,7 +531,7 @@ public class WebShellActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (sdjtuPages != null) sdjtuPages.stop();
+        if (sdjtuPages != null) sdjtuPages.destroy();
         closePopup();
         CookieManager.getInstance().flush();
         if (webView != null) {

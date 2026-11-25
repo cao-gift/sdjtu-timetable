@@ -2,6 +2,7 @@ package com.ecut.campus;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.os.SystemClock;
 import android.webkit.WebView;
 
 import com.ecut.campus.data.SdjtuPortal;
@@ -14,7 +15,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-/** 在当前交院 WebVPN 会话中打开教务菜单，让结果留在学校页面。 */
+/** 在当前交院 WebVPN 会话中自动完成统一认证并进入教务系统/菜单，让结果留在学校页面。 */
 final class SdjtuAcademicPages {
     enum Feature {
         PORTAL("", "", "", null),
@@ -60,10 +61,15 @@ final class SdjtuAcademicPages {
     private final boolean loginForSync;
     private final boolean manual;
     private final String install;
+    private final SdjtuAutoLogin autoLogin;
     private final Runnable next = this::inspect;
     private int generation;
     private int attempts;
+    private long pageSince;
     private boolean located;
+    private boolean enteredAcademic;
+    private boolean ssoFallbackUsed;
+    private boolean manualAuthOnly;
     private boolean resetMenus;
     private boolean pageChanged;
 
@@ -73,6 +79,7 @@ final class SdjtuAcademicPages {
         this.listener = listener;
         this.loginForSync = loginForSync;
         this.manual = manual;
+        this.autoLogin = new SdjtuAutoLogin(view.getContext());
         String scripts;
         try {
             String portal = read(view, "sdjtu-portal.js");
@@ -118,19 +125,51 @@ final class SdjtuAcademicPages {
         view.removeCallbacks(next);
     }
 
+    void destroy() {
+        stop();
+        autoLogin.stop();
+    }
+
     void start(boolean retry) {
         stop();
-        if (retry) located = false;
+        if (retry) {
+            located = false;
+            enteredAcademic = false;
+            ssoFallbackUsed = false;
+            manualAuthOnly = false;
+        }
         resetMenus = retry;
         attempts = 0;
         pageChanged = true;
+        pageSince = SystemClock.elapsedRealtime();
         inspect();
     }
 
     private void inspect() {
-        if (install.isEmpty() || !SdjtuPortal.isSchoolUrl(view.getUrl())) return;
+        String url = view.getUrl();
+        if (install.isEmpty() || !SdjtuPortal.isSchoolUrl(url)) return;
         int current = generation;
-        boolean navigate = !manual && (feature != Feature.PORTAL || loginForSync) && !located;
+        if (!manual && !manualAuthOnly && !autoLogin.credentialsChanged() && SdjtuLoginForm.isLoginPage(url)) {
+            autoLogin.inspectAndSubmit(view, pageSince,
+                    () -> generation == current && url.equals(view.getUrl()),
+                    new SdjtuAutoLogin.Callback() {
+                        @Override public void waitMore(long delayMs) {
+                            if (generation == current && view.isShown()) view.postDelayed(next, delayMs);
+                        }
+
+                        @Override public void manual(String message) {
+                            manualAuthOnly = true;
+                        }
+
+                        @Override public void busy(String message) {
+                            manualAuthOnly = true;
+                        }
+                    });
+            return;
+        }
+
+        boolean dashboard = SdjtuPortal.isDashboard(url);
+        boolean navigate = !manual && (feature != Feature.PORTAL ? !located : !enteredAcademic);
         String mode = feature == Feature.ROOMS ? "rooms" : feature == Feature.PLAN ? "plan" : "portal";
         String call = "(function(){"
                 + (pageChanged ? "if(!document.__lvlvAcademic){" + install + "}" : "")
@@ -148,6 +187,8 @@ final class SdjtuAcademicPages {
             }
             String base = SdjtuPortal.academicBase(result.optString("base"));
             if (!base.isEmpty()) {
+                enteredAcademic = true;
+                autoLogin.onSuccess();
                 if (!base.equals(Prefs.sdjtuAcademicBase(view.getContext()))) {
                     Prefs.setSdjtuAcademicBase(view.getContext(), base);
                 }
@@ -159,11 +200,19 @@ final class SdjtuAcademicPages {
             }
             SdjtuStudyRoute.remember(view.getContext(), feature, result.optString("entryPage"));
             String stage = result.optString("stage");
+            if (navigate && dashboard && base.isEmpty() && !"login".equals(stage) && !"error".equals(stage)
+                    && !stage.isEmpty() && !ssoFallbackUsed && SystemClock.elapsedRealtime() - pageSince > 3_500L) {
+                ssoFallbackUsed = true;
+                view.loadUrl(SdjtuPortal.ACADEMIC_SSO);
+                return;
+            }
             if ("results".equals(stage) || "form".equals(stage) || "plan".equals(stage)) located = true;
             listener.onStage(stage);
             // A student can spend several minutes choosing a plan or finishing WebVPN login.
             // Poll only the visible document; no network request is made by this timer.
-            boolean waiting = feature == Feature.PORTAL ? base.isEmpty() && (loginForSync || attempts < 10) : !located;
+            boolean waiting = feature == Feature.PORTAL
+                    ? base.isEmpty() && (loginForSync || (!enteredAcademic && attempts < 25))
+                    : !located;
             if (!manual && waiting && view.isShown()) {
                 attempts++;
                 view.postDelayed(next, attempts < 5 ? 800 : attempts < 12 ? 2200 : 7000);

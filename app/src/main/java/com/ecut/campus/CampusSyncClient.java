@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Message;
 import android.util.Log;
 import android.webkit.CookieManager;
 import android.net.http.SslError;
@@ -69,7 +68,6 @@ public final class CampusSyncClient {
     private final String targetXnm;
     private final String targetXqm;
     private final SdjtuSyncSession sdjtu;
-    private WebView sdjtuPopup;
 
     private boolean finished;
     private boolean dataRequested;
@@ -130,8 +128,10 @@ public final class CampusSyncClient {
         s.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         s.setAllowFileAccess(false);
         s.setAllowContentAccess(false);
-        s.setSupportMultipleWindows(true);
+        // 将 WebVPN 门户资源卡的 target=_blank 与 window.open 直接落在同一隐藏会话中，继续经 shouldOverrideUrlLoading 校验。
+        s.setSupportMultipleWindows(false);
         s.setJavaScriptCanOpenWindowsAutomatically(true);
+        s.setUserAgentString(s.getUserAgentString().replace("; wv", ""));
         s.setSavePassword(false);
         s.setSaveFormData(false);
         if (android.os.Build.VERSION.SDK_INT >= 26)
@@ -197,34 +197,7 @@ public final class CampusSyncClient {
             }
         });
 
-        // WebVPN 的教务系统卡片可能通过 window.open 打开教务，必须在同一隐藏会话里接住。
-        webView.setWebChromeClient(new WebChromeClient() {
-            @Override
-            public boolean onCreateWindow(WebView view, boolean isDialog,
-                                          boolean isUserGesture, Message resultMsg) {
-                if (finished || sdjtuPopup != null || !sdjtu.current()) return false;
-                WebView popup = new WebView(view.getContext());
-                sdjtuPopup = popup;
-                popup.getSettings().setAllowFileAccess(false);
-                popup.getSettings().setAllowContentAccess(false);
-                popup.setWebViewClient(new WebViewClient() {
-                    @Override
-                    public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest request) {
-                        if (request.isForMainFrame()) openPopupUrl(v, request.getUrl().toString());
-                        return true;
-                    }
-
-                    @Override
-                    public void onPageStarted(WebView v, String url, Bitmap favicon) {
-                        openPopupUrl(v, url);
-                    }
-                });
-                WebView.WebViewTransport transport = (WebView.WebViewTransport) resultMsg.obj;
-                transport.setWebView(popup);
-                resultMsg.sendToTarget();
-                return true;
-            }
-        });
+        webView.setWebChromeClient(new WebChromeClient());
     }
 
     private void load() {
@@ -419,25 +392,6 @@ public final class CampusSyncClient {
         finishSuccess(parsed.totalCourseCount());
     }
 
-    private void openPopupUrl(WebView popup, String rawUrl) {
-        if (popup == null || finished) return;
-        if (rawUrl == null || rawUrl.isEmpty() || "about:blank".equals(rawUrl)) return;
-        if (sdjtuPopup != popup || !sdjtu.current()) return;
-        closeSdjtuPopup();
-        if (SdjtuPortal.isSchoolUrl(rawUrl)) webView.loadUrl(rawUrl);
-        else fail("教务资源入口未使用学校 HTTPS 地址，请在统一门户中打开教务系统", true);
-    }
-
-    private void closeSdjtuPopup() {
-        if (sdjtuPopup == null) return;
-        WebView popup = sdjtuPopup;
-        sdjtuPopup = null;
-        popup.setWebViewClient(new WebViewClient());
-        popup.stopLoading();
-        // The temporary WebView is never attached. View.post would wait indefinitely.
-        new Handler(Looper.getMainLooper()).post(popup::destroy);
-    }
-
     private void finishSuccess(int count) {
         if (finished) return;
         sdjtu.success();
@@ -471,7 +425,6 @@ public final class CampusSyncClient {
 
     private void cleanup() {
         sdjtu.stop();
-        closeSdjtuPopup();
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(null);
         webView.stopLoading();

@@ -24,8 +24,8 @@ android {
         applicationId "app.lvlv.timetable"
         minSdk 24
         targetSdk 33
-        versionCode 67
-        versionName "1.3.15"
+        versionCode 68
+        versionName "1.3.16"
         buildConfigField "String", "RELEASE_REPOSITORY", groovy.json.JsonOutput.toJson(providers.gradleProperty("lvlvReleaseRepository").getOrElse(""))
     }
 

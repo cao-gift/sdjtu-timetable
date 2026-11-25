@@ -3,12 +3,17 @@ package com.ecut.campus;
 import android.webkit.ValueCallback;
 import android.webkit.WebView;
 
+import com.ecut.campus.data.SdjtuPortal;
+
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 final class SdjtuLoginForm {
     static final String WAIT = "WAIT";
@@ -19,6 +24,22 @@ final class SdjtuLoginForm {
     private static final String HOST = "wwebvpn.sdjtu.edu.cn";
     private static final String PATH = "/https/77726476706e69737468656265737421f3f652cd69236c5a6a1dc7a99c406d36e9/cas/login";
     private static final String SERVICE = "https://wwebvpn.sdjtu.edu.cn/login?cas_login=true";
+    private static final Set<String> EXACT_SERVICES = new HashSet<>(Arrays.asList(
+            SERVICE,
+            SdjtuPortal.ACADEMIC_SSO,
+            "http://192.168.253.164/sso.jsp",
+            "http://192.168.253.164/jsxsd/sso.jsp",
+            "http://192.168.253.164/jsxsd/",
+            "https://zhjwgl.sdjtu.edu.cn/sso.jsp",
+            "http://zhjwgl.sdjtu.edu.cn/sso.jsp"
+    ));
+    private static final String[] ACADEMIC_SERVICE_PREFIXES = {
+            "https://zhjwgl.sdjtu.edu.cn/jsxsd/",
+            "http://zhjwgl.sdjtu.edu.cn/jsxsd/",
+            "http://192.168.253.164/jsxsd/",
+            SdjtuPortal.LOGIN + "https/77726476706e69737468656265737421eaff4b8b203c26437a029db9d65027203034e6/jsxsd/",
+            SdjtuPortal.LOGIN + "http/77726476706e69737468656265737421a1ae13d27666301e2c5ddae2c90377/jsxsd/"
+    };
     private static String script;
 
     private SdjtuLoginForm() {}
@@ -34,10 +55,23 @@ final class SdjtuLoginForm {
                     && PATH.equals(page.getRawPath())
                     && page.getRawFragment() == null
                     && query != null && query.startsWith("service=") && !query.contains("&")
-                    && SERVICE.equals(URLDecoder.decode(query.substring("service=".length()), "UTF-8"));
+                    && isAllowedService(URLDecoder.decode(query.substring("service=".length()), "UTF-8"));
         } catch (URISyntaxException | IllegalArgumentException | IOException e) {
             return false;
         }
+    }
+
+    private static boolean isAllowedService(String service) {
+        if (EXACT_SERVICES.contains(service)) return true;
+        if (service == null || service.indexOf('?') >= 0 || service.indexOf('#') >= 0
+                || service.contains("..")) return false;
+        for (String prefix : ACADEMIC_SERVICE_PREFIXES) {
+            if (service.startsWith(prefix)) {
+                String tail = service.substring(prefix.length());
+                return tail.matches("[a-zA-Z0-9_./-]*");
+            }
+        }
+        return false;
     }
 
     static void inspect(WebView view, ValueCallback<String> done) {

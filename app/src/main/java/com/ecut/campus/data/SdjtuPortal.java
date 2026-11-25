@@ -11,6 +11,10 @@ public final class SdjtuPortal {
     public static final String STUDENT_HOME = LOGIN
             + "https/77726476706e69737468656265737421eaff4b8b203c26437a029db9d65027203034e6/jsxsd/framework/xsMain.jsp";
 
+    /** WebVPN 门户资源页「教务系统」（http://192.168.253.164/sso.jsp）的代理单点登录入口。 */
+    public static final String ACADEMIC_SSO = LOGIN
+            + "http/77726476706e69737468656265737421a1ae13d27666301e2c5ddae2c90377/sso.jsp";
+
     public static String studentHome(String cachedBase) {
         String base = academicBase(cachedBase);
         // Older releases could mistake an unrewritten root-relative frame for the WebVPN academic root.
@@ -35,6 +39,22 @@ public final class SdjtuPortal {
                 || uri.getHost() == null || (uri.getPort() != -1 && uri.getPort() != 443)) return false;
         String host = uri.getHost().toLowerCase(Locale.ROOT);
         return host.equals("sdjtu.edu.cn") || host.endsWith(".sdjtu.edu.cn");
+    }
+
+    /** WebVPN 登录后停留在资源访问控制系统主页（尚未进入 /http(s)/ 代理子系统，且不是登录或指纹页）。 */
+    public static boolean isDashboard(String url) {
+        if (!isSchoolUrl(url)) return false;
+        try {
+            URI uri = URI.create(url);
+            if (!"wwebvpn.sdjtu.edu.cn".equalsIgnoreCase(uri.getHost())) return false;
+            String path = uri.getRawPath();
+            if (path == null || path.isEmpty()) return true;
+            String lower = path.toLowerCase(Locale.ROOT);
+            return !lower.startsWith("/http/") && !lower.startsWith("/https/")
+                    && !lower.matches(".*/(?:login|fingerprint|set-fingerprint|logout)(?:[./;]|$).*");
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     /** 保留 WebVPN 改写的路径前缀；登录参数、会话标识和片段不落盘。 */
