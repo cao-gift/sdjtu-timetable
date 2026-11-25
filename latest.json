@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "tag": "v1.4.2",
+  "versionName": "1.4.2",
+  "versionCode": 74,
+  "name": "驴驴课表 v1.4.2",
+  "notes": "1. 移除升级说明、登录后引导、课块下雨提示等主动打扰弹窗及相关代码。\n2. 修复登录失效后设置页仍显示「已登录」的问题：新增本地 Cookie 校验与后台轻量会话存活探测，失效时即时刷新状态。\n3. 大幅提速成绩同步：新增复用 Cookie 的直连 HTTP POST 通道并支持多页并发抓取，免去冷启动 WebView 与双重查库耗时。\n4. 支持 Wi-Fi 与移动流量（只要有网）下静默自动检查更新，不再弹窗打扰，仅在底栏「设置」、设置页「关于」卡片与「检查更新」行以红色角标提醒。",
+  "apkUrl": "/downloads/lvlv-v1.4.2.apk",
+  "githubApkUrl": "https://github.com/cao-gift/sdjtu-timetable/releases/download/v1.4.2/lvlv-v1.4.2.apk",
+  "pageUrl": "/",
+  "fileName": "lvlv-v1.4.2.apk",
+  "size": 3678893,
+  "sha256": "3edf906ae0b831a9834d003554d32a3d066570637ff40ce394e8a109ae2206ba",
+  "publishedAt": "2026-11-25T12:34:00.000Z"
+}

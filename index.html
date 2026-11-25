@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>驴驴课表 · 山东交通学院专属安卓课表</title>
+  <meta name="description" content="山东交通学院专属非官方安卓课表工具：课表、成绩、空教室、培养方案与考试安排离线可读，国内高速直连下载。" />
+  <link rel="icon" type="image/png" href="./icon.png" />
+  <style>
+    :root {
+      --paper: #F5F4F0;
+      --card: #FBFAF7;
+      --ink: #111111;
+      --sub: #55554F;
+      --mute: #9A9993;
+      --line: #E9E7E1;
+      --chip: #ECEAE4;
+      --accent: #FF4A1C;
+      --on-ink: #FBFAF7;
+      --ok: #2F5D3A;
+      --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #0E0E0D;
+        --card: #171716;
+        --ink: #ECEAE4;
+        --sub: #B3B1AA;
+        --mute: #7C7B75;
+        --line: #2A2A27;
+        --chip: #21211E;
+        --accent: #FF5A2E;
+        --on-ink: #0E0E0D;
+        --ok: #6FB37E;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --paper: #0E0E0D;
+      --card: #171716;
+      --ink: #ECEAE4;
+      --sub: #B3B1AA;
+      --mute: #7C7B75;
+      --line: #2A2A27;
+      --chip: #21211E;
+      --accent: #FF5A2E;
+      --on-ink: #0E0E0D;
+      --ok: #6FB37E;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.55;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 20px 18px 64px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand img {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      object-fit: cover;
+      background: var(--card);
+      flex-shrink: 0;
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+    }
+
+    .brand-sub {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: var(--mute);
+      margin-top: 2px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .ghost-btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--sub);
+      border-radius: 6px;
+      padding: 0 12px;
+      height: 36px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: border-color 120ms ease, color 120ms ease;
+    }
+
+    .ghost-btn:hover {
+      border-color: var(--ink);
+      color: var(--ink);
+    }
+
+    .hero {
+      margin-top: 24px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px 20px 20px;
+    }
+
+    .hero-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: inline-block;
+    }
+
+    .ver-numeral {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: clamp(38px, 8vw, 56px);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 1.05;
+      margin: 8px 0 6px;
+    }
+
+    .hero-desc {
+      margin: 0;
+      font-size: 14px;
+      color: var(--sub);
+      max-width: 560px;
+    }
+
+    .ruler {
+      margin: 18px 0;
+      height: 10px;
+      border-bottom: 1px solid var(--line);
+      background-image: repeating-linear-gradient(
+        to right,
+        var(--line) 0,
+        var(--line) 1px,
+        transparent 1px,
+        transparent 16px
+      );
+      position: relative;
+    }
+
+    .ruler::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -1px;
+      width: 56px;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 600px) {
+      .meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    .meta-cell {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--paper);
+    }
+
+    .meta-k {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+
+    .meta-v {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-top: 4px;
+      word-break: break-all;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-primary, .btn-outline {
+      min-height: 48px;
+      padding: 0 20px;
+      border-radius: 6px;
+      font-size: 14.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: opacity 120ms ease, border-color 120ms ease;
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--on-ink);
+    }
+
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-outline {
+      background: transparent;
+      border-color: var(--line);
+      color: var(--ink);
+    }
+
+    .btn-outline:hover { border-color: var(--ink); }
+
+    .sha-bar {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--paper);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sha-text {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--sub);
+      word-break: break-all;
+    }
+
+    .sha-text strong {
+      color: var(--mute);
+      font-weight: 600;
+      margin-right: 6px;
+    }
+
+    .section-label {
+      margin: 28px 0 10px 2px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .notes-body {
+      padding: 16px 18px;
+      font-size: 14px;
+      color: var(--sub);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      min-height: 60px;
+      position: relative;
+    }
+
+    .row + .row::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 54px;
+      right: 18px;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .row-idx {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      color: var(--mute);
+    }
+
+    .row-title {
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .row-sub {
+      font-size: 13px;
+      color: var(--sub);
+      margin-top: 2px;
+    }
+
+    .row-tag {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.04em;
+      color: var(--mute);
+      white-space: nowrap;
+    }
+
+    .row-link:hover .row-title {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .footnote {
+      margin-top: 24px;
+      padding: 0 2px;
+      font-size: 12px;
+      color: var(--mute);
+      line-height: 1.7;
+    }
+
+    .footnote a {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .mono {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* 界面预览 · 纸墨刻度示意图（脱敏通识课 + 老师 A/B） */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 680px) {
+      .preview-grid { grid-template-columns: 1fr; }
+    }
+    .mock {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .mock-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+    .mock-title { font-size: 13px; font-weight: 700; }
+    .mock-tag { font-family: var(--mono); font-size: 10px; color: var(--mute); letter-spacing: 0.06em; }
+    .mock-screen {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      min-height: 156px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mock-course {
+      border-radius: 3px;
+      padding: 6px 8px;
+      border-left: 2.5px solid var(--ink);
+      background: var(--card);
+    }
+    .mock-course.live {
+      border: 1.5px solid var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+    .mock-course-name { font-weight: 700; font-size: 11.5px; color: var(--ink); }
+    .mock-course-meta { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top: 2px; }
+    .mock-live-tag { font-family: var(--mono); font-size: 10px; color: var(--accent); font-weight: 700; }
+    .mock-bar {
+      height: 3px;
+      background: var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .mock-bar > span { display: block; height: 100%; background: var(--accent); }
+    .mock-gpa-big {
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    @media (max-width: 520px) {
+      .hero { padding: 18px 16px 16px; }
+      .row { padding: 13px 14px; gap: 10px; }
+      .row + .row::before { left: 48px; right: 14px; }
+      .btn-primary, .btn-outline { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <div class="brand">
+        <img src="./icon.png" alt="驴驴课表图标" width="40" height="40" />
+        <div>
+          <div class="brand-title">驴驴课表</div>
+          <div class="brand-sub">SDJTU · 山东交通学院专属安卓课表</div>
+        </div>
+      </div>
+      <div class="top-actions">
+        <a class="ghost-btn" href="./changelog.html">更新日志</a>
+        <a class="ghost-btn" href="./latest.json" target="_blank" rel="noopener">JSON</a>
+        <button class="ghost-btn" id="themeBtn" type="button" aria-label="切换浅色或深色主题">THEME</button>
+      </div>
+    </header>
+
+    <section class="hero" aria-label="最新版本下载">
+      <div class="hero-head">
+        <div>
+          <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span>LATEST RELEASE · 国内直连分发</span></div>
+          <div class="ver-numeral" id="verTag">v1.4.2</div>
+          <p class="hero-desc">一次登录学校 WebVPN 教务系统，本地离线保存课表、成绩、空教室、培养方案与考试安排。应用内检查更新与下载均优先走本站节点。</p>
+        </div>
+      </div>
+
+      <div class="ruler" aria-hidden="true"></div>
+
+      <div class="meta-grid">
+        <div class="meta-cell">
+          <div class="meta-k">BUILD</div>
+          <div class="meta-v" id="verBuild">74</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-k">SIZE</div>
+          <div class="meta-v" id="verSize">3.5 MB</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-k">ANDROID</div>
+          <div class="meta-v">7.0+</div>
+        </div>
+        <div class="meta-cell">
+          <div class="meta-k">UPDATED</div>
+          <div class="meta-v" id="verDate">2026-11-25</div>
+        </div>
+      </div>
+
+      <div class="cta-row">
+        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.4.2.apk" download>
+          <span>下载安装包 APK</span>
+          <span class="mono" id="downloadName">lvlv-v1.4.2.apk</span>
+        </a>
+        <a class="btn-outline" id="githubBtn" href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">
+          <span>GitHub Releases ↗</span>
+        </a>
+      </div>
+
+      <div class="sha-bar">
+        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">3edf906ae0b831a9834d003554d32a3d066570637ff40ce394e8a109ae2206ba</span></div>
+        <button class="ghost-btn" id="copyShaBtn" type="button">COPY</button>
+      </div>
+    </section>
+
+    <div class="section-label">RELEASE NOTES · 本次更新</div>
+    <section class="card">
+      <div class="notes-body" id="verNotes">1. 大幅提速交院统一门户自动登录与同步链路：未登录直接进入统一门户跳过无效教务往返，提前探测 CAS 表单并取消人为等待，认证后直达教务 SSO。
+2. 修复未登录状态下点击同步成绩、查空教室、培养方案与考试安排无反应的问题：已保存凭据自动快速登录并同步，未保存则立即跳转登录并在进入教务系统后自动返回续接同步。
+3. 设置页「登录统一门户」按钮更名为「手动登录」，点击先弹框提示登录门户后需点击进入「教务系统」待加载完成后返回。
+4. 修复课表与考试 .ics 导出到手机日历缺失日期与全部冲突的问题（改用标准 UTC 时间戳、按时间升序排列、去重与确定性 UID）。
+5. 放宽课表卡片课程名称换行高度，按剩余空间尽量完整显示课名；移除小玩意与同学中的「学期人设卡」「双人课表海报」分享卡片功能。</div>
+    </section>
+
+    <div class="section-label">PREVIEW · 界面一览</div>
+    <section class="preview-grid" aria-label="界面预览示意图">
+      <div class="mock">
+        <div class="mock-head">
+          <span class="mock-title">周课表与实时进度</span>
+          <span class="mock-tag">01 · GAUGE</span>
+        </div>
+        <div class="mock-screen">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span class="mono" style="font-weight:700;font-size:15px;">第 14 周</span>
+            <span class="mono" style="font-size:10px;color:var(--accent);">● 09:42</span>
+          </div>
+          <div class="mock-course live">
+            <div class="mock-course-name">高等数学 A</div>
+            <div class="mock-live-tag">● 进行中 · 剩 18 分</div>
+            <div class="mock-course-meta">老师 A · 教A-201</div>
+          </div>
+          <div class="mock-course">
+            <div class="mock-course-name">大学物理</div>
+            <div class="mock-course-meta">老师 B · 教B-305 · □1</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="mock-head">
+          <span class="mock-title">成绩与 GPA 刻度图</span>
+          <span class="mock-tag">02 · GRADES</span>
+        </div>
+        <div class="mock-screen">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+              <div class="mock-tag">GPA</div>
+              <div class="mock-gpa-big">3.86</div>
+            </div>
+            <span class="mono" style="font-size:10px;color:var(--sub);">加权 89.4</span>
+          </div>
+          <svg viewBox="0 0 180 54" width="100%" height="54" aria-hidden="true">
+            <line x1="6" y1="12" x2="174" y2="12" stroke="var(--line)" stroke-width="1" />
+            <line x1="6" y1="32" x2="174" y2="32" stroke="var(--line)" stroke-width="1" />
+            <line x1="6" y1="48" x2="174" y2="48" stroke="var(--line)" stroke-width="1" />
+            <polyline fill="none" stroke="var(--ink)" stroke-width="1.6" points="18,36 72,26 126,20 166,13" />
+            <circle cx="18" cy="36" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
+            <circle cx="72" cy="26" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
+            <circle cx="126" cy="20" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
+            <circle cx="166" cy="13" r="3.6" fill="var(--accent)" />
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:11px;">
+            <span>线性代数</span>
+            <span class="mono" style="font-weight:700;">94</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="mock-head">
+          <span class="mock-title">多尺寸桌面小组件</span>
+          <span class="mock-tag">03 · WIDGET</span>
+        </div>
+        <div class="mock-screen">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="mock-live-tag">NOW · 正在上课</span>
+            <span class="mono" style="font-size:10px;color:var(--mute);">2/4 门</span>
+          </div>
+          <div class="mock-gpa-big" style="font-size:24px;color:var(--accent);">18:42</div>
+          <div class="mock-bar"><span style="width:62%;"></span></div>
+          <div class="mock-course-name" style="margin-top:4px;">大学英语</div>
+          <div class="mock-course-meta">10:00 下课 · 教C-108</div>
+          <div class="mock-course-meta" style="color:var(--accent);margin-top:auto;">考试 · 高等数学A（剩 5 天）</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="section-label">CAPABILITIES · 核心功能</div>
+    <section class="card">
+      <div class="row">
+        <div class="row-idx">01</div>
+        <div>
+          <div class="row-title">交院教务静默同步</div>
+          <div class="row-sub">直连山东交通学院 WebVPN，支持课表与历史学期归档，保留完整地点与自定义课程</div>
+        </div>
+        <div class="row-tag">OFFLINE</div>
+      </div>
+      <div class="row">
+        <div class="row-idx">02</div>
+        <div>
+          <div class="row-title">成绩查询与新成绩提醒</div>
+          <div class="row-sub">按学期查看成绩与绩点，支持翻牌查看与后台定时检查</div>
+        </div>
+        <div class="row-tag">GPA</div>
+      </div>
+      <div class="row">
+        <div class="row-idx">03</div>
+        <div>
+          <div class="row-title">查空教室</div>
+          <div class="row-sub">按校区、周次与教学楼查询强智教室课表，支持筛选当日全空闲教室并离线可读</div>
+        </div>
+        <div class="row-tag">ROOMS</div>
+      </div>
+      <div class="row">
+        <div class="row-idx">04</div>
+        <div>
+          <div class="row-title">培养方案与考试安排</div>
+          <div class="row-sub">离线浏览培养方案执行计划，合并查询期末与随堂提前期末考试</div>
+        </div>
+        <div class="row-tag">PLAN</div>
+      </div>
+      <div class="row">
+        <div class="row-idx">05</div>
+        <div>
+          <div class="row-title">桌面小组件与上课提醒</div>
+          <div class="row-sub">实时显示今日课程倒计时、课前静音提醒、课块下雨提示与磨砂玻璃/纸墨双主题</div>
+        </div>
+        <div class="row-tag">WIDGET</div>
+      </div>
+      <div class="row">
+        <div class="row-idx">06</div>
+        <div>
+          <div class="row-title">同学课表与共同空闲</div>
+          <div class="row-sub">扫码分享脱敏课表，一键算出多位同学共同空闲时段</div>
+        </div>
+        <div class="row-tag">SHARE</div>
+      </div>
+    </section>
+
+    <div class="section-label">MORE · 更新与联系</div>
+    <section class="card">
+      <div class="row">
+        <div class="row-idx">01</div>
+        <div>
+          <div class="row-title">应用内自动更新</div>
+          <div class="row-sub">客户端检查 <span class="mono">/latest.json</span> 并自动校验安装包完整性后下载更新</div>
+        </div>
+        <div class="row-tag">SHA-256</div>
+      </div>
+      <a class="row row-link" href="./changelog.html">
+        <div class="row-idx">02</div>
+        <div>
+          <div class="row-title">完整更新日志</div>
+          <div class="row-sub">查看从早期版本至今的每一项功能演进与修复记录</div>
+        </div>
+        <div class="row-tag">LOG ›</div>
+      </a>
+      <a class="row row-link" href="https://github.com/cao-gift/sdjtu-timetable" target="_blank" rel="noopener">
+        <div class="row-idx">03</div>
+        <div>
+          <div class="row-title">GitHub 项目仓库</div>
+          <div class="row-sub">查看源代码与历史发布版本</div>
+        </div>
+        <div class="row-tag">GITHUB ↗</div>
+      </a>
+      <a class="row row-link" href="mailto:3514088137@qq.com">
+        <div class="row-idx">04</div>
+        <div>
+          <div class="row-title">联系邮箱</div>
+          <div class="row-sub"><span class="mono">3514088137@qq.com</span></div>
+        </div>
+        <div class="row-tag">MAIL</div>
+      </a>
+    </section>
+
+    <footer class="footnote">
+      非官方校园工具，与山东交通学院及教务系统厂商无关。教务数据以学校系统为准，课表、成绩与可选自动登录凭据均仅保存在本机。
+      · 更新清单接口：<a class="mono" href="./latest.json">/latest.json</a>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const FALLBACK = {
+        tag: "v1.4.2",
+        versionCode: 74,
+        fileName: "lvlv-v1.4.2.apk",
+        apkUrl: "/downloads/lvlv-v1.4.2.apk",
+        size: 3678893,
+        sha256: "3edf906ae0b831a9834d003554d32a3d066570637ff40ce394e8a109ae2206ba",
+        publishedAt: "2026-11-25T12:34:00.000Z",
+        notes: "1. 移除升级说明、登录后引导、课块下雨提示等主动打扰弹窗及相关代码。\n2. 修复登录失效后设置页仍显示「已登录」的问题：新增本地 Cookie 校验与后台轻量会话存活探测，失效时即时刷新状态。\n3. 大幅提速成绩同步：新增复用 Cookie 的直连 HTTP POST 通道并支持多页并发抓取，免去冷启动 WebView 与双重查库耗时。\n4. 支持 Wi-Fi 与移动流量（只要有网）下静默自动检查更新，不再弹窗打扰，仅在底栏「设置」、设置页「关于」卡片与「检查更新」行以红色角标提醒。"
+      };
+
+      const el = (id) => document.getElementById(id);
+
+      function formatSize(bytes) {
+        if (!bytes || bytes <= 0) return "--";
+        return (bytes / 1048576).toFixed(1) + " MB";
+      }
+
+      function formatDate(iso) {
+        if (!iso) return "--";
+        const m = String(iso).match(/^(\d{4}-\d{2}-\d{2})/);
+        return m ? m[1] : String(iso);
+      }
+
+      function render(data) {
+        const tag = data.tag || FALLBACK.tag;
+        const fileName = data.fileName || ("lvlv-" + tag + ".apk");
+        const apkUrl = data.apkUrl || FALLBACK.apkUrl;
+        el("verTag").textContent = tag;
+        el("verBuild").textContent = data.versionCode ? String(data.versionCode) : "--";
+        el("verSize").textContent = formatSize(data.size);
+        el("verDate").textContent = formatDate(data.publishedAt);
+        el("verSha").textContent = data.sha256 || "--";
+        el("verNotes").textContent = (data.notes || "").trim() || "暂无更新说明。";
+        el("downloadName").textContent = fileName;
+        const btn = el("downloadBtn");
+        btn.href = apkUrl;
+        btn.setAttribute("download", fileName);
+      }
+
+      render(FALLBACK);
+
+      fetch("./latest.json?t=" + Date.now(), { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data) => { if (data && data.tag) render(data); })
+        .catch(() => {});
+
+      el("copyShaBtn").addEventListener("click", function () {
+        const sha = el("verSha").textContent.trim();
+        if (!sha || sha === "--") return;
+        const btn = this;
+        const done = () => {
+          btn.textContent = "COPIED";
+          setTimeout(() => { btn.textContent = "COPY"; }, 1600);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(sha).then(done).catch(() => {});
+        }
+      });
+
+      const root = document.documentElement;
+      const saved = localStorage.getItem("lvlv_theme");
+      if (saved === "light" || saved === "dark") root.dataset.theme = saved;
+      el("themeBtn").addEventListener("click", function () {
+        const isDark = root.dataset.theme === "dark" ||
+          (!root.dataset.theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const next = isDark ? "light" : "dark";
+        root.dataset.theme = next;
+        localStorage.setItem("lvlv_theme", next);
+      });
+    })();
+  </script>
+</body>
+</html>
