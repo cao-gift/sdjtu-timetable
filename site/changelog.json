@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-11-25T10:56:31.808Z",
-  "count": 34,
+  "generatedAt": "2026-11-25T11:11:13.029Z",
+  "count": 35,
   "releases": [
     {
-      "version": "Unreleased",
-      "date": "",
+      "version": "1.4.0",
+      "date": "2026-11-25",
       "items": [
         {
           "type": "heading",
@@ -61,6 +61,20 @@
         {
           "type": "item",
           "text": "**官网与更新**：官网 `site/` 新增同步自 `CHANGELOG.md` 的更新日志页（`changelog.html`）与脱敏界面预览区；应用内更新弹窗完整展示更新日志，并在 Wi-Fi 环境下提供「Wi-Fi 后台下载」选项。"
+        }
+      ]
+    },
+    {
+      "version": "1.3.19",
+      "date": "2026-11-25",
+      "items": [
+        {
+          "type": "item",
+          "text": "更新设置「关于」页微信赞赏码图片。"
+        },
+        {
+          "type": "item",
+          "text": "优化应用内远程更新体验。"
         }
       ]
     },

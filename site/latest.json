@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "tag": "v1.3.19",
-  "versionName": "1.3.19",
-  "versionCode": 71,
-  "name": "驴驴课表 v1.3.19",
-  "notes": "1. 更新设置「关于」页微信赞赏码图片。\n2. 优化应用内远程更新体验。",
-  "apkUrl": "/downloads/lvlv-v1.3.19.apk",
-  "githubApkUrl": "https://github.com/cao-gift/sdjtu-timetable/releases/download/v1.3.19/lvlv-v1.3.19.apk",
+  "tag": "v1.4.0",
+  "versionName": "1.4.0",
+  "versionCode": 72,
+  "name": "驴驴课表 v1.4.0",
+  "notes": "1. 新增 2×2「下一节课倒计时」与 4×1「今日进度条」纸墨风桌面小组件，以及系统下拉快捷设置磁贴（下一节课 / 今日空教室）。\n2. 新增考试倒计时、考前 1 天/1 小时提醒、考试日历 .ics 导出及课表叠加展示；新增课程作业与待办管理，未完成项随提醒推送。\n3. 升级课表「现在」按秒刻度线、上课进度脊与下课前 5 分钟提示，成绩页新增极简墨线学期 GPA 趋势图与翻牌动效，升级实况通知进度与全量本地备份/恢复。\n4. 官网新增完整更新日志页与脱敏界面预览，应用内更新弹窗支持展示完整说明与 Wi-Fi 后台下载。",
+  "apkUrl": "/downloads/lvlv-v1.4.0.apk",
+  "githubApkUrl": "https://github.com/cao-gift/sdjtu-timetable/releases/download/v1.4.0/lvlv-v1.4.0.apk",
   "pageUrl": "/",
-  "fileName": "lvlv-v1.3.19.apk",
-  "size": 3640776,
-  "sha256": "9b733e513c88c1cd203f0e34b3e51dfc4e4b04975b2c2781d7b4cf8f60d2dff1",
-  "publishedAt": "2026-11-25T06:33:40.660Z"
+  "fileName": "lvlv-v1.4.0.apk",
+  "size": 3678061,
+  "sha256": "14ee7a060b71b7e9713f10608a4c757f5799143772f111cb45b8d9bb76da02e7",
+  "publishedAt": "2026-11-25T11:11:12.968Z"
 }

@@ -1,6 +1,6 @@
 # 驴驴课表
 
-**山东交通学院专属安卓课表应用**（当前版本 **1.3.19 (71)**），基于开源项目 [augustlies/tangli（烫梨）](https://github.com/augustlies/tangli) 修改并遵循 **GPL-3.0** 协议开源。
+**山东交通学院专属安卓课表应用**（当前版本 **1.4.0 (72)**），基于开源项目 [augustlies/tangli（烫梨）](https://github.com/augustlies/tangli) 修改并遵循 **GPL-3.0** 协议开源。
 
 **简体中文** | [English](README_EN.md)
 
