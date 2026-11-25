@@ -75,13 +75,21 @@ jobs:
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
 
-      - name: Rename APK for release
+      - name: Rename APK and generate manifest for release
         if: env.HAS_SIGNING == 'true' && startsWith(github.ref, 'refs/tags/v')
-        run: cp app/build/outputs/apk/release/app-release.apk "lvlv-${GITHUB_REF_NAME}.apk"
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "lvlv-${GITHUB_REF_NAME}.apk"
+          node scripts/sync-site-release.mjs \
+            --apk "lvlv-${GITHUB_REF_NAME}.apk" \
+            --tag "${GITHUB_REF_NAME}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --out-manifest latest.json
 
-      - name: Attach APK to release
+      - name: Attach APK and manifest to release
         if: env.HAS_SIGNING == 'true' && startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          # 发布说明在 GitHub Release 页面手写（或已存在），这里只上传 APK
-          files: lvlv-${{ github.ref_name }}.apk
+          # 发布说明在 GitHub Release 页面手写（或已存在），这里上传 APK 和静态更新清单
+          files: |
+            lvlv-${{ github.ref_name }}.apk
+            latest.json

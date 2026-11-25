@@ -1,6 +1,6 @@
 # 驴驴课表
 
-**山东交通学院专属安卓课表应用**（当前版本 **1.3.17 (69)**），基于开源项目 [augustlies/tangli（烫梨）](https://github.com/augustlies/tangli) 修改并遵循 **GPL-3.0** 协议开源。
+**山东交通学院专属安卓课表应用**（当前版本 **1.3.18 (70)**），基于开源项目 [augustlies/tangli（烫梨）](https://github.com/augustlies/tangli) 修改并遵循 **GPL-3.0** 协议开源。
 
 **简体中文** | [English](README_EN.md)
 
@@ -82,16 +82,16 @@
 
 ## 安装
 
-1. 前往 [Releases](https://github.com/cao-gift/sdjtu-timetable/releases) 下载最新 APK，在 Android 7.0 或以上设备安装。
+1. 前往国内官网 [lvlv.freeblock.cn](https://lvlv.freeblock.cn) 或 [GitHub Releases](https://github.com/cao-gift/sdjtu-timetable/releases) 下载最新 APK，在 Android 7.0 或以上设备安装。应用内检查更新与下载默认优先直连官网，并支持多路镜像兜底。
 2. 打开「设置 → 登录统一门户」，登录山东交通学院 WebVPN 后即可同步课表、成绩、空教室、培养方案与考试安排。
 
 独立签名版使用包名 `app.lvlv.timetable`，可与旧版同时安装。要沿用旧课表，可在旧版导出后到新版导入。
 
 开发者可用 JDK 17 运行 `./gradlew assembleDebug` 生成可安装的调试包，或运行 `./gradlew testDebugUnitTest` 执行单元测试。
 
-## 问题反馈
+## 联系与反馈
 
-欢迎在本仓库提交 [Issue](https://github.com/cao-gift/sdjtu-timetable/issues)。「设置 → 关于」可导出已脱敏的诊断日志，反馈时请附上页面、操作步骤及观察到的现象。
+欢迎在本仓库提交 [Issue](https://github.com/cao-gift/sdjtu-timetable/issues)，或发送邮件至 `3514088137@qq.com`。反馈时请附上页面、操作步骤及观察到的现象。
 
 ## 说明
 

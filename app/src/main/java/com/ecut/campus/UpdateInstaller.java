@@ -17,6 +17,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.FileProvider;
 
+import com.ecut.campus.data.UpdateManifest;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.io.File;
@@ -33,15 +34,14 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * 应用内更新：依次从加速镜像 → GitHub 直连下载新版 APK，
- * 校验 SHA-256（GitHub 给了的话）、包名、签名和版本号都对得上才交给系统安装。
- * 任何一项不对就换下一个来源；全部失败退回浏览器打开发布页。
+ * 应用内更新：依次从官方国内节点 → 多路加速镜像 → GitHub 直连下载新版 APK，
+ * 校验 SHA-256（清单给了的话）、包名、签名和版本号都对得上才交给系统安装。
+ * 任何一项不对就换下一个来源；全部失败退回浏览器打开官网或发布页。
  */
 public final class UpdateInstaller {
     private UpdateInstaller() {}
 
     private static final String DIR = "updates";
-    private static final String MIRROR = "https://ghfast.top/";
 
     static final class Source {
         final String label, url;
@@ -50,9 +50,10 @@ public final class UpdateInstaller {
 
     static List<Source> sources(Updater.Release r) {
         List<Source> out = new ArrayList<>();
-        String gh = r.apkUrl == null ? "" : r.apkUrl;
-        if (gh.startsWith("https://github.com/")) out.add(new Source("加速镜像", MIRROR + gh));
-        if (!gh.isEmpty()) out.add(new Source("GitHub", gh));
+        if (r == null) return out;
+        for (UpdateManifest.DownloadSource s : UpdateManifest.downloadSources(r.apkUrl, r.fallbackApkUrl)) {
+            out.add(new Source(s.label, s.url));
+        }
         return out;
     }
 
@@ -156,10 +157,10 @@ public final class UpdateInstaller {
                 if (dlg.isShowing()) dlg.dismiss();
                 new AlertDialog.Builder(a)
                         .setTitle("没下载成功")
-                        .setMessage((fe.isEmpty() ? "" : fe + "\n\n") + "可以去发布页用浏览器下载。")
+                        .setMessage((fe.isEmpty() ? "" : fe + "\n\n") + "可以去官网或发布页用浏览器下载。")
                         .setNegativeButton("关闭", null)
-                        .setPositiveButton("打开发布页", (d, w) -> Updater.open(a,
-                                r.pageUrl == null || r.pageUrl.isEmpty() ? Updater.RELEASES_URL : r.pageUrl))
+                        .setPositiveButton("打开下载页", (d, w) -> Updater.open(a,
+                                r.pageUrl == null || r.pageUrl.isEmpty() ? Updater.defaultDownloadPageUrl() : r.pageUrl))
                         .show();
             });
         }, "update-download").start();
@@ -312,7 +313,7 @@ public final class UpdateInstaller {
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
             a.startActivity(i);
         } catch (Exception e) {
-            Updater.open(a, r.pageUrl == null || r.pageUrl.isEmpty() ? Updater.RELEASES_URL : r.pageUrl);
+            Updater.open(a, r.pageUrl == null || r.pageUrl.isEmpty() ? Updater.defaultDownloadPageUrl() : r.pageUrl);
         }
     }
 }

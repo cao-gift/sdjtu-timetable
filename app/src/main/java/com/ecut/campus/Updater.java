@@ -7,101 +7,153 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 
-import com.ecut.campus.data.VersionCompare;
+import com.ecut.campus.data.UpdateManifest;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
-/** 从 GitHub Releases 检查新版本。只读公开接口，不需要任何账号。 */
+/** 检查新版本：优先请求自有官网静态清单，失败后依次回退多路加速镜像与 GitHub Releases。 */
 public final class Updater {
     private Updater() {}
 
-    public static final String UPSTREAM_URL = "https://github.com/augustlies/tangli";
-    private static final String REPO = BuildConfig.RELEASE_REPOSITORY;
+    private static final String REPO = BuildConfig.RELEASE_REPOSITORY == null ? "" : BuildConfig.RELEASE_REPOSITORY.trim();
+    public static final String SITE_URL = UpdateManifest.normalizeBaseUrl(BuildConfig.UPDATE_BASE_URL);
     public static final String REPO_URL = "https://github.com/" + REPO;
     public static final String RELEASES_URL = REPO_URL + "/releases";
-    public static final String ISSUES_URL = UPSTREAM_URL + "/issues/new";
-    public static final String FEEDBACK_EMAIL = "contact@sueexin.dev";
-    private static final String API = "https://api.github.com/repos/" + REPO + "/releases/latest";
+    public static final String FEEDBACK_EMAIL = "3514088137@qq.com";
     private static final long AUTO_INTERVAL = 6L * 60 * 60 * 1000;
+    private static final int MAX_BODY_BYTES = 512 * 1024;
 
     public static final class Release {
         public String tag, name, notes, pageUrl, apkUrl;
-        /** GitHub 资产自带的 SHA-256（"digest": "sha256:…"），没有时为空 */
+        /** 备用下载地址（例如 GitHub Release APK），主地址失败时由 UpdateInstaller 接管。 */
+        public String fallbackApkUrl = "";
+        /** 安装包 SHA-256（小写十六进制），没有时为空 */
         public String sha256 = "";
         public long size;
+        public int versionCode;
     }
 
     public interface Callback {
-        /** release 为 null 表示网络或接口失败。 */
+        /** release 为 null 表示所有更新源均不可达或解析失败。 */
         void done(Release release);
+    }
+
+    public static boolean hasOfficialSite() {
+        return !SITE_URL.isEmpty();
     }
 
     public static boolean hasReleaseRepository() {
         return !REPO.isEmpty();
     }
 
+    public static boolean hasUpdateSource() {
+        return hasOfficialSite() || hasReleaseRepository();
+    }
+
+    public static String defaultDownloadPageUrl() {
+        return hasOfficialSite() ? SITE_URL + "/" : RELEASES_URL;
+    }
+
     public static void fetchLatest(Callback cb) {
         Handler main = new Handler(Looper.getMainLooper());
         new Thread(() -> {
             Release r = null;
-            try {
-                HttpURLConnection c = (HttpURLConnection) new URL(API).openConnection();
-                c.setConnectTimeout(8000);
-                c.setReadTimeout(8000);
-                c.setRequestProperty("Accept", "application/vnd.github+json");
-                c.setRequestProperty("User-Agent", "lvlv-android");
-                if (c.getResponseCode() == 200) {
-                    try (InputStream is = c.getInputStream()) {
-                        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                        byte[] buf = new byte[8192];
-                        int n;
-                        while ((n = is.read(buf)) > 0) bo.write(buf, 0, n);
-                        JSONObject o = new JSONObject(bo.toString(StandardCharsets.UTF_8.name()));
-                        r = new Release();
-                        r.tag = o.optString("tag_name", "");
-                        r.name = o.optString("name", r.tag);
-                        r.notes = o.optString("body", "");
-                        r.pageUrl = o.optString("html_url", RELEASES_URL);
-                        JSONArray assets = o.optJSONArray("assets");
-                        if (assets != null) {
-                            for (int i = 0; i < assets.length(); i++) {
-                                JSONObject a = assets.getJSONObject(i);
-                                if (a.optString("name").endsWith(".apk")) {
-                                    r.apkUrl = a.optString("browser_download_url");
-                                    r.size = a.optLong("size", 0);
-                                    String dg = a.optString("digest", "");
-                                    if (dg.startsWith("sha256:")) r.sha256 = dg.substring(7).toLowerCase(java.util.Locale.US);
-                                    break;
-                                }
-                            }
-                        }
-                    }
+            List<UpdateManifest.Endpoint> endpoints = UpdateManifest.checkEndpoints(SITE_URL, REPO);
+            String defaultPage = defaultDownloadPageUrl();
+            for (UpdateManifest.Endpoint ep : endpoints) {
+                String body = fetchJson(ep);
+                if (body == null) continue;
+                UpdateManifest.ReleaseInfo info = ep.kind == UpdateManifest.KIND_GITHUB_API
+                        ? UpdateManifest.parseGitHubReleaseJson(body, defaultPage)
+                        : UpdateManifest.parseOfficialJson(body, ep.baseUrl, defaultPage);
+                if (info != null) {
+                    r = toRelease(info);
+                    break;
                 }
-                c.disconnect();
-            } catch (Exception ignored) {
-                r = null;
             }
             final Release fr = r;
             main.post(() -> cb.done(fr));
         }, "update-check").start();
     }
 
+    private static String fetchJson(UpdateManifest.Endpoint ep) {
+        HttpURLConnection c = null;
+        try {
+            String url = ep.url;
+            int code = -1;
+            for (int hop = 0; hop < 5; hop++) {
+                c = (HttpURLConnection) new URL(url).openConnection();
+                c.setInstanceFollowRedirects(false);
+                c.setConnectTimeout(6000);
+                c.setReadTimeout(8000);
+                c.setRequestProperty("Accept", ep.kind == UpdateManifest.KIND_GITHUB_API
+                        ? "application/vnd.github+json" : "application/json");
+                c.setRequestProperty("Cache-Control", "no-cache");
+                c.setRequestProperty("User-Agent", "lvlv-android");
+                code = c.getResponseCode();
+                if (code / 100 == 3) {
+                    String loc = c.getHeaderField("Location");
+                    c.disconnect();
+                    c = null;
+                    if (loc == null) return null;
+                    url = new URL(new URL(url), loc).toString();
+                    if (!url.startsWith("https://")) return null;
+                    continue;
+                }
+                break;
+            }
+            if (code != 200 || c == null) return null;
+            try (InputStream is = c.getInputStream()) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                byte[] buf = new byte[8192];
+                int n;
+                int total = 0;
+                while ((n = is.read(buf)) > 0) {
+                    total += n;
+                    if (total > MAX_BODY_BYTES) return null;
+                    bo.write(buf, 0, n);
+                }
+                return bo.toString(StandardCharsets.UTF_8.name());
+            }
+        } catch (Exception ignored) {
+            return null;
+        } finally {
+            if (c != null) c.disconnect();
+        }
+    }
+
+    private static Release toRelease(UpdateManifest.ReleaseInfo info) {
+        Release r = new Release();
+        r.tag = info.tag;
+        r.name = info.name;
+        r.notes = info.notes;
+        r.pageUrl = info.pageUrl;
+        r.apkUrl = info.apkUrl;
+        r.fallbackApkUrl = info.fallbackApkUrl;
+        r.sha256 = info.sha256;
+        r.size = info.size;
+        r.versionCode = info.versionCode;
+        return r;
+    }
+
     public static boolean isNewer(Release r) {
-        return r != null && VersionCompare.isNewer(r.tag, BuildConfig.VERSION_NAME);
+        if (r == null) return false;
+        UpdateManifest.ReleaseInfo info = new UpdateManifest.ReleaseInfo();
+        info.tag = r.tag;
+        info.versionCode = r.versionCode;
+        return UpdateManifest.isNewer(info, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE);
     }
 
     /** 打开 App 时静默检查，6 小时最多一次；勾了「不再提示」的版本不再弹。 */
     public static void autoCheck(Activity a) {
         try { UpdateInstaller.cleanup(a); } catch (Exception ignored) {}
-        if (!hasReleaseRepository() || !Prefs.updateAutoCheck(a)) return;
+        if (!hasUpdateSource() || !Prefs.updateAutoCheck(a)) return;
         long now = System.currentTimeMillis();
         if (now - Prefs.updateCheckedAt(a) < AUTO_INTERVAL) return;
         fetchLatest(r -> {
@@ -144,8 +196,10 @@ public final class Updater {
                 .setTitle("发现新版本 " + r.tag)
                 .setView(sv)
                 .setPositiveButton("更新", (d, w) -> {
-                    if (r.apkUrl != null && !r.apkUrl.isEmpty()) UpdateInstaller.start(a, r);
-                    else open(a, r.pageUrl);
+                    boolean hasApk = (r.apkUrl != null && !r.apkUrl.isEmpty())
+                            || (r.fallbackApkUrl != null && !r.fallbackApkUrl.isEmpty());
+                    if (hasApk) UpdateInstaller.start(a, r);
+                    else open(a, r.pageUrl == null || r.pageUrl.isEmpty() ? defaultDownloadPageUrl() : r.pageUrl);
                 })
                 .setNegativeButton("关闭", (d, w) -> {
                     if (allowSkip && never.isChecked()) Prefs.setUpdateSkippedTag(a, r.tag);

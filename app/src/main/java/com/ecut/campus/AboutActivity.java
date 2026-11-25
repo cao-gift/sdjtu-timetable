@@ -2,18 +2,35 @@ package com.ecut.campus;
 
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.Intent;
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-/** 二级页：关于。项目主页、检查更新、问题反馈、许可。 */
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+
+/** 二级页：关于。项目主页、检查更新、联系方式与赞赏。 */
 public class AboutActivity extends AppCompatActivity {
     private TextView updateTrail;
     private TextView updateSub;
@@ -24,7 +41,11 @@ public class AboutActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         G.init(this);
         render();
-        if (Updater.hasReleaseRepository()) check(false);
+        if (Updater.hasUpdateSource()) check(false);
+    }
+
+    private static String rowIndex(int n) {
+        return String.format(java.util.Locale.US, "%02d", n);
     }
 
     private void render() {
@@ -33,49 +54,40 @@ public class AboutActivity extends AppCompatActivity {
 
         Ui.label(this, col, "PROJECT · 项目");
         LinearLayout c1 = Ui.card(this, col);
-        if (Updater.hasReleaseRepository()) {
-            Ui.row(this, c1, "01", "GitHub 项目主页", Updater.REPO_URL, "↗ WEB",
-                    v -> Updater.open(this, Updater.REPO_URL));
-            View upd = Ui.row(this, c1, "02", "检查更新", "正在检查…", "…", v -> check(true));
+        int idx = 1;
+        if (Updater.hasOfficialSite()) {
+            Ui.row(this, c1, rowIndex(idx++), "官方网站", Updater.SITE_URL, "↗ WEB",
+                    v -> Updater.open(this, Updater.SITE_URL));
+        }
+        if (Updater.hasUpdateSource()) {
+            View upd = Ui.row(this, c1, rowIndex(idx++), "检查更新", "正在检查…", "…", v -> check(true));
             bindUpdateRow(upd);
-            Ui.row(this, c1, "03", "全部版本与更新日志", "查看发布记录", "↗ WEB",
+        }
+        if (Updater.hasReleaseRepository()) {
+            Ui.row(this, c1, rowIndex(idx++), "GitHub 项目主页", Updater.REPO_URL, "↗ WEB",
+                    v -> Updater.open(this, Updater.REPO_URL));
+            Ui.row(this, c1, rowIndex(idx++), "全部版本与更新日志", "查看发布记录", "↗ WEB",
                     v -> Updater.open(this, Updater.RELEASES_URL));
-            Ui.row(this, c1, "04", "自动检查更新", "打开应用时检查新版本",
+        }
+        if (Updater.hasUpdateSource()) {
+            Ui.row(this, c1, rowIndex(idx++), "自动检查更新", "打开应用时检查新版本",
                     Prefs.updateAutoCheck(this) ? "ON" : "OFF", v -> {
                         Prefs.setUpdateAutoCheck(this, !Prefs.updateAutoCheck(this));
                         recreate();
                     });
         }
-        Ui.row(this, c1, Updater.hasReleaseRepository() ? "05" : "01", "使用指南", "同步课表和成绩", "?",
+        Ui.row(this, c1, rowIndex(idx++), "使用指南", "同步课表和成绩", "?",
                 v -> LoginGuide.show(this, null));
 
-        Ui.label(this, col, "FEEDBACK · 上游项目反馈");
+        Ui.label(this, col, "CONTACT · 联系与赞赏");
         LinearLayout c2 = Ui.card(this, col);
-        Ui.row(this, c2, "00", "一键发送错误日志", "上传至上游维护者", "SEND",
-                v -> DiagLog.upload(this));
-        Ui.row(this, c2, "01", "发邮件反馈", "发邮件并附诊断日志", "MAIL", v -> mail());
-        Ui.row(this, c2, "02", "在 GitHub 提 Issue", "提交问题并追踪进度", "↗ WEB",
-                v -> Updater.open(this, Updater.ISSUES_URL));
-        Ui.row(this, c2, "03", "复制邮箱地址", "复制反馈邮箱", "COPY", v -> {
-            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
-            cm.setPrimaryClip(ClipData.newPlainText("email", Updater.FEEDBACK_EMAIL));
-            Toast.makeText(this, "已复制 " + Updater.FEEDBACK_EMAIL, Toast.LENGTH_SHORT).show();
-        });
-        Ui.row(this, c2, "04", "导出诊断日志", "导出脱敏日志排查问题", "EXPORT",
-                v -> DiagLog.export(this));
-        TextView tip = Ui.text(this, col,
-                "反馈时请说明页面与现象，最好附截图。邮件默认附脱敏日志（不含学号与 Cookie），可自行删去。",
-                12f, G.MUTE);
-        tip.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), 0);
+        Ui.row(this, c2, "01", "联系邮箱", Updater.FEEDBACK_EMAIL, "COPY", v -> copyEmail());
+        Ui.row(this, c2, "02", "赞赏码", "微信扫码支持开发", "QR", v -> showDonateDialog());
 
-        Ui.label(this, col, "LICENSE · 许可");
-        LinearLayout c3 = Ui.card(this, col);
-        Ui.row(this, c3, "01", "GPL-3.0 开源许可", "自由使用与修改 · © August Lies", "↗ WEB",
-                v -> Updater.open(this, Updater.UPSTREAM_URL + "/blob/main/LICENSE"));
         TextView note = Ui.text(this, col,
                 "非官方工具，与学校及教务系统厂商无关。教务数据以学校系统为准，成绩计算仅供参考。交院自动登录由你开启，账号密码加密保存在本机，可在设置中删除。",
                 12f, G.MUTE);
-        note.setPadding(Ui.dp(this, 4), Ui.dp(this, 14), Ui.dp(this, 4), 0);
+        note.setPadding(Ui.dp(this, 4), Ui.dp(this, 18), Ui.dp(this, 4), 0);
 
         TextView ver = Ui.text(this, col, "驴驴课表 v" + BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE,
                 11f, G.MUTE);
@@ -107,7 +119,9 @@ public class AboutActivity extends AppCompatActivity {
             checking = false;
             if (isFinishing()) return;
             if (r == null) {
-                setUpdate("连不上 GitHub，稍后再试或点「全部版本」", "重试", G.MUTE);
+                setUpdate(Updater.hasOfficialSite()
+                        ? "检查更新失败，稍后再试或访问官网"
+                        : "连不上更新源，稍后再试", "重试", G.MUTE);
                 return;
             }
             Prefs.setUpdateCheckedAt(this, System.currentTimeMillis());
@@ -121,66 +135,129 @@ public class AboutActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * 发邮件反馈：自动附上诊断日志（和「导出诊断日志」同一份，DiagLog.buildReport，不含学号、姓名、Cookie）。
-     * 用 ACTION_SEND 带附件；没有能收附件的邮件应用就退回不带附件的 mailto，再不行复制邮箱。
-     */
-    private void mail() {
-        String subject = "[驴驴课表反馈] v" + BuildConfig.VERSION_NAME;
-        String info = "版本：v" + BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")"
-                + "\n机型：" + Build.MANUFACTURER + " " + Build.MODEL
-                + "\n系统：Android " + Build.VERSION.RELEASE + " (API " + Build.VERSION.SDK_INT + ")";
-        Uri log = null;
-        try {
-            String name = "tangli-diag-" + new java.text.SimpleDateFormat("MMdd-HHmm", java.util.Locale.US)
-                    .format(new java.util.Date()) + ".txt";
-            java.io.File out = ShareFiles.exportFile(this, name);
-            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
-                fos.write(DiagLog.buildReport(this).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-            }
-            log = androidx.core.content.FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", out);
-        } catch (Throwable ignored) {
-            // 日志生成失败就照常发不带附件的邮件
-        }
-        if (log != null) {
-            String body = "\n\n\n————\n" + ATTACH_NOTE + "\n" + info;
-            Intent send = new Intent(Intent.ACTION_SEND);
-            send.setType("message/rfc822");
-            send.putExtra(Intent.EXTRA_EMAIL, new String[]{Updater.FEEDBACK_EMAIL});
-            send.putExtra(Intent.EXTRA_SUBJECT, subject);
-            send.putExtra(Intent.EXTRA_TEXT, body);
-            send.putExtra(Intent.EXTRA_STREAM, log);
-            send.setClipData(ClipData.newRawUri("diag", log)); // 有的邮件应用只认 ClipData 上的授权
-            send.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            if (send.resolveActivity(getPackageManager()) != null || hasAnySendTarget(send)) {
-                try {
-                    startActivity(Intent.createChooser(send, "选择邮件应用"));
-                    return;
-                } catch (Exception ignored) {
-                }
-            }
-        }
-        Intent i = new Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"));
-        i.putExtra(Intent.EXTRA_EMAIL, new String[]{Updater.FEEDBACK_EMAIL});
-        i.putExtra(Intent.EXTRA_SUBJECT, subject);
-        i.putExtra(Intent.EXTRA_TEXT, "\n\n\n————\n" + info);
-        try {
-            startActivity(Intent.createChooser(i, "选择邮件应用"));
-        } catch (Exception e) {
-            Toast.makeText(this, "没有邮件应用，邮箱已复制", Toast.LENGTH_SHORT).show();
-            ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+    private void copyEmail() {
+        ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("email", Updater.FEEDBACK_EMAIL));
+        }
+        Toast.makeText(this, "已复制 " + Updater.FEEDBACK_EMAIL, Toast.LENGTH_SHORT).show();
+    }
+
+    private void showDonateDialog() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+        box.setPadding(Ui.dp(this, 20), Ui.dp(this, 16), Ui.dp(this, 20), Ui.dp(this, 8));
+
+        FrameLayout frame = new FrameLayout(this);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(Ui.dp(this, G.CARD_RADIUS));
+        bg.setColor(0xFFFFFFFF);
+        bg.setStroke(Math.max(1, Ui.dp(this, 1)), G.LINE);
+        frame.setBackground(bg);
+        frame.setClipToOutline(true);
+
+        ImageView iv = new ImageView(this);
+        iv.setImageResource(R.drawable.donate_wechat_qr);
+        iv.setAdjustViewBounds(true);
+        iv.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        iv.setMaxHeight(Ui.dp(this, 420));
+        iv.setContentDescription("微信赞赏码");
+        frame.addView(iv, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                Gravity.CENTER));
+
+        LinearLayout.LayoutParams fl = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        box.addView(frame, fl);
+
+        TextView tip = new TextView(this);
+        tip.setText("微信扫一扫，或保存图片后在微信中识别");
+        tip.setTextSize(12.5f);
+        tip.setTextColor(G.SUB);
+        tip.setGravity(Gravity.CENTER);
+        tip.setPadding(0, Ui.dp(this, 12), 0, 0);
+        box.addView(tip, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        ScrollView sv = new ScrollView(this);
+        sv.addView(box);
+
+        new AlertDialog.Builder(this)
+                .setTitle("赞赏码")
+                .setView(sv)
+                .setNegativeButton("关闭", null)
+                .setPositiveButton("保存到相册", (d, w) -> saveDonateQr())
+                .show();
+    }
+
+    private void saveDonateQr() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            shareDonateQr();
+            return;
+        }
+        ContentValues v = new ContentValues();
+        v.put(MediaStore.Images.Media.DISPLAY_NAME, "lvlv-donate-wechat.jpg");
+        v.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
+        v.put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/驴驴课表");
+        v.put(MediaStore.Images.Media.IS_PENDING, 1);
+        ContentResolver cr = getContentResolver();
+        Uri uri = null;
+        try {
+            uri = cr.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+            if (uri == null) throw new IllegalStateException("相册不可用");
+            try (OutputStream os = cr.openOutputStream(uri)) {
+                if (os == null) throw new IllegalStateException("写入失败");
+                writeDonateQr(os);
+            }
+            v.clear();
+            v.put(MediaStore.Images.Media.IS_PENDING, 0);
+            cr.update(uri, v, null, null);
+            Toast.makeText(this, "已保存到相册 · Pictures/驴驴课表", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            if (uri != null) cr.delete(uri, null, null);
+            Toast.makeText(this, "保存失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
-    static final String ATTACH_NOTE = "已自动附上诊断日志（不含学号、姓名、Cookie），不想发可以删掉。课表显示不对的话，最好再附一张截图。";
-
-    /** Android 11+ 包可见性限制下 resolveActivity 可能拿不到结果，再用 queryIntentActivities 试一次。 */
-    private boolean hasAnySendTarget(Intent send) {
+    private void shareDonateQr() {
         try {
-            return !getPackageManager().queryIntentActivities(send, 0).isEmpty();
+            File out = ShareFiles.exportFile(this, "lvlv-donate-wechat.jpg");
+            try (FileOutputStream fos = new FileOutputStream(out)) {
+                writeDonateQr(fos);
+            }
+            ShareFiles.send(this, out, "image/jpeg", null, "保存或分享赞赏码");
         } catch (Exception e) {
-            return false;
+            Toast.makeText(this, "导出失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void writeDonateQr(OutputStream os) throws Exception {
+        InputStream raw = null;
+        try {
+            raw = getResources().openRawResource(R.drawable.donate_wechat_qr);
+        } catch (Exception ignored) {
+            // 某些 ROM 下 drawable 资源不支持直接按流读取时，退回 Bitmap 编码
+        }
+        if (raw != null) {
+            try (InputStream is = raw) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = is.read(buf)) > 0) {
+                    os.write(buf, 0, n);
+                }
+                return;
+            }
+        }
+        Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.donate_wechat_qr);
+        if (bmp == null) throw new IllegalStateException("图片读取失败");
+        try {
+            if (!bmp.compress(Bitmap.CompressFormat.JPEG, 95, os)) {
+                throw new IllegalStateException("图片写入失败");
+            }
+        } finally {
+            bmp.recycle();
         }
     }
 }

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "tag": "v1.3.18",
+  "versionName": "1.3.18",
+  "versionCode": 70,
+  "name": "驴驴课表 v1.3.18",
+  "notes": "1. 接入国内官网（lvlv.freeblock.cn）直连检查更新与 APK 下载，并支持多路镜像自动回退与完整性校验。\n2. 设置「关于」页新增官方网站入口、联系邮箱（3514088137@qq.com）与微信赞赏码（支持保存到相册），移除无用反馈入口。",
+  "apkUrl": "/downloads/lvlv-v1.3.18.apk",
+  "githubApkUrl": "https://github.com/cao-gift/sdjtu-timetable/releases/download/v1.3.18/lvlv-v1.3.18.apk",
+  "pageUrl": "/",
+  "fileName": "lvlv-v1.3.18.apk",
+  "size": 3714092,
+  "sha256": "02509e9e4df551e761301b30f840db6c1cbfce40907f4c5f7b8c41e78123ab0b",
+  "publishedAt": "2026-11-25T06:23:32.832Z"
+}

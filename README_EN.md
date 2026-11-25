@@ -1,6 +1,6 @@
 # 驴驴课表 · Lǘlǘ Timetable
 
-**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.3.17 (69)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
+**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.3.18 (70)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
 
 [简体中文](README.md) | **English**
 
@@ -76,7 +76,7 @@ Settings displays Shandong Jiaotong University and its seal, and all academic to
 
 ## Installation
 
-1. Download the latest APK from [Releases](https://github.com/cao-gift/sdjtu-timetable/releases) and install it on Android 7.0+.
+1. Download the latest APK from the official mirror [lvlv.freeblock.cn](https://lvlv.freeblock.cn) or [GitHub Releases](https://github.com/cao-gift/sdjtu-timetable/releases) and install it on Android 7.0+. In-app update checks and downloads prioritize the official site with multi-mirror fallback.
 2. Open Settings → Sign in to Unified Portal (WebVPN) to sync your timetable, grades, classrooms, curriculum plan, and exam schedule.
 
 The independently signed build uses `app.lvlv.timetable` and can be installed alongside the previous app. To transfer a timetable, export it from the old app and import it into the new one.
@@ -85,7 +85,7 @@ For a local installable debug build, run `./gradlew assembleDebug` with JDK 17, 
 
 ## Feedback
 
-Please open an [Issue](https://github.com/cao-gift/sdjtu-timetable/issues) in this repository. Settings → About can export a scrubbed diagnostic log. Include the page you were on, steps to reproduce, and what happened.
+Please open an [Issue](https://github.com/cao-gift/sdjtu-timetable/issues) in this repository or email `3514088137@qq.com`. Include the page you were on, steps to reproduce, and what happened.
 
 ## Notes
 
