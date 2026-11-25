@@ -16,8 +16,13 @@ public final class NextClassText {
         public int kind = NONE;
         public String title = "";
         public String text = "";
+        public String courseName = "";
+        public String location = "";
         /** 倒计时到今天第几分钟（CURRENT = 下课，NEXT = 上课且在 {@link WidgetDay#SOON_MIN} 分钟内）；不倒计时为 -1 */
         public int countdownMin = -1;
+        /** 正在上课时记录本节课起止分钟数，供实况通知绘制进度条与剩余时长胶囊。 */
+        public int startMin = -1;
+        public int endMin = -1;
     }
 
     /**
@@ -30,6 +35,10 @@ public final class NextClassText {
         List<DayPlan.Item> left = WidgetDay.remaining(today, nowMin);
         if (!left.isEmpty()) {
             DayPlan.Item it = left.get(0);
+            n.courseName = it.name == null ? "" : it.name;
+            n.location = it.location == null ? "" : it.location;
+            n.startMin = it.startMin;
+            n.endMin = it.endMin;
             if (it.startMin <= nowMin) {
                 n.kind = CURRENT;
                 n.title = "正在上 · " + it.name;
@@ -52,6 +61,8 @@ public final class NextClassText {
         if (tomorrow != null && !tomorrow.isEmpty()) {
             DayPlan.Item it = tomorrow.get(0);
             n.kind = TOMORROW;
+            n.courseName = it.name == null ? "" : it.name;
+            n.location = it.location == null ? "" : it.location;
             n.title = "明天第一节 · " + it.name;
             n.text = WidgetDay.line(it);
         }

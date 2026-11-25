@@ -26,7 +26,9 @@ public final class SdjtuExamActivity extends AppCompatActivity {
     private static final SdjtuAcademicPages.Feature EXAMS = SdjtuAcademicPages.Feature.EXAMS;
     private final Exams adapter = new Exams();
     private Button syncButton;
-    private TextView status, scope, login;
+    private TextView status, scope, login, exportBtn, remindBtn;
+    private com.ecut.campus.view.InkEmptyView emptyArt;
+    private com.ecut.campus.view.GaugeSkeletonView skeleton;
     private SdjtuExamQuery query;
     private JSONObject cached, shown;
     private long syncedAt;
@@ -53,6 +55,33 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         LinearLayout.LayoutParams loginLp = new LinearLayout.LayoutParams(-2, -2);
         loginLp.topMargin = dp(10);
         header.addView(login, loginLp);
+
+        LinearLayout actionRow = new LinearLayout(this);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams actLp = new LinearLayout.LayoutParams(-1, -2);
+        actLp.topMargin = dp(10);
+        exportBtn = Ui.button(this, "导出到日历", false, v -> exportExamsIcs());
+        LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        actionRow.addView(exportBtn, btnLp);
+        remindBtn = Ui.button(this, "", false, v -> toggleExamRemind());
+        LinearLayout.LayoutParams btn2Lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        btn2Lp.setMarginStart(dp(8));
+        actionRow.addView(remindBtn, btn2Lp);
+        header.addView(actionRow, actLp);
+
+        emptyArt = new com.ecut.campus.view.InkEmptyView(this);
+        emptyArt.setKind(com.ecut.campus.view.InkEmptyView.KIND_EXAMS);
+        LinearLayout.LayoutParams eLp = new LinearLayout.LayoutParams(dp(72), dp(72));
+        eLp.gravity = android.view.Gravity.CENTER_HORIZONTAL;
+        eLp.topMargin = dp(24);
+        eLp.bottomMargin = dp(8);
+        header.addView(emptyArt, eLp);
+
+        skeleton = new com.ecut.campus.view.GaugeSkeletonView(this);
+        skeleton.setRows(4);
+        skeleton.setVisibility(View.GONE);
+        header.addView(skeleton, new LinearLayout.LayoutParams(-1, -2));
+
         ListView list = findViewById(R.id.study_list);
         list.addHeaderView(header, null, false);
         list.setAdapter(adapter);
@@ -85,6 +114,8 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                     cached = data;
                     syncedAt = now;
                     message = "";
+                    ExamReminder.reschedule(SdjtuExamActivity.this);
+                    ClassWidget.updateAll(getApplicationContext());
                 } else message = "已取得本次考试安排，保存到手机失败。";
                 render();
             }
@@ -155,8 +186,48 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         }
         status.setText(notice);
         status.setVisibility(notice.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean hasExams = rows != null && rows.length() > 0;
+        if (exportBtn != null) exportBtn.setVisibility(hasExams ? View.VISIBLE : View.GONE);
+        if (remindBtn != null) {
+            remindBtn.setVisibility(hasExams ? View.VISIBLE : View.GONE);
+            remindBtn.setText(Prefs.examRemind(this) ? "考前提醒：开" : "考前提醒：关");
+        }
+        if (skeleton != null) skeleton.setVisibility(busy && !hasExams ? View.VISIBLE : View.GONE);
+        if (emptyArt != null) emptyArt.setVisibility(!busy && !hasExams ? View.VISIBLE : View.GONE);
         adapter.rows = rows;
         adapter.notifyDataSetChanged();
+    }
+
+    private void toggleExamRemind() {
+        boolean next = !Prefs.examRemind(this);
+        Prefs.setExamRemind(this, next);
+        if (next) Notify.requestPermissionIfNeeded(this);
+        ExamReminder.reschedule(this);
+        render();
+        android.widget.Toast.makeText(this,
+                next ? "已开启考前一天与考前一小时提醒" : "已关闭考试提醒",
+                android.widget.Toast.LENGTH_SHORT).show();
+    }
+
+    private void exportExamsIcs() {
+        java.util.List<com.ecut.campus.data.ExamCountdown.Entry> list =
+                com.ecut.campus.data.ExamCountdown.parseAll(shown);
+        String term = shown == null ? "" : shown.optString("term", "");
+        String ics = com.ecut.campus.data.IcsExporter.exportExams(list,
+                term.isEmpty() ? "考试安排 · 驴驴课表" : term + " 考试安排 · 驴驴课表");
+        if (ics == null || ics.isEmpty()) {
+            android.widget.Toast.makeText(this, "暂无明确日期的考试可导出", android.widget.Toast.LENGTH_SHORT).show();
+            return;
+        }
+        try {
+            java.io.File out = ShareFiles.exportFile(this, "lvlv_exams.ics");
+            try (java.io.FileOutputStream fos = new java.io.FileOutputStream(out)) {
+                fos.write(ics.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            ShareFiles.send(this, out, "text/calendar", null, "导出考试到系统日历");
+        } catch (Exception e) {
+            android.widget.Toast.makeText(this, "导出失败：" + e.getMessage(), android.widget.Toast.LENGTH_LONG).show();
+        }
     }
 
     private final class Exams extends BaseAdapter {
@@ -171,7 +242,20 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                 row = new LinearLayout(SdjtuExamActivity.this);
                 row.setOrientation(LinearLayout.VERTICAL);
                 row.setPadding(0, dp(12), 0, 0);
-                Ui.text(SdjtuExamActivity.this, row, "", 16, G.INK).setTypeface(Typeface.DEFAULT_BOLD);
+                LinearLayout top = new LinearLayout(SdjtuExamActivity.this);
+                top.setOrientation(LinearLayout.HORIZONTAL);
+                top.setGravity(android.view.Gravity.CENTER_VERTICAL);
+                TextView nameTv = new TextView(SdjtuExamActivity.this);
+                nameTv.setTextSize(16f);
+                nameTv.setTextColor(G.INK);
+                nameTv.setTypeface(Typeface.DEFAULT_BOLD);
+                top.addView(nameTv, new LinearLayout.LayoutParams(0, -2, 1f));
+                TextView cdTv = new TextView(SdjtuExamActivity.this);
+                cdTv.setTextSize(12f);
+                cdTv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+                cdTv.setPadding(dp(8), 0, 0, 0);
+                top.addView(cdTv);
+                row.addView(top);
                 TextView time = Ui.text(SdjtuExamActivity.this, row, "", 14, G.INK);
                 time.setTypeface(Typeface.MONOSPACE);
                 time.setPadding(0, dp(4), 0, 0);
@@ -183,7 +267,16 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                 row.addView(line, lp);
             }
             JSONObject exam = getItem(i);
-            ((TextView) row.getChildAt(0)).setText(exam.optString("name"));
+            LinearLayout top = (LinearLayout) row.getChildAt(0);
+            ((TextView) top.getChildAt(0)).setText(exam.optString("name"));
+            com.ecut.campus.data.ExamCountdown.Entry entry = com.ecut.campus.data.ExamCountdown.parseOne(exam);
+            long now = System.currentTimeMillis();
+            String cd = com.ecut.campus.data.ExamCountdown.countdownLabel(entry, now);
+            TextView cdTv = (TextView) top.getChildAt(1);
+            cdTv.setText(cd);
+            boolean urgent = entry.hasDate() && now < entry.endMillis
+                    && (entry.startMillis - now <= 7 * com.ecut.campus.data.ExamCountdown.ONE_DAY_MS);
+            cdTv.setTextColor("已结束".equals(cd) || "待公布".equals(cd) ? G.MUTE : (urgent ? G.alarm() : G.INK));
             String time = exam.optString("time");
             ((TextView) row.getChildAt(1)).setText(time.isEmpty() ? "考试时间待公布" : time);
             String room = exam.optString("room"), seat = exam.optString("seat");

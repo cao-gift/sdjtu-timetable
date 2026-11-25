@@ -212,6 +212,65 @@
                 android:resource="@xml/widget_classes_info" />
         </receiver>
 
+        <receiver
+            android:name=".CountdownWidget"
+            android:exported="false"
+            android:label="下一节课倒计时">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_countdown_info" />
+        </receiver>
+
+        <receiver
+            android:name=".DayProgressWidget"
+            android:exported="false"
+            android:label="今日进度条">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_day_progress_info" />
+        </receiver>
+
+        <!-- 考前提醒（考前一天与考前一小时） -->
+        <receiver
+            android:name=".ExamReminder$Receiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 下拉快捷设置磁贴：下一节课 & 今日空教室 -->
+        <service
+            android:name=".NextClassTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_nav_timetable"
+            android:label="下一节课"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".FreeRoomTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_nav_timetable"
+            android:label="今日空教室"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <!-- 小组件「今日课程」里的课程列表（只有系统桌面能绑定） -->
         <service
             android:name=".ClassWidgetService"

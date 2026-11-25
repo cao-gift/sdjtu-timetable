@@ -171,4 +171,21 @@ public class SchoolUpgradeMigrationTest {
         assertEquals(SemesterMetaPolicy.ORIGIN_QIANGZHI | SemesterMetaPolicy.ORIGIN_FOREIGN,
                 SemesterMetaPolicy.inspectJwglxtOrigin(zf));
     }
+
+    @Test
+    public void upgrade1313SampleWithManualCourseAndUnreadNotificationId2001() {
+        assertEquals(2001, Notify.ID_NEW_GRADES);
+        // 1.3.13 单校升级样本：仅手动课 + 五天设置 + 交院成绩未读，不应触发异校清理
+        assertFalse(Prefs.isForeignSchoolState(
+                "sdjtu", false, false, false,
+                true, 1700000000000L, "11-23 09:00",
+                true, true, SDJTU_BASE,
+                false, false, false, false));
+        // 同样本若归属 ecut，则应清理旧校 grades.json 与未读通知 2001
+        assertTrue(Prefs.isForeignSchoolState(
+                "ecut", true, false, false,
+                true, 1700000000000L, "11-23 09:00",
+                true, true, "",
+                false, false, false, false));
+    }
 }

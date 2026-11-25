@@ -38,13 +38,15 @@ public class WidgetLayoutRemoteViewsTest {
     /** 小组件用到的布局：appwidget-provider 里引用的 + 列表条目。 */
     private static List<String> widgetLayouts() throws Exception {
         Set<String> names = new HashSet<>();
-        for (String info : new String[]{"widget_classes_info"}) {
+        for (String info : new String[]{"widget_classes_info", "widget_countdown_info", "widget_day_progress_info"}) {
             Matcher m = LAYOUT_REF.matcher(read("src/main/res/xml/" + info + ".xml"));
             while (m.find()) names.add(m.group(1));
         }
         names.add("widget_class_item");
         names.add("widget_classes");
         names.add("widget_classes_loading");
+        names.add("widget_countdown");
+        names.add("widget_day_progress");
         return new ArrayList<>(names);
     }
 

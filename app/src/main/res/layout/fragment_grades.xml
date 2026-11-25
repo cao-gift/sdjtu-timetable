@@ -152,11 +152,25 @@
                 android:textSize="11sp" />
         </LinearLayout>
 
+        <com.ecut.campus.view.GpaGaugeChartView
+            android:id="@+id/gpa_gauge_chart"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="1px"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="14dp"
             android:background="?attr/gInk" />
+
+        <com.ecut.campus.view.GaugeSkeletonView
+            android:id="@+id/grades_skeleton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone" />
 
         <!-- 4. 空态 -->
         <LinearLayout
@@ -165,8 +179,14 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="vertical"
-            android:paddingVertical="32dp"
+            android:paddingVertical="28dp"
             android:visibility="gone">
+
+            <com.ecut.campus.view.InkEmptyView
+                android:id="@+id/empty_grades_illustration"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_marginBottom="10dp" />
 
             <TextView
                 android:layout_width="wrap_content"

@@ -93,26 +93,50 @@ public final class NextClassNotice {
                 .putExtra(MainActivity.EXTRA_VALUE, "timetable");
         PendingIntent pi = PendingIntent.getActivity(c, REQ_OPEN, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        String bodyText = n.text;
+        String todoNote = CourseTodoStore.load(c).reminderSummary(n.courseName);
+        if (!todoNote.isEmpty()) bodyText = bodyText + "\n" + todoNote;
+
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH)
                 .setSmallIcon(R.drawable.ic_nav_timetable)
                 .setContentTitle(n.title)
-                .setContentText(n.text)
-                .setStyle(new NotificationCompat.BigTextStyle().bigText(n.text))
+                .setContentText(bodyText.replace('\n', ' '))
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(bodyText))
                 .setColor(0xFFFF4A1C)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setColorized(n.kind == NextClassText.CURRENT)
+                .setPriority(n.kind == NextClassText.CURRENT
+                        ? NotificationCompat.PRIORITY_DEFAULT : NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setOngoing(true)
                 .setSilent(true)
                 .setOnlyAlertOnce(true)
                 .setLocalOnly(true)
                 .setContentIntent(pi);
+
+        int nowMin = ClassPlans.nowMinutes(now);
+        if (n.kind == NextClassText.CURRENT && n.endMin > n.startMin && n.startMin >= 0) {
+            int total = Math.max(1, n.endMin - n.startMin);
+            int elapsed = Math.max(0, Math.min(total, nowMin - n.startMin));
+            b.setProgress(total, elapsed, false);
+        }
         if (n.countdownMin >= 0) {
             long target = ClassPlans.at(ClassPlans.midnight(now), n.countdownMin);
             if (target > now) {
                 // 「还剩 mm:ss」/「mm:ss 后上课」由系统倒计时控件走秒，到点闹钟再翻页
                 b.setWhen(target).setShowWhen(true).setUsesChronometer(true).setChronometerCountDown(true);
-                b.setSubText(n.kind == NextClassText.CURRENT ? "下课倒计时" : "上课倒计时");
+                int remMin = Math.max(1, (int) Math.ceil((target - now) / 60_000.0));
+                String sub = n.kind == NextClassText.CURRENT
+                        ? "正在上课 · 剩 " + remMin + " 分" : remMin + " 分后上课";
+                b.setSubText(sub);
+                // Android 14+ 实况通知 / 灵动岛状态胶囊元数据（不依赖 compileSdk 34+ API）
+                if (Build.VERSION.SDK_INT >= 34) {
+                    android.os.Bundle liveExtras = new android.os.Bundle();
+                    liveExtras.putBoolean("android.requestPromotedOngoing", true);
+                    liveExtras.putString("android.shortCriticalText",
+                            n.kind == NextClassText.CURRENT ? "剩" + remMin + "分" : remMin + "分后");
+                    b.addExtras(liveExtras);
+                }
             } else {
                 b.setShowWhen(false);
             }

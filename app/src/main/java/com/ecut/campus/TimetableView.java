@@ -23,6 +23,7 @@ import androidx.annotation.Nullable;
 
 import com.ecut.campus.data.ClassroomLabel;
 import com.ecut.campus.data.Timetable;
+import com.ecut.campus.data.TimetableLayout;
 import com.ecut.campus.data.SemesterMetaPolicy;
 
 import java.util.ArrayList;
@@ -55,6 +56,8 @@ public class TimetableView extends View {
         /** 长按课块。 */
         default void onSessionLongPress(Timetable.Course course, Timetable.Session session, boolean active,
                                         String label, String adjustId, boolean extra, int week) {}
+        /** 点击叠加在课表中的考试卡片。 */
+        default void onExamClick(com.ecut.campus.data.ExamCountdown.Entry exam) {}
     }
 
     public interface OnVerticalScrollListener {
@@ -151,12 +154,11 @@ public class TimetableView extends View {
     private final Paint blockPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint accentPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint pageEdgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint rainPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final android.graphics.Path clipPath = new android.graphics.Path();
     private final TextPaint bpSub = new TextPaint(), bpMono = new TextPaint(), bpTagCn = new TextPaint(), bpTagNum = new TextPaint();
     private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint subTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+    private final TimetablePainter painter;
 
     private final List<HitBlock> hitBlocks = new ArrayList<>();
     /** 每周的停课/调课/放假叠加层，按周缓存，课表或开学日期变了就清空。 */
@@ -196,6 +198,7 @@ public class TimetableView extends View {
         String label;      // 非空 = 带标记（停课/放假/已调走/补课/调课）
         String adjustId = "";
         boolean extra;
+        com.ecut.campus.data.ExamCountdown.Entry exam;
 
         HitBlock(RectF rect, Timetable.Course course, Timetable.Session session, boolean active) {
             this.rect = rect;
@@ -221,7 +224,8 @@ public class TimetableView extends View {
         gridPaint.setStrokeWidth(Math.max(1f, dp(0.6f)));
         gridPaint.setStyle(Paint.Style.STROKE);
 
-        pageEdgePaint.setStyle(Paint.Style.FILL);
+        android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
+        painter = new TimetablePainter(dm.density, dm.scaledDensity);
 
         todayDayOfWeek = WeekMath.todayDayOfWeek();
         setWillNotDraw(false);
@@ -261,10 +265,24 @@ public class TimetableView extends View {
     }
 
     private java.util.Set<String> warnCourses = java.util.Collections.emptySet();
+    private java.util.Map<String, Integer> todoCounts = java.util.Collections.emptyMap();
+    private List<com.ecut.campus.data.ExamCountdown.Entry> examEntries = Collections.emptyList();
 
     /** 缺勤快到上限的课（规范化课名），课块左缘描朱砂。 */
     public void setWarnCourses(java.util.Set<String> keys) {
         warnCourses = keys == null ? java.util.Collections.emptySet() : keys;
+        invalidate();
+    }
+
+    /** 各课未完成作业/待办数量（规范化课名 → 数量），在课块右下角绘制小角标。 */
+    public void setTodoCounts(java.util.Map<String, Integer> counts) {
+        todoCounts = counts == null ? java.util.Collections.emptyMap() : counts;
+        invalidate();
+    }
+
+    /** 已同步的考试安排，落在当前查看周次时叠加绘制为朱砂边考试卡片。 */
+    public void setExamEntries(List<com.ecut.campus.data.ExamCountdown.Entry> entries) {
+        examEntries = entries == null ? Collections.emptyList() : entries;
         invalidate();
     }
 
@@ -350,19 +368,8 @@ public class TimetableView extends View {
 
     /** 拖过头时的阻力：越往外越拉不动，最多拉出约 1/4 屏。 */
     private float rubberBand(float delta) {
-        float over = scrollOffset < 0 ? -scrollOffset : scrollOffset > maxScrollOffset ? scrollOffset - maxScrollOffset : 0f;
-        boolean outward = (scrollOffset < 0 && delta < 0) || (scrollOffset > maxScrollOffset && delta > 0);
-        if (!outward && over == 0f) {
-            // 正常区间内，跨过边界的那一段才加阻力
-            float next = scrollOffset + delta;
-            if (next < 0) return -scrollOffset + next * 0.45f;
-            if (next > maxScrollOffset) return (maxScrollOffset - scrollOffset) + (next - maxScrollOffset) * 0.45f;
-            return delta;
-        }
-        if (!outward) return delta;
-        float limit = Math.max(dp(80), getHeight() * 0.25f);
-        float k = 0.45f * Math.max(0.05f, 1f - over / limit);
-        return delta * k;
+        return TimetableLayout.rubberBand(scrollOffset, maxScrollOffset, delta,
+                Math.max(dp(80), getHeight() * 0.25f));
     }
 
     private void springBackIfNeeded() {
@@ -468,7 +475,8 @@ public class TimetableView extends View {
             canvas.drawRect(0, 0, w, h, bgPaint);
         }
         todayDayOfWeek = WeekMath.todayDayOfWeek();
-        nowMinutes = nowMinutesOfDay();
+        nowMinutesFloat = nowMinutesFloatOfDay();
+        nowMinutes = (int) nowMinutesFloat;
 
         int direction = dragDx < 0 ? 1 : (dragDx > 0 ? -1 : 0);
         int neighbor = direction == 0 ? currentWeek : adjacentWeek(direction);
@@ -484,25 +492,8 @@ public class TimetableView extends View {
         }
     }
 
-    /** 翻页接缝：一条细边加短距离渐变，明确这是两页，而不是两张网格叠在一起。 */
     private void drawPageEdge(Canvas canvas, int direction, float neighborOffset, int h) {
-        float edgeX = direction > 0 ? neighborOffset : neighborOffset + pageWidth();
-        float shadowWidth = dp(12);
-        float shadowStart = direction > 0 ? edgeX - shadowWidth : edgeX;
-        float shadowEnd = direction > 0 ? edgeX : edgeX + shadowWidth;
-
-        pageEdgePaint.setShader(new LinearGradient(
-                shadowStart, 0, shadowEnd, 0,
-                direction > 0
-                        ? new int[]{0x00000000, G.HAIR}
-                        : new int[]{G.HAIR, 0x00000000},
-                null, android.graphics.Shader.TileMode.CLAMP));
-        canvas.drawRect(Math.min(shadowStart, shadowEnd), headerHeight,
-                Math.max(shadowStart, shadowEnd), h, pageEdgePaint);
-        pageEdgePaint.setShader(null);
-
-        pageEdgePaint.setColor(G.alpha(G.INK, 0x1F));
-        canvas.drawRect(edgeX - dp(0.45f), 0, edgeX + dp(0.45f), h, pageEdgePaint);
+        painter.drawPageEdge(canvas, direction, neighborOffset, pageWidth(), headerHeight, h);
     }
 
     private void drawPage(Canvas canvas, int week, float xOffset, boolean isPrimary) {
@@ -688,19 +679,58 @@ public class TimetableView extends View {
                     hb.extra = true;
                 }
             }
+            drawExamBlocks(canvas, colWidth);
             drawNowLine(canvas, colWidth);
             drawGhost(canvas, colWidth);
         }
     }
 
-    private boolean overlapsActive(Timetable.Session s, List<Timetable.Session> active) {
-        float[] pos = position(s);
-        for (Timetable.Session a : active) {
-            if (a == s) continue;
-            float[] p = position(a);
-            if (p[0] < pos[1] - 0.01f && pos[0] < p[1] - 0.01f) return true;
+    /** 把落在当前周的考试安排叠加绘制到对应列和时间槽（朱砂描边 + [考试] 标签）。 */
+    private void drawExamBlocks(Canvas canvas, float colWidth) {
+        if (examEntries.isEmpty() || semesterStartDate == null || semesterStartDate.isEmpty()) return;
+        List<com.ecut.campus.data.ExamCountdown.Entry> weekExams =
+                com.ecut.campus.data.ExamCountdown.examsInWeek(examEntries, semesterStartDate, currentWeek);
+        if (weekExams.isEmpty()) return;
+        float padH = dp(1.6f), padV = dp(1.6f);
+        float radius = G.GLASS ? dp(10f) : dp(3f);
+        for (com.ecut.campus.data.ExamCountdown.Entry ex : weekExams) {
+            int day = com.ecut.campus.data.Dates.dayOfWeek(ex.date);
+            if (day < 1 || day > columnCount()) continue;
+            Timetable.Session s = new Timetable.Session();
+            s.dayOfWeek = day;
+            int stMin = ex.startMin >= 0 ? ex.startMin : 9 * 60;
+            int enMin = ex.endMin > stMin ? ex.endMin : Math.min(23 * 60 + 55, stMin + 120);
+            s.timeStart = Timetable.Session.formatHm(stMin);
+            s.timeEnd = Timetable.Session.formatHm(enMin);
+            s.location = ex.room + (ex.seat.isEmpty() ? "" : " · 座" + ex.seat);
+            float[] pos = position(s);
+            float left = timeColWidth + (day - 1) * colWidth + padH;
+            float right = left + colWidth - padH * 2;
+            float top = posY(pos[0]) + padV;
+            float bottom = posY(pos[1]) - padV;
+            RectF rect = new RectF(left, top, right, bottom);
+            if (rect.bottom <= headerHeight || rect.top >= getHeight()) continue;
+
+            blockPaint.setStyle(Paint.Style.FILL);
+            blockPaint.setColor(G.alpha(G.alarm(), G.NIGHT ? 0x30 : 0x1E));
+            canvas.drawRoundRect(rect, radius, radius, blockPaint);
+            blockPaint.setStyle(Paint.Style.STROKE);
+            blockPaint.setStrokeWidth(dp(1.5f));
+            blockPaint.setColor(G.alarm());
+            canvas.drawRoundRect(rect, radius, radius, blockPaint);
+
+            Timetable.Course fake = new Timetable.Course();
+            fake.name = ex.name;
+            fake.key = "exam_" + ex.name;
+            drawBlockText(canvas, rect, fake, s, true, G.INK, "[考试] ", -1, com.ecut.campus.data.RainForecast.NONE);
+            HitBlock hb = new HitBlock(rect, fake, s, true);
+            hb.exam = ex;
+            hitBlocks.add(hb);
         }
-        return false;
+    }
+
+    private boolean overlapsActive(Timetable.Session s, List<Timetable.Session> active) {
+        return TimetableLayout.overlapsActive(s, active, schedule);
     }
 
     /** 画一个课块并登记点击区域；不在可见范围返回 null。 */
@@ -754,16 +784,26 @@ public class TimetableView extends View {
                 clipPath.reset();
                 clipPath.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW);
                 canvas.clipPath(clipPath);
-                blockPaint.setColor(G.alpha(fgColor, 0x21));  // ≈ mix(底色, 字色, 0.13)：日间更深、夜间更浅
+                // 已上部分叠淡淡朱砂色进度层，直觉表达「此刻走到了哪里」
+                boolean endingSoon = TimetableLayout.isEndingSoon(nowMinutesFloat, sessionStartMin(s), sessionEndMin(s));
+                blockPaint.setColor(G.alpha(G.alarm(), endingSoon ? 0x26 : 0x18));
                 float split = top + (bottom - top) * progress;
                 canvas.drawRect(left, top, right, split, blockPaint);
-                // 「现在」在块内只画一条朱砂发丝线（在文字下面），块外的现在线遇到这里会跳过
-                blockPaint.setColor(G.alpha(G.alarm(), 0x99));
-                float hl = Math.max(1f, dp(0.7f));
+                // 「现在」在块内画一条朱砂发丝线（在文字下面），块外的现在线遇到这里会跳过
+                blockPaint.setColor(G.alpha(G.alarm(), 0xB8));
+                float hl = Math.max(1f, dp(0.8f));
                 canvas.drawRect(left, split - hl / 2f, right, split + hl / 2f, blockPaint);
+                // 下课前 5 分钟：底缘淡淡朱砂提示条
+                if (endingSoon) {
+                    blockPaint.setColor(G.alpha(G.alarm(), 0x38));
+                    canvas.drawRect(left, bottom - dp(5f), right, bottom, blockPaint);
+                }
+                // 左侧进度书脊：已上部分实心朱砂，未上部分淡朱砂轨道
                 accentPaint.setStyle(Paint.Style.FILL);
-                accentPaint.setColor(G.alarm());
+                accentPaint.setColor(G.alpha(G.alarm(), 0x38));
                 canvas.drawRect(left, top, left + dp(3f), bottom, accentPaint);
+                accentPaint.setColor(G.alarm());
+                canvas.drawRect(left, top, left + dp(3f), split, accentPaint);
                 canvas.restore();
                 if (G.GLASS) {
                     blockPaint.setStyle(Paint.Style.STROKE);
@@ -856,59 +896,12 @@ public class TimetableView extends View {
         return rf.query(ymd, sessionStartMin(s), sessionEndMin(s), System.currentTimeMillis()).level;
     }
 
-    /**
-     * 1. 静态雨蓝光晕：课块外圈一层模糊的冷色「雨蓝」光晕（日间 #5B7FA6、夜间 #8FB3DA）。
-     * 正在上的课（live）有朱砂框，光晕强度减半。
-     */
     private void drawRainOuterGlow(Canvas canvas, RectF rect, float radius, int rainLv, boolean live) {
-        float glow = com.ecut.campus.data.RainForecast.glowStrength(rainLv);
-        if (glow <= 0f) return;
-        int rainBlue = G.NIGHT
-                ? com.ecut.campus.data.RainForecast.RAIN_BLUE_NIGHT
-                : com.ecut.campus.data.RainForecast.RAIN_BLUE_DAY;
-        float factor = live ? 0.5f : 1f;
-        float k = glow * factor * (G.NIGHT ? 0.78f : 0.56f);
-        float[] radiiDp = {7.2f, 5.6f, 4.2f, 3.0f, 2.0f, 1.0f};
-        float[] weights = {0.10f, 0.14f, 0.18f, 0.22f, 0.26f, 0.30f};
-        rainPaint.setShader(null);
-        rainPaint.setStyle(Paint.Style.FILL);
-        for (int i = 0; i < radiiDp.length; i++) {
-            float r = dp(radiiDp[i]);
-            int a = Math.max(1, Math.min(255, Math.round(255f * weights[i] * k)));
-            rainPaint.setColor(G.alpha(rainBlue, a));
-            canvas.drawRoundRect(
-                    new RectF(rect.left - r, rect.top - r, rect.right + r, rect.bottom + r),
-                    radius + r, radius + r, rainPaint);
-        }
+        painter.drawRainOuterGlow(canvas, rect, radius, rainLv, live);
     }
 
-    /**
-     * 2. 卡内静态水汽：卡片上半部一层很淡的冷色渐变。
-     * 正在上的课（live）水汽强度减半。
-     */
     private void drawRainInnerMist(Canvas canvas, RectF rect, float radius, int rainLv, boolean live) {
-        float glow = com.ecut.campus.data.RainForecast.glowStrength(rainLv);
-        if (glow <= 0f) return;
-        int rainBlue = G.NIGHT
-                ? com.ecut.campus.data.RainForecast.RAIN_BLUE_NIGHT
-                : com.ecut.campus.data.RainForecast.RAIN_BLUE_DAY;
-        float factor = live ? 0.5f : 1f;
-        int topA = Math.max(1, Math.min(255, Math.round(60f * glow * factor)));
-        float mistH = rect.height() * 0.5f;
-        if (mistH <= dp(4f)) return;
-        canvas.save();
-        clipPath.reset();
-        clipPath.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW);
-        canvas.clipPath(clipPath);
-        rainPaint.setStyle(Paint.Style.FILL);
-        rainPaint.setShader(new LinearGradient(
-                0, rect.top, 0, rect.top + mistH,
-                new int[]{G.alpha(rainBlue, topA), G.alpha(rainBlue, topA / 4), 0x00000000},
-                new float[]{0f, 0.5f, 1f},
-                android.graphics.Shader.TileMode.CLAMP));
-        canvas.drawRect(rect.left, rect.top, rect.right, rect.top + mistH, rainPaint);
-        rainPaint.setShader(null);
-        canvas.restore();
+        painter.drawRainInnerMist(canvas, rect, radius, rainLv, live);
     }
 
     /** 第 p 节边界（0 = 第 1 节顶部）对应的 y。 */
@@ -916,79 +909,38 @@ public class TimetableView extends View {
         return headerHeight + p * rowHeight - scrollOffset;
     }
 
-    /**
-     * 时段在网格里的起止位置，单位「节」（第 1 节顶部为 0）。
-     * 普通课按真实节次（可以是单节、三节）；自定义时间按作息表换算，不必对齐节次。
-     */
     private float[] position(Timetable.Session s) {
-        if (s.hasCustomTime()) {
-            float a = minutesToPos(Timetable.Session.minutesOf(s.timeStart));
-            float b = minutesToPos(Timetable.Session.minutesOf(s.timeEnd));
-            if (b - a < 0.35f) b = Math.min(totalSections(), a + 0.35f);  // 太短也要能点到
-            return new float[]{a, b};
-        }
-        int st = Math.max(1, Math.min(totalSections(), s.startSection));
-        int en = Math.max(st, Math.min(totalSections(), s.endSection));
-        return new float[]{st - 1, en};
+        return TimetableLayout.position(s, schedule);
     }
 
-    /** 某个时刻落在网格的哪里：节内按比例，课间压到相邻边界上。 */
-    private float minutesToPos(int m) {
-        for (int sec = 1; sec <= totalSections(); sec++) {
-            int st = schedule.startMinutes(sec);
-            int en = schedule.endMinutes(sec);
-            if (m <= st) return sec - 1;
-            if (m <= en) return sec - 1 + (m - st) / (float) Math.max(1, en - st);
-        }
-        return totalSections();
-    }
-
-    /** 同一天的时段按重叠分簇，簇内贪心分列；laneOf[s] = {第几列, 共几列}。 */
     private void assignLanes(List<Timetable.Session> list, java.util.Map<Timetable.Session, int[]> laneOf) {
-        if (list.isEmpty()) return;
-        List<Timetable.Session> sorted = new ArrayList<>(list);
-        sorted.sort((x, y) -> Float.compare(position(x)[0], position(y)[0]));
-        List<Timetable.Session> cluster = new ArrayList<>();
-        List<Float> laneEnds = new ArrayList<>();
-        float clusterEnd = -1;
-        for (Timetable.Session s : sorted) {
-            float[] p = position(s);
-            if (!cluster.isEmpty() && p[0] >= clusterEnd - 0.01f) {
-                for (Timetable.Session c : cluster) laneOf.get(c)[1] = laneEnds.size();
-                cluster.clear();
-                laneEnds.clear();
-            }
-            int lane = -1;
-            for (int i = 0; i < laneEnds.size(); i++) {
-                if (laneEnds.get(i) <= p[0] + 0.01f) { lane = i; break; }
-            }
-            if (lane < 0) { lane = laneEnds.size(); laneEnds.add(p[1]); } else laneEnds.set(lane, p[1]);
-            laneOf.put(s, new int[]{lane, 1});
-            cluster.add(s);
-            clusterEnd = Math.max(clusterEnd, p[1]);
-        }
-        for (Timetable.Session c : cluster) laneOf.get(c)[1] = laneEnds.size();
+        TimetableLayout.assignLanes(list, schedule, laneOf);
     }
 
-    /** 现在线：今天这一列里，按作息时间画一条朱砂发丝线 + 圆点。 */
+    /** 现在线：今天这一列里按作息时间平滑移动的朱砂发丝线 + 圆点，左轨同步标出此刻时间。 */
     private void drawNowLine(Canvas canvas, float colWidth) {
         if (!isViewingRealCurrentWeek()) return;
         if (todayDayOfWeek < 1 || todayDayOfWeek > columnCount()) return;
-        java.util.Calendar now = java.util.Calendar.getInstance();
-        int m = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE);
-        float y = -1;
-        for (int sec = 1; sec <= totalSections(); sec++) {
-            int st = schedule.startMinutes(sec);
-            int en = schedule.endMinutes(sec);
-            float top = sectionTopY(sec);
-            float bottom = sectionBottomY(sec);
-            if (m < st) { y = top; break; }
-            if (m <= en) {
-                y = top + (bottom - top) * (m - st) / (float) Math.max(1, en - st);
-                break;
-            }
-        }
-        if (y < 0 || y <= headerHeight) return;
+        float pos = TimetableLayout.smoothNowPos(nowMinutesFloat, schedule);
+        if (pos < 0f) return;
+        float y = posY(pos);
+        if (y <= headerHeight || y >= getHeight()) return;
+
+        // 左轨显示当前时间（朱砂小胶囊），与 DESIGN.md §4 对齐
+        String hm = Timetable.Session.formatHm(Math.max(0, Math.min(24 * 60 - 1, nowMinutes)));
+        float pillH = dp(13f);
+        float pillW = timeColWidth - dp(6f);
+        RectF pill = new RectF(dp(3f), y - pillH / 2f, dp(3f) + pillW, y + pillH / 2f);
+        accentPaint.setStyle(Paint.Style.FILL);
+        accentPaint.setColor(G.alarm());
+        canvas.drawRoundRect(pill, dp(3f), dp(3f), accentPaint);
+        subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        subTextPaint.setTextSize(sp(7.8f));
+        subTextPaint.setColor(G.ON_INK);
+        subTextPaint.setAlpha(255);
+        subTextPaint.setTextAlign(Paint.Align.CENTER);
+        canvas.drawText(hm, pill.centerX(), pill.centerY() + dp(2.7f), subTextPaint);
+
         float x0 = timeColWidth + (todayDayOfWeek - 1) * colWidth;
         for (HitBlock hb : hitBlocks) {
             // 正在上的课块里已有那条发丝分界线，现在线就不再压过课名
@@ -1004,10 +956,13 @@ public class TimetableView extends View {
     // ==================== 实时：进度 / 倒计时 ====================
 
     private int nowMinutes = -1;
+    private float nowMinutesFloat = -1f;
 
-    private static int nowMinutesOfDay() {
+    private static float nowMinutesFloatOfDay() {
         java.util.Calendar now = java.util.Calendar.getInstance();
-        return now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE);
+        return now.get(java.util.Calendar.HOUR_OF_DAY) * 60
+                + now.get(java.util.Calendar.MINUTE)
+                + now.get(java.util.Calendar.SECOND) / 60f;
     }
 
     private int sessionStartMin(Timetable.Session s) {
@@ -1026,15 +981,14 @@ public class TimetableView extends View {
 
     /** 正在上这节课时返回已上比例 0..1，否则 -1。 */
     private float liveProgress(Timetable.Session s) {
-        if (nowMinutes < 0 || !isTodayCell(s)) return -1f;
+        if (nowMinutesFloat < 0f || !isTodayCell(s)) return -1f;
         int a = sessionStartMin(s), b = sessionEndMin(s);
-        if (a < 0 || b <= a || nowMinutes < a || nowMinutes >= b) return -1f;
-        return liveProgressOf(nowMinutes, a, b);
+        if (a < 0 || b <= a || nowMinutesFloat < a || nowMinutesFloat >= b) return -1f;
+        return TimetableLayout.liveProgressOf(nowMinutesFloat, a, b);
     }
 
     static float liveProgressOf(int now, int start, int end) {
-        if (end <= start || now < start || now >= end) return -1f;
-        return Math.max(0.02f, Math.min(1f, (now - start) / (float) (end - start)));
+        return TimetableLayout.liveProgressOf(now, start, end);
     }
 
     /** 今天还没开始的课，距开始还有几分钟；不是今天或已开始返回 -1。 */
@@ -1044,48 +998,15 @@ public class TimetableView extends View {
         return a > nowMinutes ? a - nowMinutes : -1;
     }
 
-    /**
-     * 下一节课开始前的倒计时：圆环随时间「填满」——越接近上课填得越多，满圈 = 马上上课；
-     * 中间写剩几分钟。课块太矮放不下圆环时，改成右下角一行「N分后」，不让有的课有、有的课没有。
-     */
     private void drawCountdown(Canvas canvas, RectF rect, int minutes) {
-        int color = G.alarm();
-        float r = dp(8f);
-        float cx = rect.right - r - dp(3f);
-        float cy = rect.bottom - r - dp(3f);
-        subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        subTextPaint.setColor(color);
-        subTextPaint.setAlpha(255);
-        if (cy - r < rect.top + dp(14)) {
-            subTextPaint.setTextSize(sp(8.5f));
-            subTextPaint.setTextAlign(Paint.Align.RIGHT);
-            canvas.drawText(minutes + "分后", rect.right - dp(4f), rect.bottom - dp(4f), subTextPaint);
-            return;
-        }
-        accentPaint.setStyle(Paint.Style.STROKE);
-        accentPaint.setStrokeWidth(dp(1.4f));
-        accentPaint.setColor(G.alpha(INK, 0x22));
-        canvas.drawCircle(cx, cy, r, accentPaint);
-        accentPaint.setColor(color);
-        float sweep = 360f * Math.max(0, 15 - minutes) / 15f;
-        canvas.drawArc(new RectF(cx - r, cy - r, cx + r, cy + r), -90f, Math.max(sweep, 8f), false, accentPaint);
-        accentPaint.setStyle(Paint.Style.FILL);
-        subTextPaint.setTextSize(sp(7.5f));
-        subTextPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(String.valueOf(minutes), cx, cy + dp(2.6f), subTextPaint);
-        // 圆环左边补一个「分后」，第一次看也不会读反
-        subTextPaint.setTextSize(sp(7f));
-        subTextPaint.setTextAlign(Paint.Align.RIGHT);
-        if (cx - r - dp(2) - subTextPaint.measureText("分后") > rect.left + dp(4)) {
-            canvas.drawText("分后", cx - r - dp(2f), cy + dp(2.4f), subTextPaint);
-        }
+        painter.drawCountdown(canvas, rect, minutes, accentPaint, subTextPaint);
     }
 
     private final Runnable ticker = new Runnable() {
         @Override
         public void run() {
             invalidate();
-            postDelayed(this, 30_000L);
+            postDelayed(this, 15_000L);
         }
     };
 
@@ -1093,7 +1014,7 @@ public class TimetableView extends View {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         removeCallbacks(ticker);
-        postDelayed(ticker, 30_000L);
+        postDelayed(ticker, 15_000L);
     }
 
     // ==================== 空白处画课 ====================
@@ -1225,7 +1146,9 @@ public class TimetableView extends View {
         String tagPre = null;
         if (liveLeft > 0) {
             String n = String.valueOf(liveLeft);
-            if (tagWidth("● 进行中 · 剩", n, tagCn, tagNum) <= innerWidth) tagPre = "● 进行中 · 剩";
+            boolean soonEnd = liveLeft <= TimetableLayout.ENDING_SOON_MINUTES;
+            String longPre = soonEnd ? "即将下课 · 剩" : "● 进行中 · 剩";
+            if (tagWidth(longPre, n, tagCn, tagNum) <= innerWidth) tagPre = longPre;
             else if (tagWidth("剩", n, tagCn, tagNum) <= innerWidth) tagPre = "剩";
         }
         float tagH = tagPre == null ? 0f : tagCn.getFontMetrics().descent - tagCn.getFontMetrics().ascent;
@@ -1281,8 +1204,25 @@ public class TimetableView extends View {
 
         canvas.restore();
 
-        // 有备注（作业、提醒）：右下角一个朱砂小点（右上角留给冲突角标）
-        if (isActive && course.note != null && !course.note.isEmpty()) {
+        // 有未完成作业/待办：右下角画等宽小角标 □N；否则若有备注画朱砂小点
+        int todoN = 0;
+        if (isActive && !todoCounts.isEmpty() && course.name != null) {
+            Integer cnt = todoCounts.get(com.ecut.campus.data.CourseTodo.normalizeCourseKey(course.name));
+            if (cnt != null) todoN = cnt;
+        }
+        if (todoN > 0) {
+            String badgeTxt = "□" + todoN;
+            subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+            subTextPaint.setTextSize(sp(7.5f));
+            float tw = subTextPaint.measureText(badgeTxt);
+            RectF tb = new RectF(rect.right - tw - dp(6f), rect.bottom - dp(12.5f), rect.right - dp(2f), rect.bottom - dp(2f));
+            badgePaint.setColor(G.alarm());
+            canvas.drawRoundRect(tb, dp(2f), dp(2f), badgePaint);
+            subTextPaint.setColor(G.ON_INK);
+            subTextPaint.setAlpha(255);
+            subTextPaint.setTextAlign(Paint.Align.CENTER);
+            canvas.drawText(badgeTxt, tb.centerX(), tb.centerY() + dp(2.6f), subTextPaint);
+        } else if (isActive && course.note != null && !course.note.isEmpty()) {
             badgePaint.setColor(ACCENT);
             canvas.drawCircle(rect.right - dp(6f), rect.bottom - dp(6f), dp(2.6f), badgePaint);
         }
@@ -1294,112 +1234,13 @@ public class TimetableView extends View {
         }
     }
 
-    /**
-     * 3. 斜向静态细雨丝：只画在卡片右半边、课名和教室中间的空白处，上下两端淡出；
-     * 严格避开已排版的课名、时间、教师、进行中标签和教室文字区域。
-     */
     private void drawRainStreaks(Canvas canvas, RectF rect, Timetable.Course course, Timetable.Session s,
                                  int textColor, int rainLv, float innerLeft, float innerTop,
                                  float headingHeight, int mask, float gap,
                                  @Nullable StaticLayout timeL, @Nullable StaticLayout teacherL,
                                  float tagH, float liveTagW, @Nullable StaticLayout locL) {
-        int n = com.ecut.campus.data.RainForecast.streakCount(rainLv);
-        if (n <= 0) return;
-        float w = rect.width(), h = rect.height();
-        float topBand = Math.max(rect.top + dp(22f), innerTop + headingHeight + dp(2f));
-        float botBand = rect.bottom - dp(14f);
-        if (botBand - topBand < dp(12f)) return;
-
-        // 收集课块内每一段文字的真实占宽，雨丝遇到文字行时自动往右让开或跳过
-        float[] boxTop = new float[6];
-        float[] boxBot = new float[6];
-        float[] boxRight = new float[6];
-        int boxCount = 0;
-        float curY = innerTop + headingHeight;
-        if ((mask & 2) != 0 && timeL != null) {
-            boxTop[boxCount] = curY + gap - dp(1.5f);
-            boxBot[boxCount] = curY + gap + timeL.getHeight() + dp(1.5f);
-            boxRight[boxCount] = innerLeft + maxLineWidth(timeL) + dp(3f);
-            boxCount++;
-            curY += gap + timeL.getHeight();
-        }
-        if ((mask & 4) != 0 && teacherL != null) {
-            boxTop[boxCount] = curY + gap - dp(1.5f);
-            boxBot[boxCount] = curY + gap + teacherL.getHeight() + dp(1.5f);
-            boxRight[boxCount] = innerLeft + maxLineWidth(teacherL) + dp(3f);
-            boxCount++;
-            curY += gap + teacherL.getHeight();
-        }
-        if ((mask & 8) != 0 && tagH > 0f) {
-            boxTop[boxCount] = curY + gap - dp(1.5f);
-            boxBot[boxCount] = curY + gap + tagH + dp(1.5f);
-            boxRight[boxCount] = innerLeft + liveTagW + dp(3f);
-            boxCount++;
-            curY += gap + tagH;
-        }
-        if ((mask & 1) != 0 && locL != null) {
-            boxTop[boxCount] = curY + gap - dp(1.5f);
-            boxBot[boxCount] = curY + gap + locL.getHeight() + dp(1.5f);
-            boxRight[boxCount] = innerLeft + maxLineWidth(locL) + dp(3f);
-            boxCount++;
-        }
-
-        float baseLen = dp(com.ecut.campus.data.RainForecast.streakLenDp(rainLv));
-        int baseAlpha = com.ecut.campus.data.RainForecast.streakAlpha(rainLv);
-        int seed = ((course.name != null ? course.name.hashCode() : 0) * 31 + s.dayOfWeek * 7 + s.startSection) ^ 0x5A3C;
-        java.util.Random rnd = new java.util.Random(seed);
-        final float cos70 = 0.34202015f;
-        final float sin70 = 0.9396926f;
-
-        rainPaint.setShader(null);
-        rainPaint.setStyle(Paint.Style.STROKE);
-        rainPaint.setStrokeCap(Paint.Cap.ROUND);
-        rainPaint.setStrokeWidth(Math.max(1f, dp(0.9f)));
-        float spanY = botBand - topBand;
-        float maxRight = rect.right - dp(2.4f);
-        for (int i = 0; i < n; i++) {
-            float r1 = rnd.nextFloat();
-            float r2 = rnd.nextFloat();
-            float r3 = rnd.nextFloat();
-            float u = (i + 0.5f) / n;
-            float normY = (u + 0.07f * r1) % 1f;
-            if (normY < 0f) normY += 1f;
-            float sy = topBand + spanY * normY;
-            float sx = rect.left + w * (0.45f + 0.50f * r2);
-            float L = baseLen * (0.7f + 0.3f * r3);
-            float ex = sx - L * cos70;
-            float ey = sy + L * sin70;
-
-            boolean skip = false;
-            for (int b = 0; b < boxCount; b++) {
-                if (ey >= boxTop[b] && sy <= boxBot[b] && ex < boxRight[b]) {
-                    float shiftedSx = Math.max(sx, boxRight[b] + L * cos70 + dp(1.5f));
-                    if (shiftedSx <= maxRight) {
-                        sx = shiftedSx;
-                        ex = sx - L * cos70;
-                    } else {
-                        skip = true;
-                        break;
-                    }
-                }
-            }
-            if (skip || sx > maxRight) continue;
-
-            float t = (sy - topBand) / spanY;
-            float fd = Math.min(1f, t * 4f) * Math.min(1f, (1f - t) * 3f);
-            int a = Math.round(baseAlpha * fd);
-            if (a <= 4) continue;
-            rainPaint.setColor(G.alpha(textColor, a));
-            canvas.drawLine(sx, sy, ex, ey, rainPaint);
-        }
-    }
-
-    private static float maxLineWidth(StaticLayout layout) {
-        float max = 0f;
-        for (int i = 0; i < layout.getLineCount(); i++) {
-            max = Math.max(max, layout.getLineWidth(i));
-        }
-        return max;
+        painter.drawRainStreaks(canvas, rect, course, s, textColor, rainLv, innerLeft, innerTop,
+                headingHeight, mask, gap, timeL, teacherL, tagH, liveTagW, locL);
     }
 
     private static StaticLayout textLayout(String t, TextPaint p, int width, int maxLines, float mult) {
@@ -1434,43 +1275,13 @@ public class TimetableView extends View {
         return cn.measureText(pre) + mono.measureText(num) + cn.measureText("分");
     }
 
-    /**
-     * 课块里放哪些行。titleCum[i] = 课程名前 i+1 行的高度；items 按优先级排在课程名之后
-     * （0 = 没有这一行），依次是 教室、自定义时间、教师、标签。
-     * 先保证教室：放不下就把课程名往少里压（至少 1 行），再不行才丢教室；其余按顺序能放就放。
-     * 返回 {课程名行数, 位掩码（第 i 位 = 第 i 项显示）}。
-     */
     static int[] blockPlan(float avail, float[] titleCum, float gap, float... items) {
-        int n = Math.max(1, titleCum.length);
-        float room = items.length > 0 && items[0] > 0f ? gap + items[0] : 0f;
-        while (n > 1 && titleCum[n - 1] + room > avail) n--;
-        float th = titleCum.length == 0 ? 0f : titleCum[n - 1];
-        int mask = 0;
-        if (room > 0f && th + room <= avail) mask |= 1;
-        float used = th + ((mask & 1) != 0 ? room : 0f);
-        for (int i = 1; i < items.length; i++) {
-            if (items[i] > 0f && used + gap + items[i] <= avail) {
-                mask |= 1 << i;
-                used += gap + items[i];
-            }
-        }
-        return new int[]{n, mask};
+        return TimetableLayout.blockPlan(avail, titleCum, gap, items);
     }
 
     private void drawScrollHint(Canvas canvas, int w, int h) {
-        if (maxScrollOffset <= 0) return;
-        float trackTop = headerHeight + dp(4);
-        float trackBottom = h - dp(4);
-        float trackHeight = trackBottom - trackTop;
-        float thumbHeight = Math.max(dp(24), trackHeight * visibleSections / totalSections());
-        float progress = maxScrollOffset <= 0 ? 0 : Math.max(0f, Math.min(1f, scrollOffset / maxScrollOffset));
-        float thumbTop = trackTop + (trackHeight - thumbHeight) * progress;
-
-        blockPaint.setStyle(Paint.Style.FILL);
-        blockPaint.setColor(G.STROKE);
-        float x = w - dp(3);
-        canvas.drawRoundRect(new RectF(x - dp(1.5f), thumbTop, x + dp(1.5f), thumbTop + thumbHeight),
-                dp(2), dp(2), blockPaint);
+        painter.drawScrollHint(canvas, w, h, headerHeight, scrollOffset, maxScrollOffset,
+                visibleSections, totalSections(), blockPaint);
     }
 
     private void settlePage(int direction, float velocityX) {
@@ -1534,17 +1345,11 @@ public class TimetableView extends View {
     }
 
     static long pageAnimatorDuration(float distance, float pageWidth) {
-        if (distance <= 0f || pageWidth <= 0f) return 0L;
-        float fraction = Math.max(0f, Math.min(1f, distance / pageWidth));
-        return Math.round(140L + 120L * Math.sqrt(fraction));
+        return TimetableLayout.pageAnimatorDuration(distance, pageWidth);
     }
 
     static boolean shouldCommitPage(float dx, float velocityX, float pageWidth) {
-        if (dx == 0f || pageWidth <= 0f) return false;
-        int direction = dx < 0f ? -1 : 1;
-        float projected = dx + velocityX * 0.11f;
-        boolean sameDirection = projected != 0f && Math.signum(projected) == direction;
-        return sameDirection && Math.abs(projected) >= pageWidth * 0.22f;
+        return TimetableLayout.shouldCommitPage(dx, velocityX, pageWidth);
     }
 
     private static int pairStart(int section) {
@@ -1693,7 +1498,8 @@ public class TimetableView extends View {
         for (int i = hitBlocks.size() - 1; i >= 0; i--) {
             HitBlock b = hitBlocks.get(i);
             if (b.rect.contains(x, y)) {
-                if (b.label != null) listener.onMarkedClick(b.course, b.session, b.label, b.adjustId, b.extra);
+                if (b.exam != null) listener.onExamClick(b.exam);
+                else if (b.label != null) listener.onMarkedClick(b.course, b.session, b.label, b.adjustId, b.extra);
                 else listener.onSessionClick(b.course, b.session, b.active);
                 return;
             }
@@ -1719,7 +1525,8 @@ public class TimetableView extends View {
             if (b.rect.contains(downX, downY)) {
                 longPressFired = true;
                 performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-                listener.onSessionLongPress(b.course, b.session, b.active, b.label,
+                if (b.exam != null) listener.onExamClick(b.exam);
+                else listener.onSessionLongPress(b.course, b.session, b.active, b.label,
                         b.adjustId, b.extra, currentWeek);
                 return;
             }

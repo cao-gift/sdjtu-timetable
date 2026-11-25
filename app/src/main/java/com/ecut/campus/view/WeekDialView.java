@@ -1,22 +1,28 @@
 package com.ecut.campus.view;
 
-import com.ecut.campus.G;
-
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.animation.DecelerateInterpolator;
+import android.view.animation.OvershootInterpolator;
 
-import com.ecut.campus.WeekMath;
+import com.ecut.campus.G;
 
 /**
  * 周数旋钮：竖向刻度滚轮，中央指针选中。
- * 上下拖动跟手、带惯性、松手吸附到最近刻度；点击刻度直接跳到该周。
+ * 上下拖动跟手、过格轻震、边缘弹性阻力与回弹、惯性减速吸附；点击刻度直接跳到该周。
  */
 public class WeekDialView extends View {
 
@@ -24,45 +30,45 @@ public class WeekDialView extends View {
     public interface OnWeekChanged { void onChanged(int week); }
 
     private int totalWeeks = 20;
-    private int week = 1;        // 当前指针对准的周（可为小数滚动中的浮点，用 scrollPos 表达）
+    private int week = 1;
     private int actualWeek = 1;
-    private float scrollPos = 0; // 距第 1 周的浮点偏移，week = round(scrollPos) + 1
+    private float scrollPos = 0f;
     private OnWeekPicked pickListener;
     private OnWeekChanged changeListener;
 
-    private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint ruler = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fade = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint center = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint accent = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF centerBandRect = new RectF();
     private final RectF pointerRect = new RectF();
-    private final android.graphics.PorterDuffXfermode dstOutMode =
-            new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_OUT);
-    private android.graphics.LinearGradient topFadeShader;
-    private android.graphics.LinearGradient bottomFadeShader;
+    private final PorterDuffXfermode dstOutMode = new PorterDuffXfermode(PorterDuff.Mode.DST_OUT);
+    private LinearGradient topFadeShader;
+    private LinearGradient bottomFadeShader;
     private final int touchSlop;
 
     private VelocityTracker velocityTracker;
-    private float downY, lastY, velocity;
+    private float downY, lastY;
     private boolean dragging, dragMoved;
     private ValueAnimator fling;
 
     public WeekDialView(Context context) {
         super(context);
-        text.setTextAlign(Paint.Align.CENTER);
         tick.setTextAlign(Paint.Align.CENTER);
         center.setColor(G.INK);
-        touchSlop = android.view.ViewConfiguration.get(context).getScaledTouchSlop();
+        accent.setColor(G.alarm());
+        ruler.setStyle(Paint.Style.STROKE);
+        ruler.setStrokeCap(Paint.Cap.ROUND);
+        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
     }
 
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
         float fadeH = dp(40);
-        topFadeShader = new android.graphics.LinearGradient(
-                0, 0, 0, fadeH, 0xFF000000, 0x00000000, android.graphics.Shader.TileMode.CLAMP);
-        bottomFadeShader = new android.graphics.LinearGradient(
-                0, h, 0, h - fadeH, 0xFF000000, 0x00000000, android.graphics.Shader.TileMode.CLAMP);
+        topFadeShader = new LinearGradient(0, 0, 0, fadeH, 0xFF000000, 0x00000000, Shader.TileMode.CLAMP);
+        bottomFadeShader = new LinearGradient(0, h, 0, h - fadeH, 0xFF000000, 0x00000000, Shader.TileMode.CLAMP);
     }
 
     public void configure(int current, int total, int actual) {
@@ -92,40 +98,53 @@ public class WeekDialView extends View {
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        // 上下渐隐用遮罩（DST_OUT）做，不再盖一层卡片色：弹窗是半透明玻璃时也不会露出一块直角框
         int layer = canvas.saveLayer(0, 0, getWidth(), getHeight(), null);
         int w = getWidth(), h = getHeight();
         float rowH = dp(40);
         float centerY = h / 2f;
 
         // 中央高亮带
-        center.setAlpha(28);
+        center.setColor(G.INK);
+        center.setAlpha(24);
         centerBandRect.set(dp(8), centerY - rowH / 2, w - dp(8), centerY + rowH / 2);
-        canvas.drawRoundRect(centerBandRect, dp(14), dp(14), center);
+        canvas.drawRoundRect(centerBandRect, dp(G.GLASS ? 14 : 6), dp(G.GLASS ? 14 : 6), center);
         center.setAlpha(255);
 
-        int first = (int) Math.floor(scrollPos - h / 2 / rowH - 1);
-        int last = (int) Math.ceil(scrollPos + h / 2 / rowH + 1);
+        int first = (int) Math.floor(scrollPos - h / 2f / rowH - 1);
+        int last = (int) Math.ceil(scrollPos + h / 2f / rowH + 1);
         for (int w1 = first; w1 <= last; w1++) {
             if (w1 < 0 || w1 >= totalWeeks) continue;
             float y = centerY + (w1 - scrollPos) * rowH;
-            float dist = Math.abs(y - centerY) / (h / 2f);
+            float dist = Math.min(1f, Math.abs(y - centerY) / Math.max(1f, h / 2f));
             int n = w1 + 1;
             boolean isCurrent = n == week;
             boolean isActual = n == actualWeek;
 
-            String label = "第 " + n + " 周";
-            if (isActual) label += " · 本周";
-            tick.setTextSize(dp(17));
-            tick.setTypeface(isCurrent ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-            tick.setColor(isCurrent ? G.INK
-                    : blend(G.alpha(G.SUB2, 0x8A), dist));
+            // 两侧精密刻度线（每 5 周长刻度，其余短刻度）
+            boolean major = (n == 1) || (n % 5 == 0) || isCurrent;
+            float tickLen = dp(major ? 12f : 6f);
+            ruler.setStrokeWidth(dp(isCurrent ? 1.5f : 0.9f));
+            ruler.setColor(isCurrent ? G.INK : blend(G.MUTE, dist));
+            canvas.drawLine(dp(18), y, dp(18) + tickLen, y, ruler);
+            canvas.drawLine(w - dp(18) - tickLen, y, w - dp(18), y, ruler);
+
+            String num = n < 10 ? "0" + n : String.valueOf(n);
+            String label = "第 " + num + " 周" + (isActual ? " · 本周" : "");
+            tick.setTextSize(dp(isCurrent ? 17.5f : 15.5f));
+            tick.setTypeface(Typeface.create(Typeface.MONOSPACE, isCurrent ? Typeface.BOLD : Typeface.NORMAL));
+            tick.setColor(isCurrent ? (isActual ? G.alarm() : G.INK) : blend(G.SUB2, dist));
             canvas.drawText(label, w / 2f, y + dp(6), tick);
+
+            if (isActual && !isCurrent) {
+                accent.setAlpha(Math.round(255 * Math.max(0.25f, 1f - dist * 0.7f)));
+                canvas.drawCircle(w - dp(36), y, dp(2.4f), accent);
+            }
         }
 
         // 指针侧条
+        center.setColor(week == actualWeek ? G.alarm() : G.INK);
         center.setAlpha(255);
-        pointerRect.set(dp(6), centerY - dp(14), dp(10), centerY + dp(14));
+        pointerRect.set(dp(6), centerY - dp(13), dp(10), centerY + dp(13));
         canvas.drawRoundRect(pointerRect, dp(2), dp(2), center);
 
         if (topFadeShader != null && bottomFadeShader != null) {
@@ -142,9 +161,8 @@ public class WeekDialView extends View {
     }
 
     private static int blend(int color, float dist) {
-        // dist 0..1 → 逐渐变浅
-        int alpha = (int) (0x8A * Math.max(0f, 1f - dist * 0.8f));
-        return (alpha << 24) | (color & G.CLEAR);
+        int alpha = (int) (0x99 * Math.max(0f, 1f - dist * 0.82f));
+        return (alpha << 24) | (color & 0x00FFFFFF);
     }
 
     @Override
@@ -158,14 +176,11 @@ public class WeekDialView extends View {
                 dragging = true;
                 dragMoved = false;
                 downY = lastY = event.getY();
-                velocity = 0;
                 return true;
             case MotionEvent.ACTION_MOVE: {
                 if (!dragging) return true;
                 float y = event.getY();
-                if (!dragMoved && Math.abs(y - downY) < touchSlop) {
-                    return true;
-                }
+                if (!dragMoved && Math.abs(y - downY) < touchSlop) return true;
                 if (!dragMoved) {
                     dragMoved = true;
                     lastY = y;
@@ -174,8 +189,13 @@ public class WeekDialView extends View {
                 float dy = y - lastY;
                 lastY = y;
                 float rowH = dp(40);
-                scrollPos = Math.max(0, Math.min(totalWeeks - 1, scrollPos - dy / rowH));
-                updateWeek();
+                float delta = -dy / rowH;
+                // 允许边缘轻微越界弹性拖动（最多 0.65 格），松手回弹
+                float maxPos = totalWeeks - 1;
+                boolean outOfBounds = (scrollPos < 0f && delta < 0f) || (scrollPos > maxPos && delta > 0f);
+                if (outOfBounds) delta *= 0.28f;
+                scrollPos = Math.max(-0.65f, Math.min(maxPos + 0.65f, scrollPos + delta));
+                updateWeek(true);
                 invalidate();
                 return true;
             }
@@ -189,52 +209,66 @@ public class WeekDialView extends View {
                 if (!dragMoved && Math.abs(event.getY() - downY) < touchSlop) {
                     int tapped = Math.max(1, Math.min(totalWeeks,
                             Math.round(scrollPos + (event.getY() - getHeight() / 2f) / rowH) + 1));
+                    performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
                     setWeek(tapped);
                     if (pickListener != null) pickListener.onPicked(week);
                     return true;
                 }
-                // 惯性：把速度折算成滚动距离（指数衰减）
-                float flingPx = vy * 0.28f;
-                float target = Math.max(0, Math.min(totalWeeks - 1,
-                        scrollPos - flingPx / rowH));
-                target = Math.round(target);
-                animateTo(target);
+                float maxPos = totalWeeks - 1;
+                boolean overscrolled = scrollPos < 0f || scrollPos > maxPos;
+                float target;
+                if (overscrolled) {
+                    target = scrollPos < 0f ? 0f : maxPos;
+                } else {
+                    float flingPx = vy * 0.30f;
+                    target = Math.max(0f, Math.min(maxPos, Math.round(scrollPos - flingPx / rowH)));
+                }
+                animateTo(target, overscrolled);
                 return true;
             }
             case MotionEvent.ACTION_CANCEL:
                 dragging = false;
                 if (velocityTracker != null) { velocityTracker.recycle(); velocityTracker = null; }
-                animateTo(Math.round(scrollPos));
+                float clamped = Math.max(0f, Math.min(totalWeeks - 1, Math.round(scrollPos)));
+                animateTo(clamped, scrollPos < 0f || scrollPos > totalWeeks - 1);
                 return true;
         }
         return super.onTouchEvent(event);
     }
 
-    private void updateWeek() {
+    private void updateWeek(boolean haptic) {
         int w = Math.max(1, Math.min(totalWeeks, Math.round(scrollPos) + 1));
         if (w != week) {
             week = w;
+            if (haptic) performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
             notifyChanged();
         }
     }
 
-    private void animateTo(float target) {
+    private void animateTo(float target, boolean bounce) {
         if (fling != null) fling.cancel();
+        if (!ValueAnimator.areAnimatorsEnabled()) {
+            scrollPos = target;
+            updateWeek(false);
+            invalidate();
+            return;
+        }
         final float start = scrollPos;
         float dist = Math.abs(target - start);
-        long dur = dist < 0.01f ? 0 : Math.round(140 + 160 * Math.sqrt(Math.min(1f, dist / 6f)));
+        long dur = dist < 0.01f ? 0 : Math.round(160 + 180 * Math.sqrt(Math.min(1f, dist / 6f)));
         fling = ValueAnimator.ofFloat(0f, 1f);
         fling.setDuration(dur);
+        fling.setInterpolator(bounce ? new OvershootInterpolator(1.35f) : new DecelerateInterpolator(2.0f));
         fling.addUpdateListener(a -> {
             scrollPos = start + (target - start) * (float) a.getAnimatedValue();
-            updateWeek();
+            updateWeek(true);
             invalidate();
         });
         fling.addListener(new android.animation.AnimatorListenerAdapter() {
             @Override public void onAnimationEnd(android.animation.Animator a) {
                 fling = null;
                 scrollPos = target;
-                updateWeek();
+                updateWeek(false);
                 invalidate();
             }
         });

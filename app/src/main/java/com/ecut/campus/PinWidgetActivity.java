@@ -56,9 +56,23 @@ public final class PinWidgetActivity extends AppCompatActivity {
         return new Intent(c, PinWidgetActivity.class);
     }
 
-    /** 设置里的按钮：直接打开「今日课程」的添加卡片（只剩这一种小组件，拉成 2×2 就是方块）。 */
+    /** 设置里的按钮：让用户选择要添加的小组件样式（今日课程 / 2×2 倒计时 / 4×1 进度条）。 */
     static void choose(android.app.Activity a) {
-        a.startActivity(intent(a));
+        new androidx.appcompat.app.AlertDialog.Builder(a)
+                .setTitle("选择要添加的桌面组件")
+                .setItems(new String[]{
+                        "今日课程（4×2，可缩 2×2）",
+                        "下一节课倒计时（2×2）",
+                        "今日进度条（4×1）"
+                }, (d, which) -> {
+                    Intent i = intent(a);
+                    if (which == 1) i.putExtra(EXTRA_WIDGET, "countdown");
+                    else if (which == 2) i.putExtra(EXTRA_WIDGET, "progress");
+                    else i.putExtra(EXTRA_WIDGET, "class");
+                    a.startActivity(i);
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     /** ClassWidget 收到桌面的「放好了」回调时调用；有卡片在就由卡片显示，返回 false 则由调用方弹 toast。 */
@@ -84,7 +98,7 @@ public final class PinWidgetActivity extends AppCompatActivity {
         GradientDrawable bg = new GradientDrawable();
         float d = getResources().getDisplayMetrics().density;
         bg.setCornerRadius((G.GLASS ? 26f : G.CARD_RADIUS) * d);
-        bg.setColor(G.GLASS ? getColor(R.color.glass_dialog_sheet) : G.DIALOG);
+        bg.setColor(G.dialogSurfaceColor(this));
         bg.setStroke(Math.max(1, (int) (d * (G.GLASS ? 1f : 0.5f))),
                 G.GLASS ? getColor(R.color.glass_dialog_stroke) : G.CARD_STROKE);
         card.setBackground(bg);
@@ -143,10 +157,20 @@ public final class PinWidgetActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
+    private Class<?> selectedProvider() {
+        String k = getIntent() == null ? null : getIntent().getStringExtra(EXTRA_WIDGET);
+        if ("countdown".equals(k)) return CountdownWidget.class;
+        if ("progress".equals(k)) return DayProgressWidget.class;
+        return ClassWidget.class;
+    }
+
     private void bindWidget() {
         ((ImageView) findViewById(R.id.pin_preview)).setImageResource(
                 R.drawable.widget_classes_preview);
-        ((TextView) findViewById(R.id.pin_name)).setText("今日课程 · 4×2，可拉成 2×2");
+        Class<?> p = selectedProvider();
+        String label = p == CountdownWidget.class ? "下一节课倒计时 · 2×2"
+                : (p == DayProgressWidget.class ? "今日进度条 · 4×1" : "今日课程 · 4×2，可拉成 2×2");
+        ((TextView) findViewById(R.id.pin_name)).setText(label);
     }
 
     /** 默认桌面会忽略放置请求吗（包名在名单里，或厂商是 vivo / iQOO）。 */
@@ -197,7 +221,7 @@ public final class PinWidgetActivity extends AppCompatActivity {
                 AppWidgetManager m = AppWidgetManager.getInstance(this);
                 if (m != null && m.isRequestPinAppWidgetSupported()) {
                     countBefore = placed();
-                    m.requestPinAppWidget(new ComponentName(this, ClassWidget.class),
+                    m.requestPinAppWidget(new ComponentName(this, selectedProvider()),
                             null, pinCallback());
                     android.widget.Toast.makeText(this, "已经请过桌面了；没弹窗的话就按上面几步手动加",
                             android.widget.Toast.LENGTH_LONG).show();
@@ -296,7 +320,7 @@ public final class PinWidgetActivity extends AppCompatActivity {
     private int placed() {
         try {
             AppWidgetManager m = AppWidgetManager.getInstance(this);
-            return ClassWidget.ids(this, m, ClassWidget.class).length;
+            return ClassWidget.ids(this, m, selectedProvider()).length;
         } catch (Exception e) {
             return 0;
         }
@@ -320,7 +344,7 @@ public final class PinWidgetActivity extends AppCompatActivity {
                 if (m != null && m.isRequestPinAppWidgetSupported()) {
                     countBefore = placed();
                     PendingIntent ok = pinCallback();
-                    Class<?> provider = ClassWidget.class;
+                    Class<?> provider = selectedProvider();
                     asking = true;
                     pausedWhileAsking = false;
                     sent = m.requestPinAppWidget(new ComponentName(this, provider), null, ok);

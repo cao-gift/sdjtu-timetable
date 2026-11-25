@@ -35,6 +35,7 @@ public final class DiagLog {
     private static final String LOG = "log.txt";
     private static final String KB = "kblist.json";
     private static final String PAGE_SAMPLE = "page_sample.json";
+    private static final String PARSE_SNAPSHOT = "parse_failure_snapshot.json";
     private static final long MAX_BYTES = 256 * 1024;
 
     private DiagLog() {}
@@ -116,6 +117,47 @@ public final class DiagLog {
             fos.write(json.getBytes(StandardCharsets.UTF_8));
         } catch (Throwable e) {
             log(ctx, "diag", "savePageSample failed: " + e);
+        }
+    }
+
+    /** 构造脱敏后的解析失败快照（纯文本/结构，不含姓名、学号、Cookie、URL 参数），可直接转成测试用例。 */
+    static String buildParseFailureSnapshot(String kind, String reason,
+                                            String rawPageStructureJson, String rawHint) {
+        try {
+            JSONObject root = new JSONObject();
+            root.put("kind", kind == null ? "" : kind);
+            root.put("reason", scrub(reason));
+            root.put("capturedAt", new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).format(new Date()));
+            root.put("appVersion", BuildConfig.VERSION_NAME);
+            if (rawHint != null && !rawHint.isEmpty()) {
+                String cleanHint = com.ecut.campus.data.PageSample.scrub(scrub(rawHint));
+                root.put("hint", cleanHint.length() > 300 ? cleanHint.substring(0, 300) : cleanHint);
+            }
+            String sanitized = com.ecut.campus.data.PageSample.sanitize(rawPageStructureJson);
+            if (!sanitized.isEmpty()) {
+                try {
+                    root.put("structure", new JSONObject(sanitized));
+                } catch (Exception ignored) {
+                    root.put("structureRaw", sanitized);
+                }
+            }
+            return root.toString(2);
+        } catch (Throwable e) {
+            return "";
+        }
+    }
+
+    /** 保存解析失败快照到私有诊断目录，便于学校改版后直接转成脱敏测试用例。 */
+    public static void saveParseFailureSnapshot(Context ctx, String kind, String reason,
+                                                String rawPageStructureJson, String rawHint) {
+        if (ctx == null) return;
+        String snapshot = buildParseFailureSnapshot(kind, reason, rawPageStructureJson, rawHint);
+        if (snapshot.isEmpty()) return;
+        try (FileOutputStream fos = new FileOutputStream(new File(dir(ctx), PARSE_SNAPSHOT))) {
+            fos.write(snapshot.getBytes(StandardCharsets.UTF_8));
+            log(ctx, "diag", "已保存解析失败快照 (" + kind + ")");
+        } catch (Throwable e) {
+            log(ctx, "diag", "saveParseFailureSnapshot failed: " + e);
         }
     }
 
@@ -337,6 +379,11 @@ public final class DiagLog {
         if (sample.exists()) {
             sb.append("== 页面结构样本（只含标签和字段名）==\n");
             sb.append(readText(sample, "(空)")).append("\n\n");
+        }
+        File parseSnap = new File(dir(ctx), PARSE_SNAPSHOT);
+        if (parseSnap.exists()) {
+            sb.append("== 解析失败快照（已脱敏，可直接转为测试用例）==\n");
+            sb.append(readText(parseSnap, "(空)")).append("\n\n");
         }
         sb.append("== 运行日志（同步过程、指令、崩溃）==\n");
         sb.append(readText(new File(dir(ctx), LOG), "(空)")).append('\n');

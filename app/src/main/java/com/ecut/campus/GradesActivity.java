@@ -53,29 +53,49 @@ public class GradesActivity extends AppCompatActivity {
 
     private void coverScore(TextView tv) {
         tv.setText("翻开");
-        tv.setTextSize(12f);
-        tv.setTextColor(G.ON_INK);
+        tv.setTextSize(11.5f);
+        tv.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        tv.setTextColor(G.INK);
+        // 纸张质感封签：暖纸底 + 发丝双线感描边，点击翻开
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(G.GLASS ? 12 : 3));
-        bg.setColor(G.INK);
+        bg.setCornerRadius(dp(G.GLASS ? 10 : 3));
+        bg.setColor(G.PAPER);
+        bg.setStroke(Math.max(1, dp(1)), G.INK);
         tv.setBackground(bg);
-        tv.setPadding(dp(10), dp(6), dp(10), dp(6));
+        tv.setPadding(dp(11), dp(6), dp(11), dp(6));
     }
 
-    /** 翻牌：绕竖轴转到一半换成真实分数，再转回来；刻度条随后长出来。 */
+    /** 翻牌：带纸片抬升感（微缩放 + 3D 透视绕竖轴翻转），转到一半换真实分数，再回落并生长刻度条。 */
     private void flipReveal(View box, Runnable showScore, View bar, int barW) {
-        box.setCameraDistance(8000 * getResources().getDisplayMetrics().density);
+        if (!android.animation.ValueAnimator.areAnimatorsEnabled()) {
+            showScore.run();
+            ViewGroup.LayoutParams l = bar.getLayoutParams();
+            l.width = barW;
+            bar.setLayoutParams(l);
+            return;
+        }
+        box.setCameraDistance(9600 * getResources().getDisplayMetrics().density);
         box.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
-        box.animate().rotationY(90f).setDuration(150)
-                .setInterpolator(new android.view.animation.AccelerateInterpolator())
+        box.animate()
+                .rotationY(90f)
+                .scaleX(1.04f)
+                .scaleY(1.04f)
+                .alpha(0.86f)
+                .setDuration(155)
+                .setInterpolator(new android.view.animation.AccelerateInterpolator(1.3f))
                 .withEndAction(() -> {
                     showScore.run();
                     box.setRotationY(-90f);
-                    box.animate().rotationY(0f).setDuration(220)
-                            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.6f))
+                    box.animate()
+                            .rotationY(0f)
+                            .scaleX(1f)
+                            .scaleY(1f)
+                            .alpha(1f)
+                            .setDuration(240)
+                            .setInterpolator(new android.view.animation.DecelerateInterpolator(1.8f))
                             .withEndAction(() -> {
                                 android.animation.ValueAnimator grow = android.animation.ValueAnimator.ofInt(0, barW);
-                                grow.setDuration(360);
+                                grow.setDuration(340);
                                 grow.setInterpolator(new android.view.animation.DecelerateInterpolator());
                                 grow.addUpdateListener(a -> {
                                     ViewGroup.LayoutParams l = bar.getLayoutParams();
@@ -186,8 +206,33 @@ public class GradesActivity extends AppCompatActivity {
         }
 
         View emptyCard = findViewById(R.id.empty_grades_card);
+        View skeleton = findViewById(R.id.grades_skeleton);
+        boolean syncing = activeSync != null && activeSync.isRunning();
+        if (skeleton != null) {
+            skeleton.setVisibility(syncing && displayCourses.isEmpty() ? View.VISIBLE : View.GONE);
+        }
         if (emptyCard != null) {
-            emptyCard.setVisibility(displayCourses.isEmpty() ? View.VISIBLE : View.GONE);
+            emptyCard.setVisibility(displayCourses.isEmpty() && !syncing ? View.VISIBLE : View.GONE);
+        }
+        com.ecut.campus.view.InkEmptyView emptyArt = findViewById(R.id.empty_grades_illustration);
+        if (emptyArt != null) emptyArt.setKind(com.ecut.campus.view.InkEmptyView.KIND_GRADES);
+
+        com.ecut.campus.view.GpaGaugeChartView chart = findViewById(R.id.gpa_gauge_chart);
+        if (chart != null) {
+            List<com.ecut.campus.view.GpaGaugeChartView.Point> pts = new ArrayList<>();
+            // 学期列表是倒序的（新学期在前），趋势图按时间从左到右正序展示
+            for (int i = currentGrades.semesters.size() - 1; i >= 0; i--) {
+                Grades.SemesterGrades s = currentGrades.semesters.get(i);
+                s.recompute();
+                if (s.courses.isEmpty()) continue;
+                pts.add(new com.ecut.campus.view.GpaGaugeChartView.Point(
+                        s.id, formatShortSemester(s.id), s.gpa));
+            }
+            chart.setData(pts, selectedSemesterFilter);
+            chart.setOnPointSelectListener(semId -> {
+                selectedSemesterFilter = semId.equals(selectedSemesterFilter) ? "ALL" : semId;
+                refresh();
+            });
         }
 
         LinearLayout listBox = findViewById(R.id.grades_list_container);
@@ -325,15 +370,18 @@ public class GradesActivity extends AppCompatActivity {
                     @Override
                     public void onLoginRequired(String message) {
                         activeSync = null;
+                        refresh();
                         WebShellActivity.offerSdjtuLogin(GradesActivity.this, CampusSyncClient.Kind.GRADES, message);
                     }
 
                     @Override
                     public void onFailure(String message) {
                         activeSync = null;
+                        refresh();
                         DiagLog.failDialog(GradesActivity.this, "成绩没同步成功", message);
                     }
                 });
+        refresh();
     }
 
     @Override

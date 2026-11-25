@@ -61,6 +61,8 @@ final class HistorySync {
     private int historyCursorTerm;
     private int historyEndYear;
     private int historyEndTerm;
+    private int savedCount;
+    private int skippedCount;
 
     static int currentFallYear(int year, int month) {
         return month >= 7 ? year : year - 1;
@@ -122,13 +124,22 @@ final class HistorySync {
         historyCursorTerm = fromTerm;
         historyEndYear = toYear;
         historyEndTerm = toTerm;
+        savedCount = 0;
+        skippedCount = 0;
         syncNextHistorySemester();
+    }
+
+    static String summaryMessage(int saved, int skipped) {
+        if (saved == 0 && skipped == 0) return "历史学期同步完成";
+        if (skipped == 0) return "历史学期同步完成：已归档 " + saved + " 个学期";
+        if (saved == 0) return "历史学期同步完成：跳过 " + skipped + " 个未匹配学期";
+        return "历史学期同步完成：已归档 " + saved + " 个，跳过 " + skipped + " 个";
     }
 
     private void syncNextHistorySemester() {
         if (a.isFinishing() || a.isDestroyed()) return;
         if (!hasMore(historyCursorYear, historyCursorTerm, historyEndYear, historyEndTerm)) {
-            Toast.makeText(a, "历史学期同步完成", Toast.LENGTH_SHORT).show();
+            Toast.makeText(a, summaryMessage(savedCount, skippedCount), Toast.LENGTH_LONG).show();
             a.refreshTimetableTab();
             a.refreshSettingsTab();
             return;
@@ -144,6 +155,7 @@ final class HistorySync {
                     @Override
                     public void onSuccess(int count) {
                         a.activeSync = null;
+                        savedCount++;
                         advanceHistoryCursor();
                     }
 
@@ -162,11 +174,10 @@ final class HistorySync {
                     @Override
                     public void onFailure(String message) {
                         a.activeSync = null;
-                        // 单个学期失败不中断，继续下一个
-                        Toast.makeText(a,
-                                "第 " + historyCursorTerm + " 学期："
-                                        + message + "，继续下一个",
-                                Toast.LENGTH_SHORT).show();
+                        skippedCount++;
+                        // 单个学期失败或教务忽略请求学期时不中断，跳过归档继续下一个
+                        DiagLog.log(a, "history", historyCursorYear + "-" + (historyCursorYear + 1)
+                                + "-" + historyCursorTerm + " 跳过: " + message);
                         advanceHistoryCursor();
                     }
                 });

@@ -235,8 +235,9 @@ public final class CampusSyncClient {
                     + " 周次失败=" + result.failedWeekExpr + " 合并重复=" + result.mergedDuplicates
                     + (result.warnings.isEmpty() ? "" : " " + result.warnings));
             if (!result.ok()) {
-                fail(text.startsWith("NOTABLE") ? "没找到课表，可能需要重新登录教务系统"
-                        : "课表解析为空，请稍后重试");
+                String msg = text.startsWith("NOTABLE") ? "没找到课表，可能需要重新登录教务系统"
+                        : "课表解析为空，请稍后重试";
+                captureParseSnapshotThenFail(msg, text.startsWith("NOTABLE"), text);
                 return;
             }
             Timetable currentActive = (targetXnm == null || targetXnm.isEmpty())
@@ -332,15 +333,16 @@ public final class CampusSyncClient {
             }
             if (html != null && html.startsWith("NOTABLE") && retrySdjtuAfterMissingTable()) return;
             if (html == null || html.isEmpty() || html.startsWith("ERR:") || html.startsWith("NOTABLE")) {
-                fail("没找到成绩表，可能需要重新登录教务系统");
+                captureParseSnapshotThenFail("没找到成绩表，可能需要重新登录教务系统", true, html);
                 return;
             }
             Grades parsed = QiangzhiGrades.parseHtml(html);
             dlog("GRADE_ROWS(qiangzhi): " + html.length() + " chars, courses="
                     + parsed.totalCourseCount() + ", semesters=" + parsed.semesters.size());
             if (parsed.totalCourseCount() <= 0) {
-                fail(html.contains("dataList") ? "成绩表是空的：这个账号暂时还没有成绩"
-                        : "成绩解析为空，请稍后重试");
+                String msg = html.contains("dataList") ? "成绩表是空的：这个账号暂时还没有成绩"
+                        : "成绩解析为空，请稍后重试";
+                captureParseSnapshotThenFail(msg, false, html);
                 return;
             }
             saveGrades(parsed);
@@ -408,6 +410,22 @@ public final class CampusSyncClient {
         DiagLog.log(appContext, "sync", m);
     }
 
+    /** 解析失败时在释放 WebView 前抓一份脱敏页面结构快照，方便学校改版时直接做成测试用例。 */
+    private void captureParseSnapshotThenFail(String message, boolean loginRequired, String rawHint) {
+        if (finished) return;
+        try {
+            webView.evaluateJavascript(com.ecut.campus.data.PageSample.collectJs(), raw -> {
+                if (finished) return;
+                String sample = WebShellActivity.unwrapJsString(raw);
+                DiagLog.saveParseFailureSnapshot(appContext, kind.name(), message, sample, rawHint);
+                fail(message, loginRequired);
+            });
+        } catch (Throwable t) {
+            DiagLog.saveParseFailureSnapshot(appContext, kind.name(), message, "", rawHint);
+            fail(message, loginRequired);
+        }
+    }
+
     private void fail(String message) {
         fail(message, false);
     }
@@ -417,7 +435,9 @@ public final class CampusSyncClient {
         finished = true;
         Log.w(TAG, kind.label + " failed: " + message);
         DiagLog.log(appContext, "sync", kind.label + " 失败: " + message);
-        if (message != null && message.contains("登录已失效")) Prefs.setSessionExpired(appContext, true);
+        if (loginRequired || (message != null && message.contains("登录已失效"))) {
+            Prefs.setSessionExpired(appContext, true);
+        }
         cleanup();
         if (loginRequired) callback.onLoginRequired(message);
         else callback.onFailure(message);

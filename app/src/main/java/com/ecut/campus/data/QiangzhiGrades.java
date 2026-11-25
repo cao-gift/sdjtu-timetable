@@ -16,6 +16,10 @@ import java.util.regex.Pattern;
 public final class QiangzhiGrades {
 
     public static final String GRADES_PATH = "kscj/cjcx_list";
+    /** 分页拉取上限，避免学校改版导致死循环分页。 */
+    public static final int MAX_PAGES = 20;
+    /** 单次解析最大行数保护。 */
+    public static final int MAX_ROWS = 2000;
 
     private static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.DOTALL;
     private static final Pattern TABLE = Pattern.compile(
@@ -28,22 +32,39 @@ public final class QiangzhiGrades {
 
     /**
      * 当前页面有 #dataList 就直接用；否则同步 POST 查全部学期成绩。
+     * 若教务返回分页成绩表，自动翻页合并，最多拉取 {@link #MAX_PAGES} 页，避免死循环。
      * 只把成绩表格交回 Java；学校提示没权限时返回 __NOPERM__，没找到表返回 NOTABLE。
      */
     public static String extractionJs() {
         return "(function(){" +
                 "try{" +
-                "function pick(doc){var t=doc.getElementById('dataList');return t?t.outerHTML:'';}" +
+                "var MAX_PAGES=" + MAX_PAGES + ";" +
+                "function pick(doc){var t=doc&&doc.getElementById('dataList');return t?t.outerHTML:'';}" +
+                "function totalPages(doc){" +
+                "if(!doc||!doc.body)return 1;" +
+                "var txt=doc.body.textContent||'';" +
+                "var m=txt.match(/共\\s*(\\d+)\\s*页/)||txt.match(/\\/\\s*(\\d+)\\s*页/);" +
+                "if(m){var n=parseInt(m[1],10);if(n>1)return Math.min(n,MAX_PAGES);}" +
+                "return 1;}" +
+                "function postPage(url,page){" +
+                "var x=new XMLHttpRequest();x.open('POST',url,false);" +
+                "x.setRequestHeader('Content-Type','application/x-www-form-urlencoded');" +
+                "var q='kksj=&kcxz=&kcmc=&xsfs=all';" +
+                "if(page>1)q+='&pageNum='+page+'&pageIndex='+page;" +
+                "x.send(q);return x.responseText||'';}" +
                 "var r=pick(document);if(r&&location.search.indexOf('kksj=')<0&&document.body" +
-                "&&/cjcx_list/.test(location.pathname))return r;" +
+                "&&/cjcx_list/.test(location.pathname)&&totalPages(document)<=1)return r;" +
                 "var p=location.pathname;var i=p.indexOf('/jsxsd/');" +
                 "var base=i>=0?p.substring(0,i+7):'/jsxsd/';" +
-                "var x=new XMLHttpRequest();" +
-                "x.open('POST',base+'kscj/cjcx_list',false);" +
-                "x.setRequestHeader('Content-Type','application/x-www-form-urlencoded');" +
-                "x.send('kksj=&kcxz=&kcmc=&xsfs=all');" +
-                "var txt=x.responseText||'';" +
-                "try{var d=new DOMParser().parseFromString(txt,'text/html');var r2=pick(d);if(r2)return r2;" +
+                "var url=base+'kscj/cjcx_list';" +
+                "var txt=postPage(url,1);" +
+                "try{var d=new DOMParser().parseFromString(txt,'text/html');var r2=pick(d);" +
+                "if(r2){" +
+                "var pages=totalPages(d);var tables=[r2];var seen={};seen[r2]=true;" +
+                "for(var pg=2;pg<=pages&&pg<=MAX_PAGES;pg++){" +
+                "try{var t2=postPage(url,pg);var d2=new DOMParser().parseFromString(t2,'text/html');" +
+                "var rp=pick(d2);if(!rp||seen[rp])break;seen[rp]=true;tables.push(rp);}catch(e){break;}}" +
+                "return tables.join('\\n');}" +
                 "var b=(d.body&&d.body.textContent)||'';if(/无(操作)?权限|未开放|评教/.test(b)&&b.length<2000)return '__NOPERM__';}catch(e){}" +
                 "if(r)return r;" +
                 "return 'NOTABLE';" +
@@ -51,62 +72,78 @@ public final class QiangzhiGrades {
                 "})()";
     }
 
-    /** 解析 #dataList 表格（整页或只含表格都行）。永不抛异常；失败返回空 Grades。 */
+    /** 解析一个或多个 #dataList 表格（支持分页合并与重复行去重）。永不抛异常；失败返回空 Grades。 */
     public static Grades parseHtml(String html) {
         Grades out = new Grades();
         if (html == null || html.isEmpty()) return out;
         try {
+            List<String> tables = new ArrayList<>();
             Matcher tm = TABLE.matcher(html);
-            String table = tm.find() ? tm.group(1) : html;
+            while (tm.find() && tables.size() < MAX_PAGES) {
+                tables.add(tm.group(1));
+            }
+            if (tables.isEmpty()) tables.add(html);
+
             Map<String, Grades.SemesterGrades> bySem = new LinkedHashMap<>();
-            int[] col = null;
-            Matcher rm = TR.matcher(table);
-            while (rm.find()) {
-                List<String> cells = cells(rm.group(1));
-                if (cells.isEmpty()) continue;
-                if (col == null) {
-                    col = header(cells);
-                    continue;
-                }
-                String name = get(cells, col[C_NAME]);
-                if (name.isEmpty() || "课程名称".equals(name)) continue;
-                String score = get(cells, col[C_SCORE]);
+            java.util.Set<String> seenRows = new java.util.HashSet<>();
+            int rowCount = 0;
 
-                String termRaw = get(cells, col[C_TERM]);
-                Matcher term = TERM_ID.matcher(termRaw);
-                String semId;
-                String semName;
-                if (term.find()) {
-                    semId = term.group(1) + "-" + term.group(2) + "-" + term.group(3);
-                    semName = term.group(1) + "-" + term.group(2) + " 学年第" + term.group(3) + "学期";
-                } else {
-                    semId = termRaw.isEmpty() ? "未知学期" : termRaw;
-                    semName = semId;
-                }
-                Grades.SemesterGrades sem = bySem.get(semId);
-                if (sem == null) {
-                    sem = new Grades.SemesterGrades();
-                    sem.id = semId;
-                    sem.name = semName;
-                    bySem.put(semId, sem);
-                }
+            for (String table : tables) {
+                int[] col = null;
+                Matcher rm = TR.matcher(table);
+                while (rm.find() && rowCount < MAX_ROWS) {
+                    List<String> cells = cells(rm.group(1));
+                    if (cells.isEmpty()) continue;
+                    if (col == null) {
+                        col = header(cells);
+                        continue;
+                    }
+                    String name = get(cells, col[C_NAME]);
+                    if (name.isEmpty() || "课程名称".equals(name)) continue;
+                    String score = get(cells, col[C_SCORE]);
+                    String code = get(cells, col[C_CODE]);
+                    String examType = get(cells, col[C_EXAM]);
 
-                Grades.CourseGrade cg = new Grades.CourseGrade();
-                cg.code = get(cells, col[C_CODE]);
-                cg.name = name;
-                cg.score = score;
-                cg.scoreValue = Grades.tryParseDouble(score);
-                Double credit = Grades.tryParseDouble(get(cells, col[C_CREDIT]));
-                cg.credit = credit == null ? 0 : credit;
-                cg.gradePoint = Grades.tryParseDouble(get(cells, col[C_GP]));
-                if (cg.gradePoint == null) cg.gradePoint = levelPoint(score, cg.scoreValue);
-                cg.nature = get(cells, col[C_NATURE]);
-                cg.category = get(cells, col[C_ATTR]);
-                cg.examType = get(cells, col[C_EXAM]);
-                cg.college = get(cells, col[C_COLLEGE]);
-                cg.teacher = get(cells, col[C_TEACHER]);
-                cg.isPassed = Grades.evaluatePassed(score, cg.scoreValue);
-                sem.courses.add(cg);
+                    String termRaw = get(cells, col[C_TERM]);
+                    Matcher term = TERM_ID.matcher(termRaw);
+                    String semId;
+                    String semName;
+                    if (term.find()) {
+                        semId = term.group(1) + "-" + term.group(2) + "-" + term.group(3);
+                        semName = term.group(1) + "-" + term.group(2) + " 学年第" + term.group(3) + "学期";
+                    } else {
+                        semId = termRaw.isEmpty() ? "未知学期" : termRaw;
+                        semName = semId;
+                    }
+                    String dedupeKey = semId + "|" + (code.isEmpty() ? name : code) + "|" + score + "|" + examType;
+                    if (!seenRows.add(dedupeKey)) continue;
+                    rowCount++;
+
+                    Grades.SemesterGrades sem = bySem.get(semId);
+                    if (sem == null) {
+                        sem = new Grades.SemesterGrades();
+                        sem.id = semId;
+                        sem.name = semName;
+                        bySem.put(semId, sem);
+                    }
+
+                    Grades.CourseGrade cg = new Grades.CourseGrade();
+                    cg.code = code;
+                    cg.name = name;
+                    cg.score = score;
+                    cg.scoreValue = Grades.tryParseDouble(score);
+                    Double credit = Grades.tryParseDouble(get(cells, col[C_CREDIT]));
+                    cg.credit = credit == null ? 0 : credit;
+                    cg.gradePoint = Grades.tryParseDouble(get(cells, col[C_GP]));
+                    if (cg.gradePoint == null) cg.gradePoint = levelPoint(score, cg.scoreValue);
+                    cg.nature = get(cells, col[C_NATURE]);
+                    cg.category = get(cells, col[C_ATTR]);
+                    cg.examType = examType;
+                    cg.college = get(cells, col[C_COLLEGE]);
+                    cg.teacher = get(cells, col[C_TEACHER]);
+                    cg.isPassed = Grades.evaluatePassed(score, cg.scoreValue);
+                    sem.courses.add(cg);
+                }
             }
             out.semesters.addAll(bySem.values());
             out.sortSemestersDescending();

@@ -56,8 +56,8 @@ public final class ThemeReveal {
         Bitmap bmp = pending;
         pending = null;
         if (bmp == null) return;
-        // 截图超过 3 秒还没用上（重建被打断、进程被回收后又回来）：旧画面不再盖上去
-        if (android.os.SystemClock.uptimeMillis() - pendingAt > 3000) {
+        // 截图超过 3 秒还没用上或系统关闭动画：直接到位，不播扩散动画
+        if (android.os.SystemClock.uptimeMillis() - pendingAt > 3000 || !ValueAnimator.areAnimatorsEnabled()) {
             bmp.recycle();
             restoreTab = restorePage = -1;
             return;

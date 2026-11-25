@@ -111,10 +111,13 @@ public final class ClassWidget extends AppWidgetProvider {
         }
     }
 
-    /** 桌面上放了几个「今日课程」。 */
+    /** 桌面上放了几个小组件（今日课程 + 下一节课倒计时 + 今日进度条）。 */
     static int placedCount(Context c) {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
-        return m == null ? 0 : ids(c, m, ClassWidget.class).length;
+        if (m == null) return 0;
+        return ids(c, m, ClassWidget.class).length
+                + ids(c, m, CountdownWidget.class).length
+                + ids(c, m, DayProgressWidget.class).length;
     }
 
     /** 课表、作息、主题、背景变了也调一下；没放时什么都不做。 */
@@ -124,9 +127,12 @@ public final class ClassWidget extends AppWidgetProvider {
         AppWidgetManager m = AppWidgetManager.getInstance(c);
         if (m == null) return;
         int[] a = ids(c, m, ClassWidget.class);
-        if (a.length == 0) return;
-        render(c, m, a);
-        scheduleTick(c);
+        int[] b = ids(c, m, CountdownWidget.class);
+        int[] d = ids(c, m, DayProgressWidget.class);
+        if (a.length > 0) render(c, m, a);
+        if (b.length > 0) CountdownWidget.render(c, m, b);
+        if (d.length > 0) DayProgressWidget.render(c, m, d);
+        if (a.length > 0 || b.length > 0 || d.length > 0) scheduleTick(c);
     }
 
     /** 下一次上课/下课/上课前 60 分钟（或明早 0:01）叫醒一次。窗口 1 分钟，免得倒计时走到负数还没翻页。 */
@@ -142,8 +148,7 @@ public final class ClassWidget extends AppWidgetProvider {
 
     /** 小组件都被移走了才取消闹钟。 */
     static void cancelTickIfIdle(Context c) {
-        AppWidgetManager m = AppWidgetManager.getInstance(c);
-        if (m != null && ids(c, m, ClassWidget.class).length > 0) return;
+        if (placedCount(c) > 0) return;
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am != null) am.cancel(tick(c));
     }

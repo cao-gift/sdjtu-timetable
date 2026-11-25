@@ -151,17 +151,24 @@ final class SettingsTab {
         View importBtn = settingsFragment.findViewById(R.id.btn_import_timetable);
         if (importBtn != null) importBtn.setOnClickListener(v -> TimetableFiles.pickImport(a));
 
+        View backupBtn = settingsFragment.findViewById(R.id.btn_full_backup);
+        if (backupBtn != null) backupBtn.setOnClickListener(v -> AppBackupManager.exportBackup(a));
+
+        View restoreBtn = settingsFragment.findViewById(R.id.btn_full_restore);
+        if (restoreBtn != null) restoreBtn.setOnClickListener(v -> AppBackupManager.pickRestore(a));
+
         View clearDataBtn = settingsFragment.findViewById(R.id.btn_clear_local_data);
         if (clearDataBtn != null) {
             clearDataBtn.setOnClickListener(v -> new AlertDialog.Builder(a)
                     .setTitle("清空本地数据")
-                    .setMessage("将清空课表、成绩、空教室查询结果、培养方案、考试安排与作息配置，并删除本机保存的自动登录账号密码。清空后无法恢复。")
+                    .setMessage("将清空课表、成绩、空教室查询结果、培养方案、考试安排、作业待办与作息配置，并删除本机保存的自动登录账号密码。清空后无法恢复。")
                     .setNegativeButton("取消", null)
                     .setPositiveButton("清空", (d, w) -> {
                         boolean credentialsCleared = SdjtuCredentials.clear(a);
                         TimetableStore.clear(a);
                         GradesStore.clear(a);
                         SdjtuStudyStore.clear(a);
+                        CourseTodoStore.clear(a);
                         ScheduleSettingsStore.clear(a);
                         Prefs.setLastSyncTime(a, "");
                         Prefs.setGradesDemo(a, false);
@@ -171,6 +178,7 @@ final class SettingsTab {
                         Notify.cancelNewGrades(a);
                         ClassWidget.updateAll(a.getApplicationContext());
                         ClassReminder.reschedule(a.getApplicationContext());
+                        ExamReminder.reschedule(a.getApplicationContext());
                         NextClassNotice.update(a.getApplicationContext());
                         a.refreshTimetableTab();
                         refresh();
@@ -434,8 +442,8 @@ final class SettingsTab {
         TextView pinSub = settingsFragment.findViewById(R.id.tv_widget_pin_sub);
         if (pinSub != null) {
             int n = ClassWidget.placedCount(a);
-            pinSub.setText(n > 0 ? "已添加 " + n + " 个 · 今日课程"
-                    : "桌面今日课程（4×2 / 2×2）");
+            pinSub.setText(n > 0 ? "已添加 " + n + " 个 · 课表 / 倒计时 / 进度条"
+                    : "今日课程 · 2×2 倒计时 · 4×1 进度条");
         }
         TextView allowSub = settingsFragment.findViewById(R.id.tv_widget_bg_allow_sub);
         if (allowSub != null) allowSub.setText(BgAllow.status(a));

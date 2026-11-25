@@ -71,6 +71,8 @@ public final class ClassReminder {
                 if (!it.location.isEmpty()) sb.append(it.location);
                 if (!it.sections.isEmpty()) sb.append(sb.length() > 0 ? " · " : "").append(it.sections);
                 if (!it.tag.isEmpty()) sb.append(sb.length() > 0 ? " · " : "").append(it.tag);
+                String todoNote = CourseTodoStore.load(c).reminderSummary(it.name);
+                if (!todoNote.isEmpty()) sb.append(sb.length() > 0 ? "\n" : "").append(todoNote);
                 i.putExtra(EX_TEXT, sb.toString());
                 return i;
             }
@@ -107,10 +109,12 @@ public final class ClassReminder {
         PendingIntent pi = PendingIntent.getActivity(c, 9, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         String text = data.getStringExtra(EX_TEXT);
+        String safeText = text == null || text.isEmpty() ? "快上课了" : text;
         NotificationCompat.Builder b = new NotificationCompat.Builder(c, CH)
                 .setSmallIcon(R.drawable.ic_nav_timetable)
                 .setContentTitle(data.getStringExtra(EX_TITLE))
-                .setContentText(text == null || text.isEmpty() ? "快上课了" : text)
+                .setContentText(safeText.replace('\n', ' '))
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(safeText))
                 .setColor(0xFFFF4A1C)
                 .setCategory(NotificationCompat.CATEGORY_REMINDER)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

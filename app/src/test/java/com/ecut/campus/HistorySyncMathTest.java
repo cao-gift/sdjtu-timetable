@@ -88,6 +88,14 @@ public class HistorySyncMathTest {
     }
 
     @Test
+    public void summaryMessageReflectsSavedAndSkippedTerms() {
+        assertEquals("历史学期同步完成", HistorySync.summaryMessage(0, 0));
+        assertEquals("历史学期同步完成：已归档 3 个学期", HistorySync.summaryMessage(3, 0));
+        assertEquals("历史学期同步完成：跳过 2 个未匹配学期", HistorySync.summaryMessage(0, 2));
+        assertEquals("历史学期同步完成：已归档 2 个，跳过 1 个", HistorySync.summaryMessage(2, 1));
+    }
+
+    @Test
     public void busiestWeekPicksWeekWithMostSessions() {
         com.ecut.campus.data.Timetable t = new com.ecut.campus.data.Timetable();
         t.courses.add(courseWithWeeks("1-16周", 2));

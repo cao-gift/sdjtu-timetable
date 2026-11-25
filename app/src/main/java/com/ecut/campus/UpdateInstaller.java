@@ -42,6 +42,117 @@ public final class UpdateInstaller {
     private UpdateInstaller() {}
 
     private static final String DIR = "updates";
+    private static final String CH_UPDATE = "app_update";
+    private static final int NOTIF_UPDATE_ID = 2104;
+    private static volatile boolean bgDownloading = false;
+
+    /** 检查对应版本 APK 是否已下载并校验就绪。 */
+    public static boolean isReady(Context c, Updater.Release r) {
+        if (c == null || r == null) return false;
+        File done = target(c, r);
+        return done.exists() && verify(c, done, r) == null;
+    }
+
+    /** Wi-Fi 下后台静默下载新版本 APK 并校验，完成后弹窗或通知提示安装。 */
+    public static void startBackground(Activity a, Updater.Release r, boolean silent) {
+        if (a == null || r == null || bgDownloading) return;
+        Context app = a.getApplicationContext();
+        File done = target(app, r);
+        if (done.exists() && verify(app, done, r) == null) {
+            if (!silent && !a.isFinishing()) install(a, done, r);
+            return;
+        }
+        bgDownloading = true;
+        if (!silent) {
+            android.widget.Toast.makeText(a, "已开始在 Wi-Fi 下后台下载 " + r.tag + "…",
+                    android.widget.Toast.LENGTH_SHORT).show();
+        }
+        Handler main = new Handler(Looper.getMainLooper());
+        new Thread(() -> {
+            try {
+                File[] old = dir(app).listFiles();
+                if (old != null) for (File f : old) if (!f.equals(done)) f.delete();
+                boolean[] cancelled = {false};
+                for (Source s : sources(r)) {
+                    File part = new File(dir(app), done.getName() + ".part");
+                    part.delete();
+                    String err = download(s, part, r.size, cancelled, (got, total) -> {
+                        if (!silent) postBgProgress(app, r.tag, got, total);
+                    });
+                    if (err == null) {
+                        err = verify(app, part, r);
+                        if (err == null && part.renameTo(done)) {
+                            postBgReady(app, r);
+                            main.post(() -> {
+                                if (!a.isFinishing() && !a.isDestroyed()) {
+                                    Updater.showDialog(a, r, true);
+                                }
+                            });
+                            return;
+                        }
+                    }
+                    part.delete();
+                }
+                androidx.core.app.NotificationManagerCompat.from(app).cancel(NOTIF_UPDATE_ID);
+            } catch (Throwable ignored) {
+            } finally {
+                bgDownloading = false;
+            }
+        }, "update-bg-download").start();
+    }
+
+    private static void ensureUpdateChannel(Context c) {
+        if (Build.VERSION.SDK_INT >= 26) {
+            android.app.NotificationManager nm =
+                    (android.app.NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                android.app.NotificationChannel ch = new android.app.NotificationChannel(
+                        CH_UPDATE, "应用更新", android.app.NotificationManager.IMPORTANCE_LOW);
+                ch.setSound(null, null);
+                nm.createNotificationChannel(ch);
+            }
+        }
+    }
+
+    private static void postBgProgress(Context c, String tag, long got, long total) {
+        if (!ClassReminder.canNotify(c)) return;
+        ensureUpdateChannel(c);
+        int pct = total > 0 ? (int) Math.min(100, got * 100 / total) : 0;
+        androidx.core.app.NotificationCompat.Builder b =
+                new androidx.core.app.NotificationCompat.Builder(c, CH_UPDATE)
+                        .setSmallIcon(R.drawable.ic_nav_timetable)
+                        .setContentTitle("正在后台下载更新 " + tag)
+                        .setContentText(total > 0 ? String.format(Locale.US, "%.1f / %.1f MB",
+                                got / 1048576.0, total / 1048576.0) : "下载中…")
+                        .setProgress(100, pct, total <= 0)
+                        .setOngoing(true)
+                        .setSilent(true)
+                        .setOnlyAlertOnce(true);
+        try {
+            androidx.core.app.NotificationManagerCompat.from(c).notify(NOTIF_UPDATE_ID, b.build());
+        } catch (SecurityException ignored) {
+        }
+    }
+
+    private static void postBgReady(Context c, Updater.Release r) {
+        if (!ClassReminder.canNotify(c)) return;
+        ensureUpdateChannel(c);
+        Intent open = new Intent(c, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        android.app.PendingIntent pi = android.app.PendingIntent.getActivity(c, 12, open,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT | android.app.PendingIntent.FLAG_IMMUTABLE);
+        androidx.core.app.NotificationCompat.Builder b =
+                new androidx.core.app.NotificationCompat.Builder(c, CH_UPDATE)
+                        .setSmallIcon(R.drawable.ic_nav_timetable)
+                        .setContentTitle("驴驴课表 " + r.tag + " 已下载就绪")
+                        .setContentText("安装包已通过校验，点击回到应用安装")
+                        .setAutoCancel(true)
+                        .setContentIntent(pi);
+        try {
+            androidx.core.app.NotificationManagerCompat.from(c).notify(NOTIF_UPDATE_ID, b.build());
+        } catch (SecurityException ignored) {
+        }
+    }
 
     static final class Source {
         final String label, url;

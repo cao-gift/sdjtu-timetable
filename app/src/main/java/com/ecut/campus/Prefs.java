@@ -387,4 +387,15 @@ public final class Prefs {
             return null;
         }
     }
+
+    // ===== 1.3.20：考试倒计时、Wi-Fi 后台更新 =====
+    /** 考前一天与考前一小时提醒，默认开启。 */
+    public static boolean examRemind(Context ctx) { return sp(ctx).getBoolean("exam_remind", true); }
+    public static void setExamRemind(Context ctx, boolean on) { sp(ctx).edit().putBoolean("exam_remind", on).apply(); }
+    /** 是否把考试安排叠加显示在课表中，默认开启。 */
+    public static boolean examInTimetable(Context ctx) { return sp(ctx).getBoolean("exam_in_timetable", true); }
+    public static void setExamInTimetable(Context ctx, boolean on) { sp(ctx).edit().putBoolean("exam_in_timetable", on).apply(); }
+    /** 检测到 Wi-Fi 时自动后台下载新版本安装包，默认关闭。 */
+    public static boolean updateWifiBackground(Context ctx) { return sp(ctx).getBoolean("update_wifi_bg", false); }
+    public static void setUpdateWifiBackground(Context ctx, boolean on) { sp(ctx).edit().putBoolean("update_wifi_bg", on).apply(); }
 }

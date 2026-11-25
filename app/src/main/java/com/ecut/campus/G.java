@@ -68,6 +68,26 @@ public final class G {
         return DANGER;
     }
 
+    /** 当前设备与系统是否开启窗口实时模糊（API 31+ 且系统未禁用跨窗口模糊）。 */
+    public static boolean supportsWindowBlur(Context ctx) {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.S || ctx == null) {
+            return false;
+        }
+        try {
+            android.view.WindowManager wm = (android.view.WindowManager) ctx.getSystemService(Context.WINDOW_SERVICE);
+            return wm != null && wm.isCrossWindowBlurEnabled();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** 弹窗底色：不支持实时模糊的手机上自动用 100% 不透明底色，保证文字清晰可读。 */
+    public static int dialogSurfaceColor(Context ctx) {
+        if (!GLASS) return DIALOG;
+        if (supportsWindowBlur(ctx)) return c(ctx, R.color.glass_dialog_sheet);
+        return alpha(DIALOG, 0xFF);
+    }
+
     private static int a(Context ctx, int attr, int fallback) {
         android.util.TypedValue tv = new android.util.TypedValue();
         if (!ctx.getTheme().resolveAttribute(attr, tv, true)) return fallback;

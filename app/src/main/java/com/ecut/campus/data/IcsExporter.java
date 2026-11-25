@@ -107,4 +107,50 @@ public final class IcsExporter {
                 .replace("\r\n", "\\n")
                 .replace("\n", "\\n");
     }
+
+    /** 将考试安排导出为标准 ICS 日历文本（带考前一天与考前一小时 VALARM 提醒）。 */
+    public static String exportExams(List<ExamCountdown.Entry> exams, String calendarName) {
+        if (exams == null || exams.isEmpty()) return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append("BEGIN:VCALENDAR\r\n");
+        sb.append("VERSION:2.0\r\n");
+        sb.append("PRODID:-//LvLv//Exams//CN\r\n");
+        sb.append("CALSCALE:GREGORIAN\r\n");
+        sb.append("X-WR-CALNAME:").append(escape(calendarName == null || calendarName.isEmpty()
+                ? "考试安排 · 驴驴课表" : calendarName)).append("\r\n");
+
+        SimpleDateFormat stampFmt = new SimpleDateFormat("yyyyMMdd'T'HHmmss'Z'", Locale.US);
+        stampFmt.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        String stamp = stampFmt.format(new Date());
+        int count = 0;
+        for (ExamCountdown.Entry e : exams) {
+            if (!e.hasDate()) continue;
+            int st = e.startMin >= 0 ? e.startMin : 9 * 60;
+            int en = e.endMin > st ? e.endMin : Math.min(23 * 60 + 55, st + 120);
+            String d = e.date.replace("-", "");
+            sb.append("BEGIN:VEVENT\r\n");
+            sb.append("UID:lvlv-exam-").append(d).append('-').append(count++).append("@ecut.campus\r\n");
+            sb.append("DTSTAMP:").append(stamp).append("\r\n");
+            sb.append("DTSTART;TZID=Asia/Shanghai:").append(d).append('T').append(hm(st)).append("00\r\n");
+            sb.append("DTEND;TZID=Asia/Shanghai:").append(d).append('T').append(hm(en)).append("00\r\n");
+            sb.append("SUMMARY:").append(escape("[考试] " + e.name)).append("\r\n");
+            if (!e.room.isEmpty()) sb.append("LOCATION:").append(escape(e.room)).append("\r\n");
+            StringBuilder desc = new StringBuilder();
+            if (!e.seat.isEmpty()) desc.append("座位：").append(e.seat);
+            if (!e.code.isEmpty()) {
+                if (desc.length() > 0) desc.append(" · ");
+                desc.append("课程号：").append(e.code);
+            }
+            if (desc.length() > 0) sb.append("DESCRIPTION:").append(escape(desc.toString())).append("\r\n");
+            // 考前一天提醒
+            sb.append("BEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:-P1D\r\nDESCRIPTION:")
+                    .append(escape("明天考试：" + e.name)).append("\r\nEND:VALARM\r\n");
+            // 考前一小时提醒
+            sb.append("BEGIN:VALARM\r\nACTION:DISPLAY\r\nTRIGGER:-PT1H\r\nDESCRIPTION:")
+                    .append(escape("1小时后考试：" + e.name)).append("\r\nEND:VALARM\r\n");
+            sb.append("END:VEVENT\r\n");
+        }
+        sb.append("END:VCALENDAR\r\n");
+        return count > 0 ? sb.toString() : null;
+    }
 }

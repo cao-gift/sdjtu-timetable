@@ -290,7 +290,22 @@ public class CourseEditActivity extends AppCompatActivity {
         updateWeeksPreview();
         com.ecut.campus.fun.CourseExtras.attach(this, findViewById(R.id.course_extras),
                 timetable, editingCourse, currentSession(), currentWeek);
+        attachTodoEntry();
         loadingForm = false;
+    }
+
+    private void attachTodoEntry() {
+        android.widget.LinearLayout extras = findViewById(R.id.course_extras);
+        if (extras == null) return;
+        String name = editingCourse != null ? editingCourse.name : etName.getText().toString().trim();
+        if (name.isEmpty()) return;
+        int n = CourseTodoStore.load(this).pendingForCourse(name).size();
+        String label = n > 0 ? "作业与待办（" + n + " 项未完成）  ›" : "添加课程作业 / 待办  ›";
+        TextView btn = Ui.button(this, label, false, v ->
+                CourseBlockActions.showTodoDialog(this, name, this::loadSessionIntoForm));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(10);
+        extras.addView(btn, lp);
     }
 
     private void renderDaySelector() {
@@ -437,27 +452,7 @@ public class CourseEditActivity extends AppCompatActivity {
     }
 
     private void applySectionsTo(Timetable.Session s) {
-        if (customTime && Timetable.Session.minutesOf(timeStart) >= 0
-                && Timetable.Session.minutesOf(timeEnd) > Timetable.Session.minutesOf(timeStart)) {
-            int a = Timetable.Session.minutesOf(timeStart), b = Timetable.Session.minutesOf(timeEnd);
-            int first = maxSec(), last = 1;
-            for (int sec = 1; sec <= maxSec(); sec++) {
-                if (sched.endMinutes(sec) > a && sched.startMinutes(sec) < b) {
-                    first = Math.min(first, sec);
-                    last = Math.max(last, sec);
-                }
-            }
-            if (first > last) { first = selectedStart; last = selectedEnd; }
-            s.startSection = first;
-            s.endSection = last;
-            s.timeStart = timeStart;
-            s.timeEnd = timeEnd;
-        } else {
-            s.startSection = selectedStart;
-            s.endSection = Math.max(selectedStart, selectedEnd);
-            s.timeStart = "";
-            s.timeEnd = "";
-        }
+        CourseEditHelper.applySectionsTo(s, customTime, timeStart, timeEnd, selectedStart, selectedEnd, sched);
     }
 
     private void renderWeekModeSelector() {
@@ -582,33 +577,11 @@ public class CourseEditActivity extends AppCompatActivity {
     }
 
     private void writeWeeksText() {
-        int total = Prefs.storedTotalWeeks(this);
-        if (selectedWeeks.isEmpty()) {
-            etWeeks.setText("");
-            return;
-        }
-        if (weekMode == 0 && selectedWeeks.size() >= total) {
-            etWeeks.setText("1-" + total);
-        } else if (weekMode == 2) {
-            etWeeks.setText("1-" + total + "周(单)");
-        } else if (weekMode == 3) {
-            etWeeks.setText("1-" + total + "周(双)");
-        } else {
-            List<Integer> sorted = new ArrayList<>(selectedWeeks);
-            sorted.sort(Integer::compareTo);
-            etWeeks.setText(WeekRange.compress(sorted) + "周");
-        }
+        etWeeks.setText(CourseEditHelper.formatWeeksText(weekMode, selectedWeeks, Prefs.storedTotalWeeks(this)));
     }
 
     private int detectWeekMode(Timetable.Session s) {
-        String raw = s.weeksRaw == null ? "" : s.weeksRaw;
-        int total = Prefs.storedTotalWeeks(this);
-        if (raw.contains("单")) return 2;
-        if (raw.contains("双")) return 3;
-        if (raw.equals("1-" + total) || raw.equals("1-" + total + "周")) return 0;
-        if (raw.contains(",") || raw.contains("，")) return 4;
-        if (raw.contains("-")) return 1;
-        return 4;
+        return CourseEditHelper.detectWeekMode(s, Prefs.storedTotalWeeks(this));
     }
 
     private void updateWeeksPreview() {
@@ -658,19 +631,7 @@ public class CourseEditActivity extends AppCompatActivity {
         s.dayOfWeek = selectedDay;
         applySectionsTo(s);
         s.location = etLocation.getText().toString().trim();
-        List<Integer> sorted = new ArrayList<>(selectedWeeks);
-        sorted.sort(Integer::compareTo);
-        int total = Prefs.storedTotalWeeks(this);
-        if (weekMode == 2) {
-            s.weeksRaw = "1-" + total + "周(单)";
-        } else if (weekMode == 3) {
-            s.weeksRaw = "1-" + total + "周(双)";
-        } else {
-            s.weeksRaw = WeekRange.compress(sorted);
-            if (!s.weeksRaw.isEmpty()) s.weeksRaw += "周";
-        }
-        s.weeks.clear();
-        s.weeks.addAll(sorted);
+        CourseEditHelper.applyWeeksToSession(s, weekMode, selectedWeeks, Prefs.storedTotalWeeks(this));
     }
 
     private Timetable.Session currentSession() {

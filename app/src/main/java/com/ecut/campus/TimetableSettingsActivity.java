@@ -119,6 +119,16 @@ public class TimetableSettingsActivity extends AppCompatActivity {
                 }
                 ClassWidget.updateAll(getApplicationContext());
             });
+            android.view.View examRow = Ui.row(this, disp, "03", "课表显示考试安排",
+                    "将已同步的考试卡片叠加显示到对应周次与时间槽",
+                    Prefs.examInTimetable(this) ? "ON" : "OFF", null);
+            examRow.setBackgroundResource(Ui.selectable(this, false));
+            examRow.setOnClickListener(v -> {
+                boolean on = !Prefs.examInTimetable(this);
+                Prefs.setExamInTimetable(this, on);
+                android.view.ViewGroup row = (android.view.ViewGroup) v;
+                ((android.widget.TextView) row.getChildAt(row.getChildCount() - 1)).setText(on ? "ON" : "OFF");
+            });
 
             Ui.label(this, body, "MORE · 更多");
             android.widget.LinearLayout card = Ui.card(this, body);

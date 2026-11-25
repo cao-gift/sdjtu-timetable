@@ -309,6 +309,23 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 @Override
+                public void onExamClick(com.ecut.campus.data.ExamCountdown.Entry exam) {
+                    String cd = com.ecut.campus.data.ExamCountdown.countdownLabel(exam, System.currentTimeMillis());
+                    StringBuilder msg = new StringBuilder();
+                    msg.append("倒计时：").append(cd);
+                    if (!exam.timeRaw.isEmpty()) msg.append("\n时间：").append(exam.timeRaw);
+                    if (!exam.room.isEmpty()) msg.append("\n考场：").append(exam.room);
+                    if (!exam.seat.isEmpty()) msg.append("\n座位：").append(exam.seat);
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setTitle("[考试] " + exam.name)
+                            .setMessage(msg.toString())
+                            .setPositiveButton("查看全部考试", (d, w) ->
+                                    startActivity(new Intent(MainActivity.this, SdjtuExamActivity.class)))
+                            .setNegativeButton("关闭", null)
+                            .show();
+                }
+
+                @Override
                 public void onWeekSettling(int delta) {
                     // 手指一松就先翻标题，不等吸附动画结束
                     int total = Prefs.totalWeeks(MainActivity.this);
@@ -429,36 +446,12 @@ public class MainActivity extends AppCompatActivity {
         return WeekMath.normalizeToMonday(Prefs.semesterStartDate(this));
     }
 
-    /** 刻度标题：小字「第」+ 巨大等宽周数 + 「周」。不显示总周数。 */
     private CharSequence gaugeWeekTitle(int week, int total) {
-        String num = week < 10 ? "0" + week : String.valueOf(week);
-        String head = "第 ";
-        String tail = " 周";
-        android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder();
-        sb.append(head);
-        int a = sb.length();
-        sb.append(num);
-        int b = sb.length();
-        sb.append(tail);
-        float d = getResources().getDisplayMetrics().scaledDensity;
-        sb.setSpan(new android.text.style.AbsoluteSizeSpan(Math.round(13 * d)), 0, a, 0);
-        sb.setSpan(new android.text.style.ForegroundColorSpan(G.MUTE), 0, a, 0);
-        sb.setSpan(new android.text.style.AbsoluteSizeSpan(Math.round(46 * d)), a, b, 0);
-        sb.setSpan(new android.text.style.TypefaceSpan("monospace"), a, b, 0);
-        sb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), a, b, 0);
-        sb.setSpan(new android.text.style.AbsoluteSizeSpan(Math.round(13 * d)), b, sb.length(), 0);
-        sb.setSpan(new android.text.style.ForegroundColorSpan(G.MUTE), b, sb.length(), 0);
-        sb.setSpan(new android.text.style.TypefaceSpan("monospace"), b, sb.length(), 0);
-        return sb;
+        return MainSyncHelper.gaugeWeekTitle(this, week);
     }
 
-    /** 课表超过 3 天没同步时，在副标题后提示一句。 */
     private String staleHint() {
-        if (Prefs.sessionExpired(this)) return "  ·  登录已过期";
-        long at = Prefs.timetableSyncedAt(this);
-        if (at <= 0) return "";
-        long days = (System.currentTimeMillis() - at) / 86_400_000L;
-        return days >= 3 ? "  ·  " + days + " 天前同步" : "";
+        return MainSyncHelper.staleHint(this);
     }
 
     void refreshSettingsTab() {
@@ -513,6 +506,9 @@ public class MainActivity extends AppCompatActivity {
             timetableView.setHiddenLocationPhrases(Prefs.hiddenLocationPhrases(this));
             timetableView.setFitAllSections(Prefs.fitAllSections(this));
             timetableView.setWarnCourses(com.ecut.campus.fun.FunPrefs.absenceWarnings(this, currentTimetable, total));
+            timetableView.setTodoCounts(CourseTodoStore.load(this).pendingCounts());
+            timetableView.setExamEntries(Prefs.examInTimetable(this)
+                    ? ExamReminder.loadEntries(this) : java.util.Collections.emptyList());
             timetableView.setTimetable(currentTimetable, week);
             if (textDock != null && textDock.getHeight() > 0) {
                 timetableView.setBottomInset(dockInset());
@@ -572,49 +568,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void startSilentSync(CampusSyncClient.Kind kind) {
-        if (activeSync != null && activeSync.isRunning()) {
-            Toast.makeText(this, "正在同步，请稍候", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        Toast.makeText(this, "正在后台同步" + kind.label + "…", Toast.LENGTH_SHORT).show();
-        activeSync = CampusSyncClient.start(newWebViewForSync(), kind,
-                new CampusSyncClient.Callback() {
-                    @Override
-                    public void onSuccess(int count) {
-                        activeSync = null;
-                        refreshTimetableTab();
-                        refreshSettingsTab();
-                        String diff = kind == CampusSyncClient.Kind.TIMETABLE
-                                ? CampusSyncClient.lastTimetableDiff : "";
-                        CampusSyncClient.lastTimetableDiff = "";
-                        if (diff != null && !diff.isEmpty()) {
-                            new AlertDialog.Builder(MainActivity.this)
-                                    .setTitle("课表有变化")
-                                    .setMessage(diff)
-                                    .setPositiveButton("知道了", null)
-                                    .show();
-                        } else {
-                            Toast.makeText(MainActivity.this,
-                                    kind.label + "已更新：" + count + " 门",
-                                    Toast.LENGTH_SHORT).show();
-                        }
-                    }
-
-                    @Override
-                    public void onLoginRequired(String message) {
-                        activeSync = null;
-                        refreshSettingsTab();
-                        WebShellActivity.offerSdjtuLogin(MainActivity.this, kind, message);
-                    }
-
-                    @Override
-                    public void onFailure(String message) {
-                        activeSync = null;
-                        refreshSettingsTab();
-                        refreshTimetableTab();
-                        DiagLog.failDialog(MainActivity.this, kind.label + "没同步成功", message);
-                    }
-                });
+        MainSyncHelper.startSilentSync(this, kind);
     }
 
 
@@ -649,6 +603,11 @@ public class MainActivity extends AppCompatActivity {
                 refreshTimetableTab();
                 refreshSettingsTab();
             }
+        } else if (requestCode == AppBackupManager.REQ_RESTORE && resultCode == Activity.RESULT_OK && data != null) {
+            AppBackupManager.handleRestoreUri(this, data.getData(), () -> {
+                refreshTimetableTab();
+                refreshSettingsTab();
+            });
         } else if (requestCode == WidgetBg.REQ_PICK && resultCode == Activity.RESULT_OK && data != null) {
             android.net.Uri picked = data.getData();
             if (settings != null) settings.onWidgetImagePicked(picked);
@@ -679,6 +638,7 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
         // 离开 App 时（课表/作息可能刚改过）顺手重排课前提醒、刷新桌面小组件
         ClassReminder.reschedule(this);
+        ExamReminder.reschedule(this);
         ClassWidget.updateAll(this);
     }
 

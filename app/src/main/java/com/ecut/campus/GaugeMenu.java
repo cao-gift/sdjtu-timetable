@@ -44,7 +44,11 @@ public final class GaugeMenu {
     public void show(View anchor, OnPick pick) {
         LinearLayout box = new LinearLayout(ctx);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setBackgroundResource(R.drawable.bg_gauge_menu);
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setCornerRadius(dp(G.GLASS ? 16 : 6));
+        bg.setColor(G.dialogSurfaceColor(ctx));
+        bg.setStroke(Math.max(1, dp(G.GLASS ? 1f : 0.7f)), G.GLASS ? G.STROKE : G.LINE);
+        box.setBackground(bg);
         box.setPadding(0, dp(6), 0, dp(6));
 
         PopupWindow pw = new PopupWindow(box, dp(212), ViewGroup.LayoutParams.WRAP_CONTENT, true);
@@ -85,14 +89,16 @@ public final class GaugeMenu {
                 tv.setText(title);
                 tv.setTextSize(14f);
                 tv.setTextColor(G.INK);
-                tv.setSingleLine(true);
-                row.addView(tv);
+                tv.setMaxLines(2);
+                row.addView(tv, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
                 row.setOnClickListener(v -> {
                     pw.dismiss();
                     pick.onPick(title);
                 });
-                box.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(42)));
+                row.setMinimumHeight(dp(44));
+                row.setPadding(dp(16), dp(8), dp(16), dp(8));
+                box.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             }
         }
         pw.showAsDropDown(anchor, -dp(212) + anchor.getWidth() - dp(4), dp(2), Gravity.NO_GRAVITY);

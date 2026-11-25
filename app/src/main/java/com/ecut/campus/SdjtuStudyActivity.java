@@ -53,6 +53,8 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
     private EditText search;
     private TextView timestamp, message, scope, tally;
     private LinearLayout filters;
+    private com.ecut.campus.view.InkEmptyView emptyArt;
+    private com.ecut.campus.view.GaugeSkeletonView skeleton;
     private final Results adapter = new Results();
 
     @Override protected void onCreate(@Nullable Bundle saved) {
@@ -167,6 +169,20 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         tally.setTypeface(Typeface.MONOSPACE);
         tally.setPadding(0, dp(12), 0, dp(8));
         header.addView(tally);
+
+        emptyArt = new com.ecut.campus.view.InkEmptyView(this);
+        emptyArt.setKind(rooms() ? com.ecut.campus.view.InkEmptyView.KIND_ROOMS
+                : com.ecut.campus.view.InkEmptyView.KIND_PLAN);
+        LinearLayout.LayoutParams eLp = new LinearLayout.LayoutParams(dp(72), dp(72));
+        eLp.gravity = Gravity.CENTER_HORIZONTAL;
+        eLp.topMargin = dp(24);
+        eLp.bottomMargin = dp(8);
+        header.addView(emptyArt, eLp);
+
+        skeleton = new com.ecut.campus.view.GaugeSkeletonView(this);
+        skeleton.setRows(5);
+        skeleton.setVisibility(View.GONE);
+        header.addView(skeleton, new LinearLayout.LayoutParams(-1, -2));
         return header;
     }
 
@@ -343,6 +359,8 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         conditionButton.setEnabled(!busy);
         conditionButton.setText("选择培养方案");
         filters.setVisibility(data != null ? View.VISIBLE : View.GONE);
+        if (skeleton != null) skeleton.setVisibility(busy && data == null ? View.VISIBLE : View.GONE);
+        if (emptyArt != null) emptyArt.setVisibility(!busy && data == null ? View.VISIBLE : View.GONE);
         renderRows();
     }
 

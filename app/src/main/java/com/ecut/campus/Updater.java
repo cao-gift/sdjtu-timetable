@@ -150,6 +150,25 @@ public final class Updater {
         return UpdateManifest.isNewer(info, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE);
     }
 
+    /** 当前是否处于 Wi-Fi 网络环境。 */
+    public static boolean isOnWifi(Context c) {
+        if (c == null) return false;
+        try {
+            android.net.ConnectivityManager cm = (android.net.ConnectivityManager)
+                    c.getApplicationContext().getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (cm == null) return false;
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                android.net.NetworkCapabilities nc = cm.getNetworkCapabilities(cm.getActiveNetwork());
+                return nc != null && nc.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI);
+            }
+            @SuppressWarnings("deprecation")
+            android.net.NetworkInfo ni = cm.getActiveNetworkInfo();
+            return ni != null && ni.isConnected() && ni.getType() == android.net.ConnectivityManager.TYPE_WIFI;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     /** 打开 App 时静默检查，6 小时最多一次；勾了「不再提示」的版本不再弹。 */
     public static void autoCheck(Activity a) {
         try { UpdateInstaller.cleanup(a); } catch (Exception ignored) {}
@@ -161,23 +180,42 @@ public final class Updater {
             Prefs.setUpdateCheckedAt(a.getApplicationContext(), System.currentTimeMillis());
             if (a.isFinishing() || a.isDestroyed() || !isNewer(r)) return;
             if (r.tag.equals(Prefs.updateSkippedTag(a))) return;
+            boolean hasApk = (r.apkUrl != null && !r.apkUrl.isEmpty())
+                    || (r.fallbackApkUrl != null && !r.fallbackApkUrl.isEmpty());
+            if (hasApk && Prefs.updateWifiBackground(a) && isOnWifi(a) && !UpdateInstaller.isReady(a, r)) {
+                UpdateInstaller.startBackground(a, r, true);
+                return;
+            }
             showDialog(a, r, true);
         });
     }
 
     public static void showDialog(Activity a, Release r, boolean allowSkip) {
         String notes = r.notes == null ? "" : r.notes.trim();
-        if (notes.length() > 600) notes = notes.substring(0, 600) + "…";
         float dp = a.getResources().getDisplayMetrics().density;
         android.widget.LinearLayout box = new android.widget.LinearLayout(a);
         box.setOrientation(android.widget.LinearLayout.VERTICAL);
         box.setPadding(Math.round(24 * dp), Math.round(8 * dp), Math.round(24 * dp), 0);
+
+        boolean ready = UpdateInstaller.isReady(a, r);
+        String metaLine = "当前 v" + BuildConfig.VERSION_NAME + " → " + r.tag
+                + (r.size > 0 ? String.format(java.util.Locale.US, " · %.1f MB", r.size / 1048576.0) : "")
+                + (ready ? " · 已下载就绪" : "");
+        android.widget.TextView meta = new android.widget.TextView(a);
+        meta.setText(metaLine);
+        meta.setTypeface(android.graphics.Typeface.MONOSPACE);
+        meta.setTextSize(11.5f);
+        meta.setTextColor(ready ? G.alarm() : G.MUTE);
+        meta.setPadding(0, 0, 0, Math.round(10 * dp));
+        box.addView(meta);
+
         android.widget.TextView msg = new android.widget.TextView(a);
-        msg.setText((notes.isEmpty() ? "" : notes + "\n\n") + "当前版本 v" + BuildConfig.VERSION_NAME);
+        msg.setText(notes.isEmpty() ? "包含常规稳定性改进与体验优化。" : notes);
         msg.setTextSize(14f);
-        msg.setTextColor(G.SUB);
-        msg.setLineSpacing(0f, 1.15f);
+        msg.setTextColor(G.INK);
+        msg.setLineSpacing(0f, 1.25f);
         box.addView(msg);
+
         android.widget.CheckBox never = new android.widget.CheckBox(a);
         never.setText("这个版本不再提示");
         never.setTextSize(13f);
@@ -186,18 +224,19 @@ public final class Updater {
             android.widget.LinearLayout.LayoutParams lp = new android.widget.LinearLayout.LayoutParams(
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT,
                     android.widget.LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.topMargin = Math.round(10 * dp);
+            lp.topMargin = Math.round(12 * dp);
             lp.leftMargin = Math.round(-6 * dp);
             box.addView(never, lp);
         }
         android.widget.ScrollView sv = new android.widget.ScrollView(a);
         sv.addView(box);
-        new MaterialAlertDialogBuilder(a)
+
+        boolean hasApk = (r.apkUrl != null && !r.apkUrl.isEmpty())
+                || (r.fallbackApkUrl != null && !r.fallbackApkUrl.isEmpty());
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(a)
                 .setTitle("发现新版本 " + r.tag)
                 .setView(sv)
-                .setPositiveButton("更新", (d, w) -> {
-                    boolean hasApk = (r.apkUrl != null && !r.apkUrl.isEmpty())
-                            || (r.fallbackApkUrl != null && !r.fallbackApkUrl.isEmpty());
+                .setPositiveButton(ready ? "立即安装" : "更新", (d, w) -> {
                     if (hasApk) UpdateInstaller.start(a, r);
                     else open(a, r.pageUrl == null || r.pageUrl.isEmpty() ? defaultDownloadPageUrl() : r.pageUrl);
                 })
@@ -206,8 +245,14 @@ public final class Updater {
                 })
                 .setOnCancelListener(d -> {
                     if (allowSkip && never.isChecked()) Prefs.setUpdateSkippedTag(a, r.tag);
-                })
-                .show();
+                });
+        if (hasApk && !ready && isOnWifi(a)) {
+            builder.setNeutralButton("Wi-Fi 后台下载", (d, w) -> {
+                Prefs.setUpdateWifiBackground(a, true);
+                UpdateInstaller.startBackground(a, r, false);
+            });
+        }
+        builder.show();
     }
 
     public static void open(Context c, String url) {

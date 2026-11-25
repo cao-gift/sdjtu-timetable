@@ -40,12 +40,15 @@ final class CourseBlockActions {
                 + (s.hasCustomTime() ? s.timeStart + "-" + s.timeEnd : s.startSection + "-" + s.endSection + "节");
         boolean hasNote = c.note != null && !c.note.isEmpty();
         String noteItem = hasNote ? "备注：" + (c.note.length() > 16 ? c.note.substring(0, 16) + "…" : c.note) : "写备注…";
+        int pendingTodos = CourseTodoStore.load(a).pendingForCourse(c.name).size();
+        String todoItem = pendingTodos > 0 ? "作业与待办（" + pendingTodos + " 项未完成）" : "作业与待办…";
         new AlertDialog.Builder(a)
                 .setTitle(head)
-                .setItems(new String[]{"仅本周停课", "调到其他时间…", noteItem, "编辑课程"}, (dlg, which) -> {
+                .setItems(new String[]{"仅本周停课", "调到其他时间…", todoItem, noteItem, "编辑课程"}, (dlg, which) -> {
                     if (which == 0) cancelOnce(a, c, s, week, refresh);
                     else if (which == 1) showMoveDialog(a, c, s, week, refresh);
-                    else if (which == 2) showNoteDialog(a, c, refresh);
+                    else if (which == 2) showTodoDialog(a, c.name, refresh);
+                    else if (which == 3) showNoteDialog(a, c, refresh);
                     else editor.open(c, s);
                 })
                 .show();
@@ -80,6 +83,113 @@ final class CourseBlockActions {
         }
         if (!extra) b.setNeutralButton("编辑课程", (dlg, w) -> editor.open(c, s));
         b.show();
+    }
+
+    /** 课程作业与待办弹窗：可新增、勾选完成、删除，未完成项自动随课前提醒推送。 */
+    static void showTodoDialog(Activity a, String courseName, Runnable refresh) {
+        float d = a.getResources().getDisplayMetrics().density;
+        com.ecut.campus.data.CourseTodo book = CourseTodoStore.load(a);
+        LinearLayout root = new LinearLayout(a);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = Math.round(20 * d);
+        root.setPadding(pad, Math.round(8 * d), pad, Math.round(4 * d));
+
+        LinearLayout listBox = new LinearLayout(a);
+        listBox.setOrientation(LinearLayout.VERTICAL);
+        root.addView(listBox, new LinearLayout.LayoutParams(-1, -2));
+
+        EditText input = new EditText(a);
+        input.setHint("添加作业或待办，如：交第 3 章习题");
+        input.setSingleLine(true);
+        input.setTextSize(14f);
+        input.setTextColor(G.INK);
+        input.setHintTextColor(G.MUTE);
+        input.setBackgroundResource(R.drawable.bg_gauge_input);
+        LinearLayout.LayoutParams inLp = new LinearLayout.LayoutParams(-1, -2);
+        inLp.topMargin = Math.round(10 * d);
+        root.addView(input, inLp);
+
+        Runnable[] rerender = new Runnable[1];
+        rerender[0] = () -> {
+            listBox.removeAllViews();
+            java.util.List<com.ecut.campus.data.CourseTodo.Item> items = book.forCourse(courseName);
+            if (items.isEmpty()) {
+                TextView empty = new TextView(a);
+                empty.setText("暂无作业或待办，添加后会在课前提醒里一起提示。");
+                empty.setTextSize(12.5f);
+                empty.setTextColor(G.MUTE);
+                empty.setPadding(0, Math.round(4 * d), 0, Math.round(4 * d));
+                listBox.addView(empty);
+                return;
+            }
+            for (com.ecut.campus.data.CourseTodo.Item item : items) {
+                LinearLayout row = new LinearLayout(a);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(0, Math.round(6 * d), 0, Math.round(6 * d));
+
+                TextView check = new TextView(a);
+                check.setText(item.done ? "■ " : "□ ");
+                check.setTypeface(android.graphics.Typeface.MONOSPACE);
+                check.setTextColor(item.done ? G.MUTE : G.alarm());
+                check.setTextSize(15f);
+                row.addView(check);
+
+                TextView tv = new TextView(a);
+                tv.setText(item.title);
+                tv.setTextSize(14f);
+                tv.setTextColor(item.done ? G.MUTE : G.INK);
+                if (item.done) tv.setPaintFlags(tv.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+                row.addView(tv, new LinearLayout.LayoutParams(0, -2, 1f));
+
+                TextView del = new TextView(a);
+                del.setText("×");
+                del.setTextSize(18f);
+                del.setTextColor(G.MUTE);
+                del.setPadding(Math.round(10 * d), Math.round(4 * d), Math.round(4 * d), Math.round(4 * d));
+                del.setOnClickListener(v -> {
+                    book.remove(item.id);
+                    CourseTodoStore.save(a, book);
+                    ClassReminder.reschedule(a);
+                    rerender[0].run();
+                    if (refresh != null) refresh.run();
+                });
+                row.addView(del);
+
+                row.setOnClickListener(v -> {
+                    book.toggle(item.id);
+                    CourseTodoStore.save(a, book);
+                    ClassReminder.reschedule(a);
+                    rerender[0].run();
+                    if (refresh != null) refresh.run();
+                });
+                listBox.addView(row);
+            }
+        };
+        rerender[0].run();
+
+        android.widget.ScrollView sv = new android.widget.ScrollView(a);
+        sv.addView(root);
+        AlertDialog dlg = new AlertDialog.Builder(a)
+                .setTitle(courseName + " · 作业与待办")
+                .setView(sv)
+                .setNegativeButton("关闭", null)
+                .setPositiveButton("添加", null)
+                .create();
+        dlg.setOnShowListener(di -> dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String t = input.getText().toString().trim();
+            if (t.isEmpty()) {
+                Toast.makeText(a, "请先填写待办内容", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            book.add(courseName, t, "");
+            CourseTodoStore.save(a, book);
+            ClassReminder.reschedule(a);
+            input.setText("");
+            rerender[0].run();
+            if (refresh != null) refresh.run();
+        }));
+        dlg.show();
     }
 
     /** 课程备注（作业、带什么、提醒）：同名课程共用一条，课块右上角显示小点。 */

@@ -52,6 +52,30 @@ public class QiangzhiGradesAndStartTest {
     }
 
     @Test
+    public void paginatedTablesMergeAndDeduplicateWithCap() {
+        String p1 = "<table id='dataList'><tr><th>开课学期</th><th>课程编号</th><th>课程名称</th><th>成绩</th><th>学分</th><th>绩点</th></tr>"
+                + "<tr><td>2025-2026-1</td><td>C001</td><td>高等数学A</td><td>90</td><td>5</td><td>4.0</td></tr>"
+                + "<tr><td>2025-2026-1</td><td>C002</td><td>线性代数</td><td>85</td><td>3</td><td>3.5</td></tr></table>";
+        String p2 = "<table id='dataList'><tr><th>开课学期</th><th>课程编号</th><th>课程名称</th><th>成绩</th><th>学分</th><th>绩点</th></tr>"
+                + "<tr><td>2025-2026-1</td><td>C002</td><td>线性代数</td><td>85</td><td>3</td><td>3.5</td></tr>"
+                + "<tr><td>2024-2025-2</td><td>C003</td><td>大学物理</td><td>82</td><td>3</td><td>3.2</td></tr></table>";
+        Grades merged = QiangzhiGrades.parseHtml(p1 + "\n" + p2);
+        assertEquals(3, merged.totalCourseCount());
+        assertEquals(2, merged.semesters.size());
+
+        // 超过 MAX_PAGES 张表时只解析前 MAX_PAGES 张，避免无限分页
+        StringBuilder many = new StringBuilder();
+        for (int i = 1; i <= QiangzhiGrades.MAX_PAGES + 5; i++) {
+            many.append("<table id='dataList'><tr><th>开课学期</th><th>课程编号</th><th>课程名称</th><th>成绩</th><th>学分</th></tr>")
+                    .append("<tr><td>2025-2026-1</td><td>K").append(i).append("</td><td>课程").append(i)
+                    .append("</td><td>80</td><td>2</td></tr></table>");
+        }
+        Grades capped = QiangzhiGrades.parseHtml(many.toString());
+        assertEquals(QiangzhiGrades.MAX_PAGES, capped.totalCourseCount());
+        assertTrue(QiangzhiGrades.extractionJs().contains("MAX_PAGES=" + QiangzhiGrades.MAX_PAGES));
+    }
+
+    @Test
     public void startFromQiangzhiCalendar() {
         String html = "<table id='kbtable'><tr><th>周次</th><th>星期一</th><th>星期二</th></tr>"
                 + "<tr><td>1</td><td title='2025年09月08日'>8</td><td title='2025年09月09日'>9</td></tr>"

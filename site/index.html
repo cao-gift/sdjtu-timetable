@@ -412,6 +412,73 @@
       font-variant-numeric: tabular-nums;
     }
 
+    /* 界面预览 · 纸墨刻度示意图（脱敏通识课 + 老师 A/B） */
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 680px) {
+      .preview-grid { grid-template-columns: 1fr; }
+    }
+    .mock {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .mock-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+    .mock-title { font-size: 13px; font-weight: 700; }
+    .mock-tag { font-family: var(--mono); font-size: 10px; color: var(--mute); letter-spacing: 0.06em; }
+    .mock-screen {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 11px;
+      min-height: 156px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mock-course {
+      border-radius: 3px;
+      padding: 6px 8px;
+      border-left: 2.5px solid var(--ink);
+      background: var(--card);
+    }
+    .mock-course.live {
+      border: 1.5px solid var(--accent);
+      border-left: 3px solid var(--accent);
+    }
+    .mock-course-name { font-weight: 700; font-size: 11.5px; color: var(--ink); }
+    .mock-course-meta { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top: 2px; }
+    .mock-live-tag { font-family: var(--mono); font-size: 10px; color: var(--accent); font-weight: 700; }
+    .mock-bar {
+      height: 3px;
+      background: var(--line);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .mock-bar > span { display: block; height: 100%; background: var(--accent); }
+    .mock-gpa-big {
+      font-family: var(--mono);
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
     @media (max-width: 520px) {
       .hero { padding: 18px 16px 16px; }
       .row { padding: 13px 14px; gap: 10px; }
@@ -431,6 +498,7 @@
         </div>
       </div>
       <div class="top-actions">
+        <a class="ghost-btn" href="./changelog.html">更新日志</a>
         <a class="ghost-btn" href="./latest.json" target="_blank" rel="noopener">JSON</a>
         <button class="ghost-btn" id="themeBtn" type="button" aria-label="切换浅色或深色主题">THEME</button>
       </div>
@@ -486,6 +554,79 @@
     <section class="card">
       <div class="notes-body" id="verNotes">1. 更新设置「关于」页微信赞赏码图片。
 2. 优化应用内远程更新体验。</div>
+    </section>
+
+    <div class="section-label">PREVIEW · 界面一览</div>
+    <section class="preview-grid" aria-label="界面预览示意图">
+      <div class="mock">
+        <div class="mock-head">
+          <span class="mock-title">周课表与实时进度</span>
+          <span class="mock-tag">01 · GAUGE</span>
+        </div>
+        <div class="mock-screen">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;">
+            <span class="mono" style="font-weight:700;font-size:15px;">第 14 周</span>
+            <span class="mono" style="font-size:10px;color:var(--accent);">● 09:42</span>
+          </div>
+          <div class="mock-course live">
+            <div class="mock-course-name">高等数学 A</div>
+            <div class="mock-live-tag">● 进行中 · 剩 18 分</div>
+            <div class="mock-course-meta">老师 A · 教A-201</div>
+          </div>
+          <div class="mock-course">
+            <div class="mock-course-name">大学物理</div>
+            <div class="mock-course-meta">老师 B · 教B-305 · □1</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="mock-head">
+          <span class="mock-title">成绩与 GPA 刻度图</span>
+          <span class="mock-tag">02 · GRADES</span>
+        </div>
+        <div class="mock-screen">
+          <div style="display:flex;justify-content:space-between;align-items:flex-end;">
+            <div>
+              <div class="mock-tag">GPA</div>
+              <div class="mock-gpa-big">3.86</div>
+            </div>
+            <span class="mono" style="font-size:10px;color:var(--sub);">加权 89.4</span>
+          </div>
+          <svg viewBox="0 0 180 54" width="100%" height="54" aria-hidden="true">
+            <line x1="6" y1="12" x2="174" y2="12" stroke="var(--line)" stroke-width="1" />
+            <line x1="6" y1="32" x2="174" y2="32" stroke="var(--line)" stroke-width="1" />
+            <line x1="6" y1="48" x2="174" y2="48" stroke="var(--line)" stroke-width="1" />
+            <polyline fill="none" stroke="var(--ink)" stroke-width="1.6" points="18,36 72,26 126,20 166,13" />
+            <circle cx="18" cy="36" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
+            <circle cx="72" cy="26" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
+            <circle cx="126" cy="20" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
+            <circle cx="166" cy="13" r="3.6" fill="var(--accent)" />
+          </svg>
+          <div style="display:flex;justify-content:space-between;font-size:11px;">
+            <span>线性代数</span>
+            <span class="mono" style="font-weight:700;">94</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mock">
+        <div class="mock-head">
+          <span class="mock-title">多尺寸桌面小组件</span>
+          <span class="mock-tag">03 · WIDGET</span>
+        </div>
+        <div class="mock-screen">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span class="mock-live-tag">NOW · 正在上课</span>
+            <span class="mono" style="font-size:10px;color:var(--mute);">2/4 门</span>
+          </div>
+          <div class="mock-gpa-big" style="font-size:24px;color:var(--accent);">18:42</div>
+          <div class="mock-bar"><span style="width:62%;"></span></div>
+          <div class="mock-course-name" style="margin-top:4px;">大学英语</div>
+          <div class="mock-course-meta">10:00 下课 · 教C-108</div>
+          <div class="mock-course-meta" style="color:var(--accent);margin-top:auto;">考试 · 高等数学A（剩 5 天）</div>
+        </div>
+      </div>
     </section>
 
     <div class="section-label">CAPABILITIES · 核心功能</div>
@@ -550,8 +691,16 @@
         </div>
         <div class="row-tag">SHA-256</div>
       </div>
-      <a class="row row-link" href="https://github.com/cao-gift/sdjtu-timetable" target="_blank" rel="noopener">
+      <a class="row row-link" href="./changelog.html">
         <div class="row-idx">02</div>
+        <div>
+          <div class="row-title">完整更新日志</div>
+          <div class="row-sub">查看从早期版本至今的每一项功能演进与修复记录</div>
+        </div>
+        <div class="row-tag">LOG ›</div>
+      </a>
+      <a class="row row-link" href="https://github.com/cao-gift/sdjtu-timetable" target="_blank" rel="noopener">
+        <div class="row-idx">03</div>
         <div>
           <div class="row-title">GitHub 项目仓库</div>
           <div class="row-sub">查看源代码与历史发布版本</div>
@@ -559,7 +708,7 @@
         <div class="row-tag">GITHUB ↗</div>
       </a>
       <a class="row row-link" href="mailto:3514088137@qq.com">
-        <div class="row-idx">03</div>
+        <div class="row-idx">04</div>
         <div>
           <div class="row-title">联系邮箱</div>
           <div class="row-sub"><span class="mono">3514088137@qq.com</span></div>

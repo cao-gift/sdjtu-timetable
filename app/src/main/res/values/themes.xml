@@ -58,6 +58,14 @@
         <item name="android:textColorHighlight">#33FF4A1C</item>
         <item name="android:colorControlActivated">@color/g_ink</item>
         <item name="colorControlActivated">@color/g_ink</item>
+        <item name="android:windowAnimationStyle">@style/Gauge.WindowAnimation</item>
+    </style>
+
+    <style name="Gauge.WindowAnimation" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@anim/gauge_enter</item>
+        <item name="android:activityOpenExitAnimation">@anim/gauge_exit</item>
+        <item name="android:activityCloseEnterAnimation">@anim/gauge_pop_enter</item>
+        <item name="android:activityCloseExitAnimation">@anim/gauge_pop_exit</item>
     </style>
 
     <style name="Gauge.Shape.Small" parent="">

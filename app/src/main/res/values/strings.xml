@@ -4,6 +4,8 @@
     <string name="widget_classes_placeholder_top">驴驴课表 · 今日课程</string>
     <string name="widget_classes_placeholder_hint">点一下打开驴驴课表</string>
     <string name="widget_classes_desc">今天还要上的课，一门一条；上完了显示明天第一节</string>
+    <string name="widget_countdown_desc">2×2 下一节课倒计时：大号等宽倒计时、课名与教室</string>
+    <string name="widget_progress_desc">4×1 今日进度条：一眼看清今天上了几节课与下一节</string>
     <string name="widget_preview_title">今日周二，还有 <font color="#FF4A1C">2</font> 门课要上</string>
     <string name="whats_new_title">驴驴课表 1.3.17</string>
     <string name="whats_new_body">全面精简设置首页、课表与作息、通用、同学、小玩意及关于页的功能副标题描述，更紧凑清爽、单行易读。</string>

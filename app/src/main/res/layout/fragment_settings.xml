@@ -795,7 +795,7 @@
                     <TextView
                         android:id="@+id/tv_widget_pin_sub"
                         style="@style/G.RowSub"
-                        android:text="桌面今日课程（4×2 / 2×2）" />
+                        android:text="今日课程 · 2×2 倒计时 · 4×1 进度条" />
                 </LinearLayout>
 
                 <TextView
@@ -1074,6 +1074,36 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_full_backup"
+                        style="@style/Gauge.Button.Outline"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:text="导出全量备份"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_full_restore"
+                        style="@style/Gauge.Button.Outline"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="8dp"
+                        android:text="一键恢复"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:orientation="horizontal">
 
 
