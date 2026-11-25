@@ -41,11 +41,18 @@ public final class CountdownWidget extends AppWidgetProvider {
         String ymd = ClassPlans.ymd(now);
         int nowMin = ClassPlans.nowMinutes(now);
         ClassPlans.Ctx x = ClassPlans.load(c);
-        boolean ok = x.t != null && !x.t.courses.isEmpty() && Dates.valid(x.start);
-        List<DayPlan.Item> today = ok ? ClassPlans.day(x, ymd) : null;
-        List<DayPlan.Item> tomorrow = ok ? ClassPlans.day(x, Dates.addDays(ymd, 1)) : null;
+        int week = Dates.valid(x.start) ? Dates.weekOf(x.start, ymd) : 0;
+        int semState = ClassWidget.state(x, week);
+        List<DayPlan.Item> today = semState == com.ecut.campus.data.WidgetDay.OK ? ClassPlans.day(x, ymd) : null;
+        List<DayPlan.Item> tomorrow = semState == com.ecut.campus.data.WidgetDay.OK
+                ? ClassPlans.day(x, Dates.addDays(ymd, 1)) : null;
         String examHint = ExamReminder.upcomingBanner(c, now);
-        return WidgetProgress.build(today, tomorrow, nowMin, examHint);
+        String todoHint = TodoReminder.upcomingWidgetHint(c, now);
+        com.ecut.campus.data.Holidays.BreakInfo holidayBreak =
+                semState == com.ecut.campus.data.WidgetDay.OK
+                        ? com.ecut.campus.data.Holidays.activeBreak(x.t, ymd) : null;
+        return WidgetProgress.build(today, tomorrow, nowMin, examHint, todoHint,
+                semState, ymd, x.start, holidayBreak);
     }
 
     static void render(Context c, AppWidgetManager m, int[] ids) {
@@ -63,15 +70,13 @@ public final class CountdownWidget extends AppWidgetProvider {
         for (int id : ids) {
             try {
                 RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_countdown);
-                if (theme != ClassWidget.THEME_SYSTEM) {
-                    v.setImageViewResource(R.id.wc_bg, night ? R.drawable.w_card_night : R.drawable.w_card_day);
-                    v.setTextColor(R.id.wc_title, ink);
-                    v.setTextColor(R.id.wc_detail, sub);
-                    v.setTextColor(R.id.wc_readout, ink);
-                    v.setTextColor(R.id.wc_chrono, ink);
-                }
+                v.setImageViewResource(R.id.wc_bg, ClassWidget.cardDrawable(c, theme, night));
+                v.setTextColor(R.id.wc_title, ink);
+                v.setTextColor(R.id.wc_detail, sub);
                 boolean urgent = snap.mode == WidgetProgress.MODE_LIVE;
                 v.setTextColor(R.id.wc_badge, urgent ? accent : sub);
+                v.setTextColor(R.id.wc_readout, urgent ? accent : ink);
+                v.setTextColor(R.id.wc_chrono, urgent ? accent : ink);
                 v.setTextViewText(R.id.wc_badge, snap.badge);
                 v.setTextViewText(R.id.wc_title, snap.title);
                 v.setTextViewText(R.id.wc_detail, snap.detail);
@@ -86,7 +91,6 @@ public final class CountdownWidget extends AppWidgetProvider {
                         v.setChronometerCountDown(R.id.wc_chrono, true);
                         v.setViewVisibility(R.id.wc_chrono, View.VISIBLE);
                         v.setViewVisibility(R.id.wc_readout, View.GONE);
-                        if (urgent) v.setTextColor(R.id.wc_chrono, accent);
                         useChrono = true;
                     }
                 }

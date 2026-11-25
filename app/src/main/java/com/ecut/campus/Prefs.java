@@ -230,6 +230,12 @@ public final class Prefs {
     public static String shareName(Context ctx) { return sp(ctx).getString("share_name", ""); }
     public static void setShareName(Context ctx, String n) { sp(ctx).edit().putString("share_name", n).apply(); }
 
+    /** 课表变动后自动同步写入系统日历「驴驴课表」（默认关）。 */
+    public static boolean calendarAutoSync(Context ctx) { return sp(ctx).getBoolean("calendar_auto_sync", false); }
+    public static void setCalendarAutoSync(Context ctx, boolean v) { sp(ctx).edit().putBoolean("calendar_auto_sync", v).apply(); }
+    public static long calendarSyncedAt(Context ctx) { return sp(ctx).getLong("calendar_synced_at", 0L); }
+    public static void setCalendarSyncedAt(Context ctx, long t) { sp(ctx).edit().putLong("calendar_synced_at", t).apply(); }
+
     /**
      * 判断升级前的本地状态是否属于非交院学校（需要清理旧校会话、成绩缓存与未读提醒）。
      * 纯 Java 可测，便于覆盖单校升级与跨校迁移边界。

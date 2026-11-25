@@ -83,7 +83,7 @@ final class SettingsTab {
         View backGen = settingsFragment.findViewById(R.id.btn_settings_back_general);
         if (backGen != null) backGen.setOnClickListener(v -> showPage(R.id.settings_page_root));
         View icsRow = settingsFragment.findViewById(R.id.row_export_ics);
-        if (icsRow != null) icsRow.setOnClickListener(v -> a.exportIcs());
+        if (icsRow != null) icsRow.setOnClickListener(v -> CalendarSyncManager.showMenu(a, this::refresh));
         bindClassRemind();
         bindNextClassNotice();
         com.google.android.material.materialswitch.MaterialSwitch rainSw =
@@ -161,6 +161,22 @@ final class SettingsTab {
         View restoreBtn = settingsFragment.findViewById(R.id.btn_full_restore);
         if (restoreBtn != null) restoreBtn.setOnClickListener(v -> AppBackupManager.pickRestore(a));
 
+        View diagRow = settingsFragment.findViewById(R.id.row_export_diag);
+        if (diagRow != null) diagRow.setOnClickListener(v -> DiagLog.export(a));
+
+        View advToggle = settingsFragment.findViewById(R.id.row_advanced_toggle);
+        View advBody = settingsFragment.findViewById(R.id.box_advanced_body);
+        TextView advChev = settingsFragment.findViewById(R.id.tv_advanced_chevron);
+        if (advToggle != null && advBody != null) {
+            advToggle.setOnClickListener(v -> {
+                boolean open = advBody.getVisibility() != View.VISIBLE;
+                advBody.setVisibility(open ? View.VISIBLE : View.GONE);
+                if (advChev != null) advChev.setText(open ? "▾" : "▸");
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                a.refreshDockBlur();
+            });
+        }
+
         View clearDataBtn = settingsFragment.findViewById(R.id.btn_clear_local_data);
         if (clearDataBtn != null) {
             clearDataBtn.setOnClickListener(v -> new AlertDialog.Builder(a)
@@ -183,6 +199,7 @@ final class SettingsTab {
                         ClassWidget.updateAll(a.getApplicationContext());
                         ClassReminder.reschedule(a.getApplicationContext());
                         ExamReminder.reschedule(a.getApplicationContext());
+                        TodoReminder.reschedule(a.getApplicationContext());
                         NextClassNotice.update(a.getApplicationContext());
                         a.refreshTimetableTab();
                         refresh();
@@ -333,6 +350,21 @@ final class SettingsTab {
         bindAccountStatus();
         refreshAboutBadge();
 
+        TextView icsSub = settingsFragment.findViewById(R.id.tv_ics_sub);
+        if (icsSub != null) {
+            icsSub.setText(Prefs.calendarAutoSync(a)
+                    ? "已开启自动更新 · 点击写入或导出 .ics"
+                    : "一键写入系统日历，或导出 .ics");
+        }
+
+        TextView diagSub = settingsFragment.findViewById(R.id.tv_diag_sub);
+        if (diagSub != null) {
+            int snaps = DiagLog.snapshotCount(a);
+            diagSub.setText(snaps > 0
+                    ? "含 " + snaps + " 份解析失败快照 · 不含账号密码"
+                    : "运行日志与页面结构样本 · 不含账号密码");
+        }
+
         TextView summaryTv = settingsFragment.findViewById(R.id.tv_settings_data_summary);
         if (summaryTv != null) {
             Timetable t = TimetableStore.load(a);
@@ -394,16 +426,10 @@ final class SettingsTab {
         }
 
         if (expired) {
-            if (saved && paused) {
-                status.setText("需打开门户验证，或更新密码");
-                badge.setText("● 需验证");
-            } else if (saved) {
-                status.setText("会话已失效，同步时将自动登录");
-                badge.setText("● 登录已失效");
-            } else {
-                status.setText("登录已过期，请重新登录");
-                badge.setText("● 登录已过期");
-            }
+            com.ecut.campus.data.SessionNotice.Kind kind =
+                    com.ecut.campus.data.SessionNotice.of(true, saved, paused, false);
+            status.setText(com.ecut.campus.data.SessionNotice.status(kind));
+            badge.setText(com.ecut.campus.data.SessionNotice.badge(kind));
             badge.setTextColor(G.ACCENT);
         } else if (connected) {
             if (probingSession && age > SdjtuSessionProbe.STALE_THRESHOLD_MS) {

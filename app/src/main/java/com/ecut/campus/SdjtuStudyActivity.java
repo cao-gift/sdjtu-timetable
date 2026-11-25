@@ -46,14 +46,15 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
     private JSONObject request = new JSONObject();
     private long syncedAt;
     private String notice = "", term = "", roomState = "free";
-    private boolean needsLogin, awaitingLogin, allowLoginPrompt;
+    private boolean needsLogin, awaitingLogin, allowLoginPrompt, failed;
     private boolean canLocate;
     private Button locateButton;
-    private Button syncButton, conditionButton, filterButton, loginButton;
+    private Button syncButton, conditionButton, filterButton;
+    private SessionBanner banner;
     private EditText search;
     private TextView timestamp, message, scope, tally;
-    private LinearLayout filters;
-    private com.ecut.campus.view.InkEmptyView emptyArt;
+    private LinearLayout filters, emptyBox;
+    private TextView emptyTitle, emptySub, emptyAction;
     private com.ecut.campus.view.GaugeSkeletonView skeleton;
     private final Results adapter = new Results();
 
@@ -82,6 +83,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
             roomState = saved.getString("roomState", "free");
             term = saved.getString("term", "");
             needsLogin = saved.getBoolean("needsLogin");
+            failed = saved.getBoolean("failed");
             canLocate = saved.getBoolean("canLocate");
             awaitingLogin = saved.getBoolean("awaitingLogin");
             notice = saved.getString("notice", "");
@@ -92,6 +94,12 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         render();
         if (saved != null && (saved.getBoolean("syncing") || saved.getBoolean("roomPicker")))
             startSync(saved.getBoolean("allowLoginPrompt"));
+    }
+
+    @Override protected void onResume() {
+        super.onResume();
+        if (Prefs.hasPortalSession(this) && !Prefs.sessionExpired(this)) needsLogin = false;
+        if (banner != null) render();
     }
 
     private boolean rooms() { return feature == SdjtuAcademicPages.Feature.ROOMS; }
@@ -131,9 +139,11 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         message.setPadding(0, dp(8), 0, dp(4));
         message.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         header.addView(message);
-        loginButton = button("登录统一门户");
-        loginButton.setOnClickListener(v -> openLogin(null));
-        header.addView(loginButton, wrap());
+        banner = new SessionBanner(this, () -> openLogin(null));
+        LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(-1, -2);
+        bannerLp.topMargin = dp(4);
+        bannerLp.bottomMargin = dp(4);
+        header.addView(banner.view(), bannerLp);
         locateButton = button("在教务中定位");
         locateButton.setOnClickListener(v -> feature.locate(this, LOCATE_PAGE));
         header.addView(locateButton, wrap());
@@ -170,19 +180,41 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         tally.setPadding(0, dp(12), 0, dp(8));
         header.addView(tally);
 
-        emptyArt = new com.ecut.campus.view.InkEmptyView(this);
+        emptyBox = new LinearLayout(this);
+        emptyBox.setOrientation(LinearLayout.VERTICAL);
+        emptyBox.setGravity(Gravity.CENTER_HORIZONTAL);
+        emptyBox.setPadding(dp(12), dp(28), dp(12), dp(24));
+        com.ecut.campus.view.InkEmptyView emptyArt = new com.ecut.campus.view.InkEmptyView(this);
         emptyArt.setKind(rooms() ? com.ecut.campus.view.InkEmptyView.KIND_ROOMS
                 : com.ecut.campus.view.InkEmptyView.KIND_PLAN);
-        LinearLayout.LayoutParams eLp = new LinearLayout.LayoutParams(dp(72), dp(72));
-        eLp.gravity = Gravity.CENTER_HORIZONTAL;
-        eLp.topMargin = dp(24);
-        eLp.bottomMargin = dp(8);
-        header.addView(emptyArt, eLp);
+        emptyBox.addView(emptyArt, new LinearLayout.LayoutParams(dp(72), dp(72)));
+        emptyTitle = new TextView(this);
+        emptyTitle.setTextSize(15f);
+        emptyTitle.setTypeface(Typeface.DEFAULT_BOLD);
+        emptyTitle.setTextColor(G.INK);
+        emptyTitle.setPadding(0, dp(10), 0, 0);
+        emptyBox.addView(emptyTitle);
+        emptySub = new TextView(this);
+        emptySub.setTextSize(13f);
+        emptySub.setTextColor(G.SUB);
+        emptySub.setGravity(Gravity.CENTER);
+        emptySub.setPadding(0, dp(6), 0, 0);
+        emptyBox.addView(emptySub);
+        emptyAction = Ui.button(this, rooms() ? "选择查询条件" : "同步培养方案", true, v -> {
+            if (rooms()) put(request, "roomAction", "options");
+            startSync();
+        });
+        LinearLayout.LayoutParams eaLp = new LinearLayout.LayoutParams(-2, -2);
+        eaLp.topMargin = dp(16);
+        emptyBox.addView(emptyAction, eaLp);
+        header.addView(emptyBox, new LinearLayout.LayoutParams(-1, -2));
 
         skeleton = new com.ecut.campus.view.GaugeSkeletonView(this);
         skeleton.setRows(5);
         skeleton.setVisibility(View.GONE);
-        header.addView(skeleton, new LinearLayout.LayoutParams(-1, -2));
+        LinearLayout.LayoutParams skLp = new LinearLayout.LayoutParams(-1, -2);
+        skLp.topMargin = dp(8);
+        header.addView(skeleton, skLp);
         return header;
     }
 
@@ -198,6 +230,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
             return;
         }
         canLocate = false;
+        failed = false;
         boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
         notice = rooms()
                 ? ("query".equals(request.optString("roomAction"))
@@ -232,6 +265,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
                     roomDialog.dismiss();
                     roomDialog = null;
                 }
+                failed = true;
                 needsLogin = loginRequired;
                 canLocate = !loginRequired;
                 notice = reason;
@@ -347,14 +381,11 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         else syncButton.setText(busy ? "同步中…" : "同步");
         timestamp.setText(syncedAt == 0 ? "尚未同步" : "上次同步  " +
                 DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(new Date(syncedAt)));
-        String status = notice;
-        if (status.isEmpty() && data == null) status = rooms()
-                ? "请选择校区和周次，教学楼可留空。"
-                : "点「同步」读取你的培养方案。";
+        String status = (busy || data != null) ? notice : "";
         message.setText(status);
         message.setVisibility(status.isEmpty() ? View.GONE : View.VISIBLE);
         locateButton.setVisibility(canLocate && !busy ? View.VISIBLE : View.GONE);
-        loginButton.setVisibility(needsLogin ? View.VISIBLE : View.GONE);
+        banner.update(needsLogin, busy, !awaitingLogin);
         String summary = data == null ? "" : data.optString(rooms() ? "summary" : "planChoice");
         scope.setText(summary.isEmpty() ? "" : (rooms() ? "上次查询 · " : "当前方案 · ") + summary);
         scope.setVisibility(summary.isEmpty() ? View.GONE : View.VISIBLE);
@@ -366,7 +397,24 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         conditionButton.setText("选择培养方案");
         filters.setVisibility(data != null ? View.VISIBLE : View.GONE);
         if (skeleton != null) skeleton.setVisibility(busy && data == null ? View.VISIBLE : View.GONE);
-        if (emptyArt != null) emptyArt.setVisibility(!busy && data == null ? View.VISIBLE : View.GONE);
+        if (emptyBox != null) {
+            boolean showEmpty = !busy && data == null;
+            emptyBox.setVisibility(showEmpty ? View.VISIBLE : View.GONE);
+            if (showEmpty) {
+                if (failed) {
+                    emptyTitle.setText(rooms() ? "空教室查询失败" : "培养方案同步失败");
+                    emptySub.setText(notice.isEmpty() ? "未能读取教务数据，请稍后重试。" : notice);
+                    emptyAction.setText("重试同步");
+                } else {
+                    emptyTitle.setText(rooms() ? "尚未查询空教室" : "暂无本地培养方案");
+                    emptySub.setText(rooms()
+                            ? "选择校区和周次后查询空闲教室，教学楼可留空。"
+                            : "点「同步」读取课程体系、学分与开设学期。");
+                    emptyAction.setText(rooms() ? "选择查询条件" : "同步培养方案");
+                }
+                emptyAction.setEnabled(!awaitingLogin);
+            }
+        }
         renderRows();
     }
 
@@ -536,6 +584,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         out.putBoolean("syncing", sync != null);
         out.putBoolean("allowLoginPrompt", allowLoginPrompt);
         out.putBoolean("needsLogin", needsLogin);
+        out.putBoolean("failed", failed);
         out.putBoolean("canLocate", canLocate);
         out.putBoolean("awaitingLogin", awaitingLogin);
         out.putString("notice", notice);

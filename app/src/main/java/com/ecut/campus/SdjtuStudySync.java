@@ -378,6 +378,12 @@ final class SdjtuStudySync {
         if (loginRequired) {
             Prefs.setPortalSession(activity, false);
             Prefs.setSessionExpired(activity, true);
+        } else {
+            // 页面结构无法识别时留一份脱敏快照（只含原因与去参数的页面路径），供诊断包收录。
+            String page = "";
+            try { page = web == null ? "" : String.valueOf(web.getUrl()); } catch (Throwable ignored) {}
+            DiagLog.saveParseFailureSnapshot(activity, "STUDY_" + feature.name(), message, "",
+                    page.isEmpty() || "null".equals(page) ? "" : "page=" + page);
         }
         cancel();
         callback.onFailure(message, loginRequired);

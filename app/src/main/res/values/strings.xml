@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">驴驴课表</string>
+    <string name="shortcut_today">今日课表</string>
+    <string name="shortcut_rooms">查空教室</string>
+    <string name="shortcut_grades">学业成绩</string>
+    <string name="shortcut_exams">考试安排</string>
     <string name="shortcut_pin_widget">添加今日课程组件</string>
     <string name="widget_classes_placeholder_top">驴驴课表 · 今日课程</string>
     <string name="widget_classes_placeholder_hint">点一下打开驴驴课表</string>

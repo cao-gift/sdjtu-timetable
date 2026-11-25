@@ -98,6 +98,26 @@ public final class WidgetDay {
     /** @param level {@link #WIDE} / {@link #MID} / {@link #NARROW}，其余参数同上 */
     public static Card build(int state, String ymd, int week, String start,
                              List<DayPlan.Item> today, List<DayPlan.Item> tomorrow, int nowMin, int cap, int level) {
+        return buildInternal(state, ymd, week, start, today, tomorrow, nowMin, cap, level, null, "", false);
+    }
+
+    /**
+     * 完整上下文版（供桌面小组件使用）：
+     * 开学前自动显示「距开学 N 天」，法定假期/学期结束后显示假期倒计时，临近作业截止时附带提醒。
+     */
+    public static Card buildWithContext(int state, String ymd, int week, String start,
+                                        List<DayPlan.Item> today, List<DayPlan.Item> tomorrow,
+                                        int nowMin, int cap, int level,
+                                        Holidays.BreakInfo holidayBreak, String todoHint) {
+        return buildInternal(state, ymd, week, start, today, tomorrow, nowMin, cap, level,
+                holidayBreak, todoHint == null ? "" : todoHint.trim(), true);
+    }
+
+    private static Card buildInternal(int state, String ymd, int week, String start,
+                                      List<DayPlan.Item> today, List<DayPlan.Item> tomorrow,
+                                      int nowMin, int cap, int level,
+                                      Holidays.BreakInfo holidayBreak, String todoHint,
+                                      boolean semesterCountdown) {
         Card c = new Card();
         String wd = Dates.cnDay(Dates.dayOfWeek(ymd));
         c.sub = state == OK && week >= 1 ? dot(ymd) + " / 第" + week + "周" : dot(ymd) + (wd.isEmpty() ? "" : " " + wd);
@@ -111,15 +131,40 @@ public final class WidgetDay {
                 c.note = "在驴驴课表里设一下开学日期就能显示";
                 return c;
             case BEFORE:
+                if (semesterCountdown && Dates.valid(start) && Dates.valid(ymd)) {
+                    int days = (int) Math.max(1L, Dates.epochDay(start) - Dates.epochDay(ymd));
+                    String head = "距开学 ";
+                    String n = String.valueOf(days);
+                    c.title = head + n + " 天";
+                    c.numStart = head.length();
+                    c.numEnd = head.length() + n.length();
+                    c.note = "第 1 周从 " + dot(start) + " 开始";
+                    return c;
+                }
                 c.title = "还没开学";
                 c.note = Dates.valid(start) ? "开学见，第 1 周从 " + dot(start) + " 开始" : "开学见";
                 return c;
             case AFTER:
+                if (semesterCountdown) {
+                    c.title = "假期中";
+                    c.note = "本学期课程已结束，新学期课表同步后自动切换";
+                    return c;
+                }
                 c.title = "这学期的课上完啦";
                 c.note = "放假愉快，新学期课表同步后会显示在这";
                 return c;
             default:
                 break;
+        }
+        if (semesterCountdown && holidayBreak != null && (today == null || today.isEmpty())) {
+            String head = holidayBreak.label + "假期 · 剩 ";
+            String n = String.valueOf(holidayBreak.daysLeft);
+            c.title = head + n + " 天";
+            c.numStart = head.length();
+            c.numEnd = head.length() + n.length();
+            c.note = "共 " + holidayBreak.totalDays + " 天假"
+                    + (todoHint.isEmpty() ? "，好好休息" : " · " + todoHint);
+            return c;
         }
         cap = Math.max(1, cap);
         if (level == NARROW) cap = Math.min(cap, 2);
@@ -130,6 +175,9 @@ public final class WidgetDay {
             c.title = head + n + (level == NARROW ? " 门" : " 门课要上");
             c.numStart = head.length();
             c.numEnd = head.length() + n.length();
+            if (!todoHint.isEmpty() && level == WIDE) {
+                c.sub = c.sub + " · " + todoHint;
+            }
             int shown = Math.min(cap, left.size());
             c.more = left.size() - shown;
             boolean soonDone = false;
@@ -159,8 +207,11 @@ public final class WidgetDay {
             return c;
         }
         c.title = today == null || today.isEmpty() ? "今天没课" : "今天的课上完了";
+        if (!todoHint.isEmpty() && level == WIDE) {
+            c.sub = c.sub + " · " + todoHint;
+        }
         if (tomorrow == null || tomorrow.isEmpty()) {
-            c.note = "明天也没课，好好休息";
+            c.note = todoHint.isEmpty() ? "明天也没课，好好休息" : todoHint;
         } else {
             Chip ch = chip(tomorrow.get(0), level);
             ch.tag = "明天";

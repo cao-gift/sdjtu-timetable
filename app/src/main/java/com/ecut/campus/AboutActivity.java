@@ -157,7 +157,7 @@ public class AboutActivity extends AppCompatActivity {
         FrameLayout frame = new FrameLayout(this);
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(Ui.dp(this, G.CARD_RADIUS));
-        bg.setColor(0xFFFFFFFF);
+        bg.setColor(0xFFFBFAF7);
         bg.setStroke(Math.max(1, Ui.dp(this, 1)), G.LINE);
         frame.setBackground(bg);
         frame.setClipToOutline(true);

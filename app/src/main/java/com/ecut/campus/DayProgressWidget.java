@@ -48,17 +48,18 @@ public final class DayProgressWidget extends AppWidgetProvider {
         for (int id : ids) {
             try {
                 RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.widget_day_progress);
-                if (theme != ClassWidget.THEME_SYSTEM) {
-                    v.setImageViewResource(R.id.wp_bg, night ? R.drawable.w_card_night : R.drawable.w_card_day);
-                    v.setTextColor(R.id.wp_title, ink);
-                    v.setTextColor(R.id.wp_detail, sub);
-                    v.setTextColor(R.id.wp_ratio, accent);
-                    v.setTextColor(R.id.wp_chrono, accent);
-                }
+                v.setImageViewResource(R.id.wp_bg, ClassWidget.cardDrawable(c, theme, night));
+                v.setTextColor(R.id.wp_title, ink);
+                v.setTextColor(R.id.wp_detail, sub);
+                v.setTextColor(R.id.wp_ratio, snap.mode == WidgetProgress.MODE_LIVE ? accent : sub);
+                v.setTextColor(R.id.wp_chrono, accent);
                 String prefix = snap.mode == WidgetProgress.MODE_LIVE ? "正在上 · "
                         : (snap.mode == WidgetProgress.MODE_NEXT ? "下一节 · " : "");
                 v.setTextViewText(R.id.wp_title, prefix + snap.title);
-                v.setTextViewText(R.id.wp_ratio, snap.totalCount > 0 ? snap.ratioLabel + " 门" : "今日无课");
+                String ratio = snap.mode == WidgetProgress.MODE_SEMESTER
+                        ? snap.primaryReadout
+                        : (snap.totalCount > 0 ? snap.ratioLabel + " 门" : "今日无课");
+                v.setTextViewText(R.id.wp_ratio, ratio);
                 v.setProgressBar(R.id.wp_bar, 100, snap.dayPercent, false);
                 v.setTextViewText(R.id.wp_detail, snap.detail);
 

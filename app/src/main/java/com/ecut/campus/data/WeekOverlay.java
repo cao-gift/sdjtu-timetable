@@ -32,9 +32,11 @@ public final class WeekOverlay {
     public final int week;
     public final Map<Timetable.Session, Mark> cancelled = new IdentityHashMap<>();
     public final List<Extra> extras = new ArrayList<>();
-    /** 星期 → 当天标签（「国庆」「补 10/7 周三」），表头用 */
+    /** 星期 → 当天标签（「国庆」「补周三」），表头用 */
     public final String[] dayLabels = new String[8];
     public final boolean[] dayOff = new boolean[8];
+    /** 本周法定/自定义调休单行说明（无调休为空串）。 */
+    public String makeupNotice = "";
 
     private WeekOverlay(int week) { this.week = week; }
 
@@ -88,6 +90,7 @@ public final class WeekOverlay {
                     }
                 }
             }
+            o.makeupNotice = Holidays.weekNoticeSummary(t, start, week);
         }
 
         // 2. 停课 / 调课

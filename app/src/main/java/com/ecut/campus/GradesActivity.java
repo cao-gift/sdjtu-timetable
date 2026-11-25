@@ -30,6 +30,7 @@ public class GradesActivity extends AppCompatActivity {
     private String selectedSemesterFilter = "ALL";
     private CampusSyncClient activeSync;
     private boolean awaitingLogin;
+    private String lastSyncError = "";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -44,7 +45,30 @@ public class GradesActivity extends AppCompatActivity {
         View emptySyncBtn = findViewById(R.id.btn_empty_sync_grades);
         if (emptySyncBtn != null) emptySyncBtn.setOnClickListener(v -> syncGrades());
 
+        banner = new SessionBanner(this, this::loginFromBanner);
+        ViewGroup root = (ViewGroup) findViewById(R.id.grades_sync_host).getParent();
+        LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bannerLp.setMargins(dp(18), 0, dp(18), dp(8));
+        root.addView(banner.view(), 2, bannerLp);
+
         refresh();
+    }
+
+    private SessionBanner banner;
+
+    private void updateBanner() {
+        if (banner == null) return;
+        boolean busy = activeSync != null && activeSync.isRunning();
+        banner.update(false, busy, !awaitingLogin);
+    }
+
+    /** 提示条「重新登录」：登录完成后 onActivityResult 继续同步成绩。 */
+    private void loginFromBanner() {
+        if (awaitingLogin || (activeSync != null && activeSync.isRunning())) return;
+        awaitingLogin = true;
+        refresh();
+        WebShellActivity.startManualLoginForSync(this, WebShellActivity.REQ_SDJTU_GRADES, "成绩", null);
     }
 
     /** 本次打开时已经翻开的新成绩。 */
@@ -140,6 +164,7 @@ public class GradesActivity extends AppCompatActivity {
     }
 
     private void refresh() {
+        updateBanner();
         currentGrades = GradesStore.load(this);
         currentGrades.recomputeAll();
 
@@ -218,7 +243,18 @@ public class GradesActivity extends AppCompatActivity {
         TextView emptySyncBtn = findViewById(R.id.btn_empty_sync_grades);
         if (emptySyncBtn != null) {
             emptySyncBtn.setEnabled(!busy);
-            emptySyncBtn.setText(syncing ? "同步中…" : "同步成绩");
+            emptySyncBtn.setText(syncing ? "同步中…" : (lastSyncError.isEmpty() ? "同步成绩" : "重试同步"));
+        }
+        TextView emptyTitle = findViewById(R.id.tv_empty_grades_title);
+        TextView emptySub = findViewById(R.id.tv_empty_grades_sub);
+        if (emptyTitle != null && emptySub != null) {
+            if (!lastSyncError.isEmpty()) {
+                emptyTitle.setText("成绩同步失败");
+                emptySub.setText(lastSyncError);
+            } else {
+                emptyTitle.setText("暂无本地成绩档案");
+                emptySub.setText("点「同步」获取成绩。可在设置中保存统一门户账号，登录过期后自动重新登录。");
+            }
         }
         if (skeleton != null) {
             skeleton.setVisibility(syncing && displayCourses.isEmpty() ? View.VISIBLE : View.GONE);
@@ -372,6 +408,7 @@ public class GradesActivity extends AppCompatActivity {
             WebShellActivity.startManualLoginForSync(this, WebShellActivity.REQ_SDJTU_GRADES, "成绩", null);
             return;
         }
+        lastSyncError = "";
         boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
         Toast.makeText(this, autoLogin ? "正在自动登录并同步成绩…" : "正在后台同步成绩…", Toast.LENGTH_SHORT).show();
         activeSync = CampusSyncClient.startLazy(this, this::newWebViewForSync, CampusSyncClient.Kind.GRADES,
@@ -379,6 +416,7 @@ public class GradesActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(int count) {
                         activeSync = null;
+                        lastSyncError = "";
                         refresh();
                         Toast.makeText(GradesActivity.this,
                                 "成绩已更新：" + count + " 门", Toast.LENGTH_SHORT).show();
@@ -387,6 +425,7 @@ public class GradesActivity extends AppCompatActivity {
                     @Override
                     public void onLoginRequired(String message) {
                         activeSync = null;
+                        lastSyncError = message == null ? "教务登录已失效，请重新登录" : message;
                         if (allowLoginRedirect) {
                             awaitingLogin = true;
                             refresh();
@@ -401,6 +440,7 @@ public class GradesActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(String message) {
                         activeSync = null;
+                        lastSyncError = message == null || message.isEmpty() ? "请稍后重试" : message;
                         refresh();
                         DiagLog.failDialog(GradesActivity.this, "成绩没同步成功", message);
                     }

@@ -18,6 +18,8 @@
     <!-- 「让小组件自己翻页」：弹系统窗口请求不受电池优化限制 -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
@@ -154,6 +156,13 @@
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity
+            android:name=".CourseTodoActivity"
+            android:exported="false"
+            android:label="作业与待办"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
+
 
         <activity
             android:name=".AboutActivity"
@@ -248,7 +257,19 @@
             </intent-filter>
         </receiver>
 
-        <!-- 下拉快捷设置磁贴：下一节课 & 今日空教室 -->
+        <!-- 作业截止提醒（前一天晚 20:00 与当天早 08:30） -->
+        <receiver
+            android:name=".TodoReminder$Receiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- 下拉快捷设置磁贴：下一节课 & 今日空教室 & 同步课表 -->
         <service
             android:name=".NextClassTileService"
             android:exported="true"
@@ -265,6 +286,17 @@
             android:exported="true"
             android:icon="@drawable/ic_nav_timetable"
             android:label="今日空教室"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".SyncTimetableTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_refresh"
+            android:label="同步课表"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

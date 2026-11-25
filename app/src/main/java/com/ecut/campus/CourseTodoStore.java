@@ -58,5 +58,6 @@ public final class CourseTodoStore {
         File dir = ctx.getApplicationContext().getFilesDir();
         new File(dir, FILE).delete();
         new File(dir, TMP).delete();
+        TodoPhotoStore.clearAll(ctx);
     }
 }

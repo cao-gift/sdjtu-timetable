@@ -162,8 +162,19 @@ public class MainActivity extends AppCompatActivity {
         } else if ("export".equals(action) && "ics".equals(value)) {
             exportIcs();
         } else if ("open".equals(action)) {
-            if ("timetable".equals(value)) showTab(TAB_TIMETABLE);
-            else if ("settings".equals(value)) showTab(TAB_SETTINGS);
+            if ("timetable".equals(value) || "today".equals(value)) {
+                showTab(TAB_TIMETABLE);
+                if ("today".equals(value)) jumpToWeek(actualCurrentWeek());
+            } else if ("settings".equals(value)) {
+                showTab(TAB_SETTINGS);
+            } else if ("grades".equals(value)) {
+                startActivity(new Intent(this, GradesActivity.class));
+            } else if ("exams".equals(value)) {
+                startActivity(new Intent(this, SdjtuExamActivity.class));
+            } else if ("rooms".equals(value)) {
+                startActivity(new Intent(this, SdjtuStudyActivity.class)
+                        .putExtra(WebShellActivity.EXTRA_TARGET_KEY, SdjtuAcademicPages.Feature.ROOMS.target));
+            }
         }
     }
 
@@ -452,15 +463,36 @@ public class MainActivity extends AppCompatActivity {
         if (subtitle != null) {
             int until = WeekMath.daysUntilStart(start);
             boolean needStart = start.isEmpty();
-            subtitle.setOnClickListener(needStart
-                    ? v -> startActivity(new Intent(this, TimetableSettingsActivity.class)) : null);
-            subtitle.setClickable(needStart);
+            boolean needLogin = !needStart && com.ecut.campus.data.SessionNotice.needsAction(
+                    com.ecut.campus.data.SessionNotice.of(Prefs.sessionExpired(this),
+                            SdjtuCredentials.isSaved(this), SdjtuAutoLogin.isPaused(this), false));
+            String makeupSummary = needStart ? ""
+                    : com.ecut.campus.data.Holidays.weekNoticeSummary(currentTimetable, start, week);
+            if (needStart) {
+                subtitle.setOnClickListener(v -> startActivity(new Intent(this, TimetableSettingsActivity.class)));
+                subtitle.setClickable(true);
+            } else if (needLogin) {
+                subtitle.setOnClickListener(v -> WebShellActivity.startManualLoginForSync(
+                        this, WebShellActivity.REQ_SDJTU_TIMETABLE, "课表", null));
+                subtitle.setClickable(true);
+            } else if (!makeupSummary.isEmpty()) {
+                final int w = week;
+                subtitle.setOnClickListener(v -> showMakeupDialog(start, w));
+                subtitle.setClickable(true);
+            } else {
+                subtitle.setOnClickListener(null);
+                subtitle.setClickable(false);
+            }
+            String extraHint = staleHint();
+            if (!makeupSummary.isEmpty() && extraHint.isEmpty()) {
+                extraHint = "  ·  " + makeupSummary;
+            }
             subtitle.setText(needStart
                     ? "还没设第 1 周周一 · 点这里设置"
                     : (until > 0 ? "距开学 " + until + " 天 · "
                             : (week != actualCurrentWeek() ? "本周是第 " + actualCurrentWeek() + " 周 · " : ""))
                             + WeekMath.weekRangeLabel(start, week)
-                            + staleHint());
+                            + extraHint);
         }
 
         if (timetableView != null) {
@@ -584,7 +616,20 @@ public class MainActivity extends AppCompatActivity {
             RainWeather.refreshIfNeeded(this, true, () -> {
                 if (!isFinishing() && timetableView != null) timetableView.invalidate();
             });
+        } else if (requestCode == CalendarSyncManager.REQ_CALENDAR_PERM) {
+            CalendarSyncManager.onPermissionResult(this, grantResults, this::refreshSettingsTab);
         }
+    }
+
+    private void showMakeupDialog(String start, int week) {
+        java.util.List<String> lines = com.ecut.campus.data.Holidays.weekMakeupNotices(currentTimetable, start, week);
+        if (lines.isEmpty()) return;
+        new AlertDialog.Builder(this)
+                .setTitle("第 " + week + " 周调休安排")
+                .setMessage(android.text.TextUtils.join("\n", lines)
+                        + "\n\n课表已按法定调休自动调整，学校另有通知时可长按课块单独修改。")
+                .setPositiveButton("知道了", null)
+                .show();
     }
 
     @Override
@@ -599,6 +644,7 @@ public class MainActivity extends AppCompatActivity {
         // 离开 App 时（课表/作息可能刚改过）顺手重排课前提醒、刷新桌面小组件
         ClassReminder.reschedule(this);
         ExamReminder.reschedule(this);
+        TodoReminder.reschedule(this);
         ClassWidget.updateAll(this);
     }
 

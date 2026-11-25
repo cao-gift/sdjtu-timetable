@@ -30,33 +30,38 @@ public final class IcsExporter {
 
     private IcsExporter() {}
 
-    private static final class Event {
-        final String ymd;
-        final int startMinutes;
-        final int endMinutes;
-        final String summary;
-        final String location;
-        final String description;
+    /** 展开后的单节具体日程（同时供 .ics 导出与系统日历直写共用）。 */
+    public static final class CalendarEvent {
+        public final String ymd;
+        public final int startMinutes;
+        public final int endMinutes;
+        public final long startMillis;
+        public final long endMillis;
+        public final String summary;
+        public final String location;
+        public final String description;
 
-        Event(String ymd, int startMinutes, int endMinutes, String summary, String location, String description) {
+        CalendarEvent(String ymd, int startMinutes, int endMinutes, String summary, String location, String description) {
             this.ymd = ymd;
             this.startMinutes = startMinutes;
             this.endMinutes = endMinutes;
+            this.startMillis = toCnMillis(ymd, startMinutes);
+            this.endMillis = toCnMillis(ymd, endMinutes);
             this.summary = summary;
             this.location = location;
             this.description = description;
         }
     }
 
-    /** 生成整学期 ICS 文本；无开学日期时返回 null（由调用方提示）。 */
-    public static String export(Timetable t, ScheduleSettings schedule, String semesterLabel) {
-        if (t == null || t.semester == null) return null;
+    /** 展开整学期全部课程事件（自动应用法定调休、放假、停课、调课），按时间升序排列。 */
+    public static List<CalendarEvent> collectEvents(Timetable t, ScheduleSettings schedule) {
+        List<CalendarEvent> events = new ArrayList<>();
+        if (t == null || t.semester == null) return events;
         String start = WeekMath.normalizeToMonday(t.semester.startDate);
-        if (start.isEmpty() || !Dates.valid(start)) return null;
+        if (start.isEmpty() || !Dates.valid(start)) return events;
         int totalWeeks = SemesterMetaPolicy.clampWeeks(t.semester.totalWeeks);
         ScheduleSettings sched = schedule != null ? schedule : ScheduleSettings.createDefault();
 
-        List<Event> events = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (int week = 1; week <= totalWeeks; week++) {
             WeekOverlay ov = WeekOverlay.build(t, start, week);
@@ -74,11 +79,20 @@ public final class IcsExporter {
         }
 
         Collections.sort(events, Comparator
-                .comparing((Event e) -> e.ymd)
+                .comparing((CalendarEvent e) -> e.ymd)
                 .thenComparingInt(e -> e.startMinutes)
                 .thenComparingInt(e -> e.endMinutes)
                 .thenComparing(e -> e.summary)
                 .thenComparing(e -> e.location));
+        return events;
+    }
+
+    /** 生成整学期 ICS 文本；无开学日期时返回 null（由调用方提示）。 */
+    public static String export(Timetable t, ScheduleSettings schedule, String semesterLabel) {
+        if (t == null || t.semester == null) return null;
+        String start = WeekMath.normalizeToMonday(t.semester.startDate);
+        if (start.isEmpty() || !Dates.valid(start)) return null;
+        List<CalendarEvent> events = collectEvents(t, schedule);
 
         StringBuilder sb = new StringBuilder();
         sb.append("BEGIN:VCALENDAR\r\n");
@@ -93,7 +107,7 @@ public final class IcsExporter {
         String semTag = safeUidPart(t.semester.id);
         Map<String, Integer> uidCounts = new HashMap<>();
 
-        for (Event e : events) {
+        for (CalendarEvent e : events) {
             String dtStart = toUtcStamp(e.ymd, e.startMinutes);
             String dtEnd = toUtcStamp(e.ymd, e.endMinutes);
             String baseUid = "lvlv-" + semTag + "-" + e.ymd.replace("-", "")
@@ -119,7 +133,7 @@ public final class IcsExporter {
         return sb.toString();
     }
 
-    private static void collectEvent(List<Event> out, Set<String> seen, String start,
+    private static void collectEvent(List<CalendarEvent> out, Set<String> seen, String start,
                                      ScheduleSettings sched, int week,
                                      Timetable.Course c, Timetable.Session s) {
         String ymd = Dates.dateOf(start, week, s.dayOfWeek);
@@ -143,7 +157,20 @@ public final class IcsExporter {
         String teacher = s.teacherFor(week, c.teacher).trim();
         String weekNote = "第 " + week + " 周 " + Dates.cnDay(s.dayOfWeek);
         String desc = teacher.isEmpty() ? weekNote : (weekNote + " · " + teacher);
-        out.add(new Event(ymd, startMinutes, endMinutes, summary, loc, desc));
+        out.add(new CalendarEvent(ymd, startMinutes, endMinutes, summary, loc, desc));
+    }
+
+    /** 将东八区 (yyyy-MM-dd, 当日分钟数) 转为 Epoch 毫秒。 */
+    static long toCnMillis(String ymd, int minutes) {
+        String[] parts = ymd.split("-");
+        int year = Integer.parseInt(parts[0]);
+        int month = Integer.parseInt(parts[1]) - 1;
+        int day = Integer.parseInt(parts[2]);
+        int clamped = Math.max(0, Math.min(24 * 60 - 1, minutes));
+        Calendar cal = Calendar.getInstance(CN_TZ, Locale.US);
+        cal.clear();
+        cal.set(year, month, day, clamped / 60, clamped % 60, 0);
+        return cal.getTimeInMillis();
     }
 
     /** 将东八区 (yyyy-MM-dd, 当日分钟数) 转为 RFC 5545 标准 UTC 时间戳 yyyyMMdd'T'HHmmss'Z'。 */

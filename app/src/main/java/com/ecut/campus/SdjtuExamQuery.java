@@ -78,6 +78,8 @@ final class SdjtuExamQuery {
         running = null;
         // A returned row set for a different semester cannot complete this refresh.
         if (second != null && !term.isEmpty() && !term.equals(second.optString("term"))) {
+            DiagLog.saveParseFailureSnapshot(activity, "STUDY_EXAMS", "教务返回的学期与本次查询不一致",
+                    "", "expected=" + term + " actual=" + second.optString("term"));
             second = null;
             reason = "教务返回的学期与本次查询不一致。";
         }
@@ -89,6 +91,8 @@ final class SdjtuExamQuery {
         try {
             merged = SdjtuExamSchedule.merge(first, second);
         } catch (IllegalArgumentException e) {
+            DiagLog.saveParseFailureSnapshot(activity, "STUDY_EXAMS", "教务返回的考试安排无法识别",
+                    "", e.getMessage());
             callback.onFailure("教务返回的考试安排无法识别，请重试。", loginRequired);
             return;
         }

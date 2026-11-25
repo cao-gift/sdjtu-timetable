@@ -12,6 +12,7 @@ public final class WidgetProgress {
     public static final int MODE_TOMORROW = 3;
     public static final int MODE_DONE = 4;
     public static final int MODE_EMPTY = 5;
+    public static final int MODE_SEMESTER = 6;
 
     public static final class Snapshot {
         public int mode = MODE_EMPTY;
@@ -36,7 +37,56 @@ public final class WidgetProgress {
                                  List<DayPlan.Item> tomorrow,
                                  int nowMin,
                                  String examHint) {
+        return build(today, tomorrow, nowMin, examHint, "", WidgetDay.OK, "", "", null);
+    }
+
+    /**
+     * 随学期自动切换 + 作业截止提示版：
+     * 开学前显示「距开学 N 天」，法定假期 / 学期结束后显示假期倒计时，临近作业截止时在小组件提示。
+     */
+    public static Snapshot build(List<DayPlan.Item> today,
+                                 List<DayPlan.Item> tomorrow,
+                                 int nowMin,
+                                 String examHint,
+                                 String todoHint,
+                                 int semesterState,
+                                 String ymd,
+                                 String startDate,
+                                 Holidays.BreakInfo holidayBreak) {
         Snapshot s = new Snapshot();
+        String safeTodo = todoHint == null ? "" : todoHint.trim();
+
+        if (semesterState == WidgetDay.BEFORE && Dates.valid(startDate) && Dates.valid(ymd)) {
+            int days = (int) Math.max(1L, Dates.epochDay(startDate) - Dates.epochDay(ymd));
+            s.mode = MODE_SEMESTER;
+            s.badge = "OPENING · 距开学";
+            s.primaryReadout = days + "天";
+            s.title = "距开学 " + days + " 天";
+            s.detail = "第 1 周 " + WidgetDay.dot(startDate) + " 开始";
+            s.ratioLabel = "待开学";
+            return s;
+        }
+        if (semesterState == WidgetDay.AFTER) {
+            s.mode = MODE_SEMESTER;
+            s.badge = "VACATION · 假期中";
+            s.primaryReadout = "放假";
+            s.title = "本学期课程已结束";
+            s.detail = safeTodo.isEmpty() ? "假期愉快 · 新学期自动切换" : safeTodo;
+            s.ratioLabel = "假期中";
+            return s;
+        }
+        if (holidayBreak != null && (today == null || today.isEmpty())) {
+            s.mode = MODE_SEMESTER;
+            s.badge = "HOLIDAY · " + holidayBreak.label + "假期";
+            s.primaryReadout = "剩" + holidayBreak.daysLeft + "天";
+            s.title = holidayBreak.label + "放假中";
+            s.detail = safeTodo.isEmpty()
+                    ? "共 " + holidayBreak.totalDays + " 天 · 含今天剩 " + holidayBreak.daysLeft + " 天"
+                    : safeTodo;
+            s.ratioLabel = "假期中";
+            return s;
+        }
+
         int total = today == null ? 0 : today.size();
         s.totalCount = total;
 
@@ -100,6 +150,10 @@ public final class WidgetProgress {
                 s.title = examHint;
                 s.detail = "今日 " + total + " 门课已全部结束";
                 s.primaryReadout = "考试";
+            } else if (!safeTodo.isEmpty()) {
+                s.title = safeTodo;
+                s.detail = "今日 " + total + " 门课已全部结束";
+                s.primaryReadout = "作业";
             } else if (tomorrow != null && !tomorrow.isEmpty()) {
                 DayPlan.Item first = tomorrow.get(0);
                 s.title = "明天 " + first.name;
@@ -118,8 +172,19 @@ public final class WidgetProgress {
             s.mode = MODE_TOMORROW;
             s.badge = "EXAM · 近期考试";
             s.title = examHint;
-            s.detail = "今日无课";
+            s.detail = safeTodo.isEmpty() ? "今日无课" : safeTodo;
             s.primaryReadout = "备考";
+            s.ratioLabel = "0/0";
+            return s;
+        }
+
+        if (!safeTodo.isEmpty()) {
+            s.mode = MODE_TOMORROW;
+            s.badge = "TODO · 作业临近";
+            s.title = safeTodo;
+            s.detail = tomorrow != null && !tomorrow.isEmpty()
+                    ? "明天首节 " + tomorrow.get(0).name : "今日无课";
+            s.primaryReadout = "截止";
             s.ratioLabel = "0/0";
             return s;
         }

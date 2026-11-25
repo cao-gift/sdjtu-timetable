@@ -623,19 +623,19 @@
 
                     <TextView
                         style="@style/G.RowTitle"
-                        android:text="导出到手机日历" />
+                        android:text="同步到手机日历" />
 
                     <TextView
                         android:id="@+id/tv_ics_sub"
                         style="@style/G.RowSub"
-                        android:text="生成 .ics 导入系统日历" />
+                        android:text="一键写入系统日历，或导出 .ics" />
                 </LinearLayout>
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="monospace"
-                    android:text="ICS"
+                    android:text="CAL"
                     android:textColor="?attr/gMute"
                     android:textSize="11sp" />
             </LinearLayout>
@@ -829,35 +829,6 @@
             <View style="@style/G.Hair" />
 
             <LinearLayout
-                android:id="@+id/row_widget_bg_allow"
-                style="@style/G.Row">
-
-                <TextView
-                    style="@style/G.RowIndex"
-                    android:text="02" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/G.RowTitle"
-                        android:text="让小组件自己翻页" />
-
-                    <TextView
-                        android:id="@+id/tv_widget_bg_allow_sub"
-                        style="@style/G.RowSub"
-                        android:text="允许后台刷新今日课程" />
-                </LinearLayout>
-
-                <TextView style="@style/G.RowChevron" />
-            </LinearLayout>
-
-            <View style="@style/G.Hair" />
-
-            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -874,7 +845,7 @@
                     <TextView
                         style="@style/G.RowIndex"
                         android:layout_marginTop="3dp"
-                        android:text="03" />
+                        android:text="02" />
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -1071,72 +1042,185 @@
 
         <TextView
             style="@style/G.SectionLabel"
-            android:text="DATA · 本地数据" />
+            android:text="ADVANCED · 高级" />
         <com.google.android.material.card.MaterialCardView
             style="@style/G.Card">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="18dp">
-
-                <TextView
-                    android:id="@+id/tv_settings_data_summary"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="monospace"
-                    android:text="本地课表：0 门  ·  成绩：0 门"
-                    android:textColor="?attr/gSub"
-                    android:textSize="12.5sp" />
+                android:orientation="vertical">
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
+                    android:id="@+id/row_advanced_toggle"
+                    style="@style/G.Row">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_full_backup"
-                        style="@style/Gauge.Button.Outline"
+                    <TextView
+                        style="@style/G.RowIndex"
+                        android:text="··" />
+
+                    <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:text="导出全量备份"
-                        android:textSize="13sp" />
+                        android:orientation="vertical">
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_full_restore"
-                        style="@style/Gauge.Button.Outline"
-                        android:layout_width="0dp"
+                        <TextView
+                            style="@style/G.RowTitle"
+                            android:text="高级选项" />
+
+                        <TextView
+                            style="@style/G.RowSub"
+                            android:text="后台刷新 · 诊断包 · 备份与清空" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_advanced_chevron"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:layout_marginStart="10dp"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:text="一键恢复"
-                        android:textSize="13sp" />
+                        android:fontFamily="monospace"
+                        android:text="▸"
+                        android:textColor="?attr/gMute"
+                        android:textSize="16sp" />
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/box_advanced_body"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
+                    <View style="@style/G.Hair" />
 
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_clear_local_data"
-                        style="@style/Gauge.Button.Danger"
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:id="@+id/row_widget_bg_allow"
+                        style="@style/G.Row">
+
+                        <TextView
+                            style="@style/G.RowIndex"
+                            android:text="01" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/G.RowTitle"
+                                android:text="小组件后台刷新" />
+
+                            <TextView
+                                android:id="@+id/tv_widget_bg_allow_sub"
+                                style="@style/G.RowSub"
+                                android:text="允许自动翻页" />
+                        </LinearLayout>
+
+                        <TextView style="@style/G.RowChevron" />
+                    </LinearLayout>
+
+                    <View style="@style/G.Hair" />
+
+                    <LinearLayout
+                        android:id="@+id/row_export_diag"
+                        style="@style/G.Row">
+
+                        <TextView
+                            style="@style/G.RowIndex"
+                            android:text="02" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/G.RowTitle"
+                                android:text="导出诊断包" />
+
+                            <TextView
+                                android:id="@+id/tv_diag_sub"
+                                style="@style/G.RowSub"
+                                android:text="脱敏日志与页面样本 · 不含账号密码" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_diag_trail"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:fontFamily="monospace"
+                            android:text="ZIP"
+                            android:textColor="?attr/gMute"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <View style="@style/G.Hair" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="清空本地数据"
-                        android:textSize="13sp" />
-                </LinearLayout>
+                        android:orientation="vertical"
+                        android:padding="18dp">
 
+                        <TextView
+                            android:id="@+id/tv_settings_data_summary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:text="本地课表：0 门  ·  成绩：0 门"
+                            android:textColor="?attr/gSub"
+                            android:textSize="12.5sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_full_backup"
+                                style="@style/Gauge.Button.Outline"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:text="全量备份"
+                                android:textSize="13sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_full_restore"
+                                style="@style/Gauge.Button.Outline"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="10dp"
+                                android:paddingStart="8dp"
+                                android:paddingEnd="8dp"
+                                android:text="一键恢复"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_clear_local_data"
+                                style="@style/Gauge.Button.Danger"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="清空本地数据"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

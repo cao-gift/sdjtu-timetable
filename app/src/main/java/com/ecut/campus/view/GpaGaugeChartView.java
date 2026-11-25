@@ -44,6 +44,7 @@ public class GpaGaugeChartView extends View {
     private OnPointSelectListener listener;
 
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint meanPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dotFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dotStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -59,12 +60,20 @@ public class GpaGaugeChartView extends View {
     public GpaGaugeChartView(Context context, @Nullable AttributeSet attrs) {
         super(context, attrs);
         gridPaint.setStyle(Paint.Style.STROKE);
+        meanPaint.setStyle(Paint.Style.STROKE);
         linePaint.setStyle(Paint.Style.STROKE);
         linePaint.setStrokeCap(Paint.Cap.ROUND);
         linePaint.setStrokeJoin(Paint.Join.ROUND);
         dotFillPaint.setStyle(Paint.Style.FILL);
         dotStrokePaint.setStyle(Paint.Style.STROKE);
         textPaint.setTypeface(Typeface.MONOSPACE);
+    }
+
+    /** 供单测与绘制共用：计算相邻学期 GPA 变化文案（无颜色剧透，纯中性等宽数字）。 */
+    public static String trendDeltaLabel(double prevGpa, double currGpa) {
+        double delta = currGpa - prevGpa;
+        if (Math.abs(delta) < 0.005) return "持平";
+        return String.format(Locale.US, "%+.2f", delta);
     }
 
     public void setData(List<Point> list, String selectedSemesterId) {
@@ -85,7 +94,7 @@ public class GpaGaugeChartView extends View {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int w = MeasureSpec.getSize(widthMeasureSpec);
-        int h = Math.round(dp(118));
+        int h = Math.round(dp(136));
         setMeasuredDimension(w, resolveSize(h, heightMeasureSpec));
     }
 
@@ -97,18 +106,43 @@ public class GpaGaugeChartView extends View {
         int w = getWidth(), h = getHeight();
         float left = dp(34);
         float right = w - dp(16);
-        float top = dp(20);
+        float top = dp(34);
         float bottom = h - dp(24);
-        float chartH = Math.max(dp(40), bottom - top);
+        float chartH = Math.max(dp(44), bottom - top);
 
-        double minGpa = 5.0, maxGpa = 0.0;
+        double minGpa = 5.0, maxGpa = 0.0, sumGpa = 0.0;
         for (Point p : points) {
             minGpa = Math.min(minGpa, p.gpa);
             maxGpa = Math.max(maxGpa, p.gpa);
+            sumGpa += p.gpa;
         }
+        double meanGpa = sumGpa / n;
         double floor = Math.max(0.0, Math.floor((minGpa - 0.3) * 2.0) / 2.0);
         double ceil = Math.min(5.0, Math.ceil((maxGpa + 0.25) * 2.0) / 2.0);
         if (ceil - floor < 1.0) ceil = Math.min(5.0, floor + 1.0);
+
+        // 顶部等宽趋势摘要行（纯纸墨中性色，不做涨跌红绿剧透）
+        int activeIdx = n - 1;
+        for (int i = 0; i < n; i++) {
+            if (points.get(i).semesterId.equals(selectedId)) {
+                activeIdx = i;
+                break;
+            }
+        }
+        textPaint.setTextSize(sp(10f));
+        textPaint.setTypeface(Typeface.MONOSPACE);
+        textPaint.setTextAlign(Paint.Align.LEFT);
+        textPaint.setColor(G.MUTE);
+        canvas.drawText("GPA TREND · 学期趋势", 0, dp(13), textPaint);
+
+        String summary = String.format(Locale.US, "均值 %.2f", meanGpa);
+        if (activeIdx > 0) {
+            summary = "较上学期 " + trendDeltaLabel(points.get(activeIdx - 1).gpa, points.get(activeIdx).gpa)
+                    + "  ·  " + summary;
+        }
+        textPaint.setTextAlign(Paint.Align.RIGHT);
+        textPaint.setColor(G.SUB);
+        canvas.drawText(summary, right, dp(13), textPaint);
 
         // 3 条发丝水平刻度线 + 左侧等宽标尺
         gridPaint.setColor(G.LINE);
@@ -123,6 +157,14 @@ public class GpaGaugeChartView extends View {
             canvas.drawLine(left, y, right, y, gridPaint);
             canvas.drawText(String.format(Locale.US, "%.1f", val), left - dp(6), y + dp(3.2f), textPaint);
         }
+
+        // 均值虚线参考轨
+        float meanNorm = (float) ((meanGpa - floor) / Math.max(0.1, ceil - floor));
+        float meanY = bottom - chartH * Math.max(0f, Math.min(1f, meanNorm));
+        meanPaint.setColor(G.alpha(G.MUTE, 0x99));
+        meanPaint.setStrokeWidth(Math.max(1f, dp(0.8f)));
+        meanPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{dp(3), dp(3)}, 0));
+        canvas.drawLine(left, meanY, right, meanY, meanPaint);
 
         xs = new float[n];
         ys = new float[n];
@@ -145,14 +187,14 @@ public class GpaGaugeChartView extends View {
         linePaint.setStrokeWidth(dp(1.5f));
         canvas.drawPath(linePath, linePaint);
 
-        // 竖向短刻度 + 圆点 + 读数
-        float r = dp(3.8f);
-        dotStrokePaint.setStrokeWidth(dp(1.6f));
+        // 竖向短刻度 + 圆点 + 读数（仅选中/最新学期 1 处用朱砂点）
+        float r = dp(3.6f);
+        dotStrokePaint.setStrokeWidth(dp(1.5f));
         textPaint.setTextAlign(Paint.Align.CENTER);
+        int labelStep = n > 6 ? 2 : 1;
         for (int i = 0; i < n; i++) {
             Point p = points.get(i);
-            boolean active = p.semesterId.equals(selectedId)
-                    || ("ALL".equals(selectedId) && i == n - 1);
+            boolean active = i == activeIdx;
 
             // 底部标尺短刻度
             gridPaint.setColor(active ? G.alarm() : G.MUTE);
@@ -166,13 +208,15 @@ public class GpaGaugeChartView extends View {
             // 点上方等宽 GPA 数值
             textPaint.setTextSize(sp(9.5f));
             textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, active ? Typeface.BOLD : Typeface.NORMAL));
-            textPaint.setColor(active ? G.alarm() : G.SUB);
+            textPaint.setColor(active ? G.INK : G.SUB);
             canvas.drawText(String.format(Locale.US, "%.2f", p.gpa), xs[i], ys[i] - dp(7.5f), textPaint);
 
-            // 底部等宽短学期名
-            textPaint.setTextSize(sp(9f));
-            textPaint.setColor(active ? G.INK : G.MUTE);
-            canvas.drawText(p.label, xs[i], bottom + dp(16f), textPaint);
+            // 底部等宽短学期名（学期过多时抽稀避免重叠，选中项始终显示）
+            if (active || i == 0 || i == n - 1 || i % labelStep == 0) {
+                textPaint.setTextSize(sp(9f));
+                textPaint.setColor(active ? G.INK : G.MUTE);
+                canvas.drawText(p.label, xs[i], bottom + dp(16f), textPaint);
+            }
         }
     }
 

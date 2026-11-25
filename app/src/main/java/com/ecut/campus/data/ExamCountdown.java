@@ -183,6 +183,43 @@ public final class ExamCountdown {
         return out;
     }
 
+    /**
+     * 按考试时间轴排序：进行中 / 未考（最近在前） → 时间待公布 → 已结束（最近考完在前）。
+     */
+    public static List<Entry> sortTimeline(List<Entry> list, long nowMillis) {
+        List<Entry> upcoming = new ArrayList<>();
+        List<Entry> tbd = new ArrayList<>();
+        List<Entry> finished = new ArrayList<>();
+        if (list != null) {
+            for (Entry e : list) {
+                if (e == null) continue;
+                if (!e.hasDate()) tbd.add(e);
+                else if (e.endMillis > nowMillis) upcoming.add(e);
+                else finished.add(e);
+            }
+        }
+        upcoming.sort(Comparator.comparingLong(e -> e.startMillis));
+        finished.sort((a, b) -> Long.compare(b.startMillis, a.startMillis));
+        List<Entry> out = new ArrayList<>(upcoming.size() + tbd.size() + finished.size());
+        out.addAll(upcoming);
+        out.addAll(tbd);
+        out.addAll(finished);
+        return out;
+    }
+
+    /**
+     * 找出时间轴中最近一场尚未结束的考试下标；无未考项返回 -1。
+     * 考试页仅对此项使用朱砂色（确保整屏朱砂 ≤ 2 处）。
+     */
+    public static int nearestUpcomingIndex(List<Entry> sorted, long nowMillis) {
+        if (sorted == null) return -1;
+        for (int i = 0; i < sorted.size(); i++) {
+            Entry e = sorted.get(i);
+            if (e != null && e.hasDate() && e.endMillis > nowMillis) return i;
+        }
+        return -1;
+    }
+
     private static boolean sameDay(long a, long b) {
         Calendar ca = Calendar.getInstance();
         ca.setTimeInMillis(a);

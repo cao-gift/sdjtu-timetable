@@ -37,9 +37,14 @@ final class MainSyncHelper {
         return sb;
     }
 
-    /** 课表超过 3 天没同步或会话过期时，在副标题后提示一句。 */
+    /** 课表超过 3 天没同步或需要重新登录时，在副标题后提示一句（文案与各页提示条一致）。 */
     static String staleHint(Context ctx) {
-        if (Prefs.sessionExpired(ctx)) return "  ·  登录已过期";
+        if (Prefs.sessionExpired(ctx)) {
+            String hint = com.ecut.campus.data.SessionNotice.subtitleHint(
+                    com.ecut.campus.data.SessionNotice.of(true, SdjtuCredentials.isSaved(ctx),
+                            SdjtuAutoLogin.isPaused(ctx), false));
+            if (!hint.isEmpty()) return hint;
+        }
         long at = Prefs.timetableSyncedAt(ctx);
         if (at <= 0) return "";
         long days = (System.currentTimeMillis() - at) / 86_400_000L;
@@ -72,6 +77,9 @@ final class MainSyncHelper {
                         a.activeSync = null;
                         a.refreshTimetableTab();
                         a.refreshSettingsTab();
+                        if (kind == CampusSyncClient.Kind.TIMETABLE) {
+                            CalendarSyncManager.syncIfEnabledAsync(a);
+                        }
                         String diff = kind == CampusSyncClient.Kind.TIMETABLE
                                 ? CampusSyncClient.lastTimetableDiff : "";
                         CampusSyncClient.lastTimetableDiff = "";

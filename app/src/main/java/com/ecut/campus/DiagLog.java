@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Build;
 import android.widget.Toast;
 
+import com.ecut.campus.data.DiagBundle;
 import com.ecut.campus.data.Timetable;
 import com.ecut.campus.data.TimetableStore;
 
@@ -20,12 +21,17 @@ import java.nio.charset.StandardCharsets;
 import java.io.FileInputStream;
 import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * 诊断日志：同步过程、解析结果、崩溃堆栈写到 App 私有目录，
- * 用户在「关于 → 导出诊断日志」一键导出成 txt 发给开发者。
+ * 用户在「设置 → 通用 → 导出诊断包」或同步失败弹窗中一键导出成 zip 发给开发者。
  *
  * 隐私：不记录 Cookie、学号、姓名、URL 参数；课表原始数据只保留课程相关字段。
  */
@@ -36,6 +42,7 @@ public final class DiagLog {
     private static final String KB = "kblist.json";
     private static final String PAGE_SAMPLE = "page_sample.json";
     private static final String PARSE_SNAPSHOT = "parse_failure_snapshot.json";
+    private static final String SNAP_DIR = "snapshots";
     private static final long MAX_BYTES = 256 * 1024;
 
     private DiagLog() {}
@@ -153,11 +160,50 @@ public final class DiagLog {
         if (ctx == null) return;
         String snapshot = buildParseFailureSnapshot(kind, reason, rawPageStructureJson, rawHint);
         if (snapshot.isEmpty()) return;
-        try (FileOutputStream fos = new FileOutputStream(new File(dir(ctx), PARSE_SNAPSHOT))) {
-            fos.write(snapshot.getBytes(StandardCharsets.UTF_8));
-            log(ctx, "diag", "已保存解析失败快照 (" + kind + ")");
+        byte[] bytes = snapshot.getBytes(StandardCharsets.UTF_8);
+        synchronized (DiagLog.class) {
+            try (FileOutputStream fos = new FileOutputStream(new File(dir(ctx), PARSE_SNAPSHOT))) {
+                fos.write(bytes);
+            } catch (Throwable e) {
+                log(ctx, "diag", "saveParseFailureSnapshot failed: " + e);
+                return;
+            }
+            // 另存一份带时间戳的历史快照，诊断包按份收录；超出上限删最旧的。
+            try {
+                File snaps = snapshotDir(ctx);
+                String name = DiagBundle.snapshotName(kind, System.currentTimeMillis());
+                try (FileOutputStream fos = new FileOutputStream(new File(snaps, name))) {
+                    fos.write(bytes);
+                }
+                for (String old : DiagBundle.namesToPrune(snapshotNames(ctx), DiagBundle.MAX_SNAPSHOTS)) {
+                    //noinspection ResultOfMethodCallIgnored
+                    new File(snaps, old).delete();
+                }
+            } catch (Throwable e) {
+                log(ctx, "diag", "snapshot history failed: " + e);
+            }
+        }
+        log(ctx, "diag", "已保存解析失败快照 (" + kind + ")");
+    }
+
+    private static File snapshotDir(Context ctx) {
+        File d = new File(dir(ctx), SNAP_DIR);
+        if (!d.exists()) d.mkdirs();
+        return d;
+    }
+
+    /** 历史解析失败快照文件名，从新到旧。 */
+    static List<String> snapshotNames(Context ctx) {
+        String[] names = snapshotDir(ctx).list();
+        return DiagBundle.newestFirst(names == null ? new ArrayList<>() : Arrays.asList(names));
+    }
+
+    /** 已保存的解析失败快照份数（设置页诊断行显示）。 */
+    public static int snapshotCount(Context ctx) {
+        try {
+            return snapshotNames(ctx).size();
         } catch (Throwable e) {
-            log(ctx, "diag", "saveParseFailureSnapshot failed: " + e);
+            return 0;
         }
     }
 
@@ -385,6 +431,12 @@ public final class DiagLog {
             sb.append("== 解析失败快照（已脱敏，可直接转为测试用例）==\n");
             sb.append(readText(parseSnap, "(空)")).append("\n\n");
         }
+        List<String> history = snapshotNames(ctx);
+        if (!history.isEmpty()) {
+            sb.append("== 历史解析失败快照（诊断包 snapshots/ 目录）==\n");
+            for (String n : history) sb.append("- ").append(n).append('\n');
+            sb.append('\n');
+        }
         sb.append("== 运行日志（同步过程、指令、崩溃）==\n");
         sb.append(readText(new File(dir(ctx), LOG), "(空)")).append('\n');
         return sb.toString();
@@ -409,37 +461,59 @@ public final class DiagLog {
     }
 
     /**
-     * 出错时的统一弹窗：写明原因，可导出脱敏日志便于排查。
+     * 出错时的统一弹窗：写明原因，可导出脱敏诊断包便于排查。
      */
     public static void failDialog(Activity a, String title, String message) {
         if (a == null || a.isFinishing()) return;
         log(a, "fail", title + ": " + message);
         new androidx.appcompat.app.AlertDialog.Builder(a)
                 .setTitle(title)
-                .setMessage(message + "\n\n如需协助排查，可导出脱敏日志发送至 " + Updater.FEEDBACK_EMAIL + "（不含账号密码，姓名学号已去掉）。")
+                .setMessage(message + "\n\n如需协助排查，可导出脱敏诊断包发送至 " + Updater.FEEDBACK_EMAIL + "（不含账号密码，姓名学号已去掉）。")
                 .setNegativeButton("知道了", null)
-                .setPositiveButton("导出日志", (d, w) -> export(a))
+                .setPositiveButton("导出诊断包", (d, w) -> export(a))
                 .show();
     }
 
-    /** 兼容旧调用：改为直接导出脱敏日志文件。 */
+    /** 兼容旧调用：改为直接导出脱敏诊断包。 */
     public static void upload(Activity a) {
         if (a == null) return;
         export(a);
     }
 
-    /** 写成 txt 并弹出系统分享（微信 / QQ / 邮件都行）。 */
+    /**
+     * 诊断包：report.txt + 历史解析失败快照 + 页面结构样本 + 原始课表结构，打成 zip 弹出系统分享。
+     * 只收录 diag/ 目录下已脱敏的文件。
+     */
     public static void export(Activity a) {
         try {
-            String name = "lvlv-diag-" + new SimpleDateFormat("MMdd-HHmm", Locale.US)
-                    .format(new Date()) + ".txt";
+            Date now = new Date();
+            String name = "lvlv-diag-" + new SimpleDateFormat("MMdd-HHmm", Locale.US).format(now) + ".zip";
+            Map<String, byte[]> entries = new LinkedHashMap<>();
+            List<String> snaps = snapshotNames(a);
+            entries.put("README.txt", DiagBundle.readme(BuildConfig.VERSION_NAME + " (" + BuildConfig.VERSION_CODE + ")",
+                    snaps.size(), new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(now))
+                    .getBytes(StandardCharsets.UTF_8));
+            entries.put("report.txt", buildReport(a).getBytes(StandardCharsets.UTF_8));
+            File snapDir = snapshotDir(a);
+            for (String s : snaps) entries.put("snapshots/" + s, readBytesOrNull(new File(snapDir, s)));
+            entries.put("page_sample.json", readBytesOrNull(new File(dir(a), PAGE_SAMPLE)));
+            entries.put("kblist.json", readBytesOrNull(new File(dir(a), KB)));
             File out = ShareFiles.exportFile(a, name);
             try (FileOutputStream fos = new FileOutputStream(out)) {
-                fos.write(buildReport(a).getBytes(StandardCharsets.UTF_8));
+                DiagBundle.writeZip(fos, entries);
             }
-            ShareFiles.send(a, out, "text/plain", "驴驴课表诊断日志 v" + BuildConfig.VERSION_NAME, "发送诊断日志");
+            log(a, "diag", "已导出诊断包 " + name + " · 快照 " + snaps.size() + " 份");
+            ShareFiles.send(a, out, "application/zip", "驴驴课表诊断包 v" + BuildConfig.VERSION_NAME, "发送诊断包");
         } catch (Throwable e) {
             Toast.makeText(a, "导出失败：" + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private static byte[] readBytesOrNull(File f) {
+        try {
+            return f.exists() && f.length() > 0 ? readBytes(f) : null;
+        } catch (Throwable e) {
+            return null;
         }
     }
 }

@@ -141,6 +141,10 @@ public class WebShellActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         G.init(this);
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            getWindow().setStatusBarColor(G.PAPER);
+            getWindow().setNavigationBarColor(G.PAPER);
+        }
         setContentView(R.layout.activity_web);
 
         webView = findViewById(R.id.webview);

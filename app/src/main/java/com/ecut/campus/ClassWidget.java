@@ -225,7 +225,11 @@ public final class ClassWidget extends AppWidgetProvider {
                 it.rainLevel = RainWeather.levelFor(c, tomorrowYmd, it.startMin, it.endMin);
             }
         }
-        return WidgetDay.build(state, ymd, week, x.start, today, tomorrow, nowMin, cap, level);
+        com.ecut.campus.data.Holidays.BreakInfo holidayBreak =
+                state == WidgetDay.OK ? com.ecut.campus.data.Holidays.activeBreak(x.t, ymd) : null;
+        String todoHint = TodoReminder.upcomingWidgetHint(c, now);
+        return WidgetDay.buildWithContext(state, ymd, week, x.start, today, tomorrow, nowMin, cap, level,
+                holidayBreak, todoHint);
     }
 
     /** 下一次该刷新的时刻：最近的上课/下课/上课前 60 分钟，没有就明早 0:01。 */
@@ -299,12 +303,20 @@ public final class ClassWidget extends AppWidgetProvider {
                 == Configuration.UI_MODE_NIGHT_YES);
     }
 
-    private static int state(ClassPlans.Ctx x, int week) {
+    static int state(ClassPlans.Ctx x, int week) {
         if (x.t == null || x.t.courses.isEmpty()) return WidgetDay.NO_TIMETABLE;
         if (!Dates.valid(x.start)) return WidgetDay.NO_START;
         if (week < 1) return WidgetDay.BEFORE;
         if (x.totalWeeks > 0 && week > x.totalWeeks) return WidgetDay.AFTER;
         return WidgetDay.OK;
+    }
+
+    /** 根据当前应用主题与日夜状态返回小组件底卡资源（玻璃主题半透明，API 31+ 跟随系统圆角）。 */
+    static int cardDrawable(Context c, int theme, boolean night) {
+        boolean glass = Prefs.theme(c) == G.THEME_GLASS;
+        if (glass) return night ? R.drawable.w_card_glass_night : R.drawable.w_card_glass_day;
+        if (theme != THEME_SYSTEM) return night ? R.drawable.w_card_night : R.drawable.w_card_day;
+        return R.drawable.w_card;
     }
 
     /** 一个小组件的整张 RemoteViews。photoLong > 0 时用自选背景图（长边像素上限）。 */
@@ -334,8 +346,8 @@ public final class ClassWidget extends AppWidgetProvider {
         v.setViewVisibility(R.id.w_list, card.chips.isEmpty() ? View.GONE : View.VISIBLE);
         if (look != null) {
             v.setImageViewBitmap(R.id.w_bg, look.bitmap);
-        } else if (theme != THEME_SYSTEM) {
-            v.setImageViewResource(R.id.w_bg, night ? R.drawable.w_card_night : R.drawable.w_card_day);
+        } else {
+            v.setImageViewResource(R.id.w_bg, cardDrawable(c, theme, night));
         }
         if (pal.explicit) {
             v.setTextColor(R.id.w_title, ink);

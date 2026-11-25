@@ -1,6 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 长按 App 图标弹出的快捷方式：添加「今日课程」（可以拉成 2×2 方块）。 -->
 <shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_widget"
+        android:shortcutId="open_today"
+        android:shortcutLongLabel="@string/shortcut_today"
+        android:shortcutShortLabel="@string/shortcut_today">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.ecut.campus.MainActivity"
+            android:targetPackage="app.lvlv.timetable.debug">
+            <extra android:name="tangli_action" android:value="open" />
+            <extra android:name="tangli_value" android:value="today" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_widget"
+        android:shortcutId="open_rooms"
+        android:shortcutLongLabel="@string/shortcut_rooms"
+        android:shortcutShortLabel="@string/shortcut_rooms">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.ecut.campus.MainActivity"
+            android:targetPackage="app.lvlv.timetable.debug">
+            <extra android:name="tangli_action" android:value="open" />
+            <extra android:name="tangli_value" android:value="rooms" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_widget"
+        android:shortcutId="open_grades"
+        android:shortcutLongLabel="@string/shortcut_grades"
+        android:shortcutShortLabel="@string/shortcut_grades">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.ecut.campus.MainActivity"
+            android:targetPackage="app.lvlv.timetable.debug">
+            <extra android:name="tangli_action" android:value="open" />
+            <extra android:name="tangli_value" android:value="grades" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_widget"
+        android:shortcutId="open_exams"
+        android:shortcutLongLabel="@string/shortcut_exams"
+        android:shortcutShortLabel="@string/shortcut_exams">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetClass="com.ecut.campus.MainActivity"
+            android:targetPackage="app.lvlv.timetable.debug">
+            <extra android:name="tangli_action" android:value="open" />
+            <extra android:name="tangli_value" android:value="exams" />
+        </intent>
+    </shortcut>
+
     <shortcut
         android:enabled="true"
         android:icon="@drawable/ic_shortcut_widget"
