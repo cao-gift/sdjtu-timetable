@@ -466,75 +466,217 @@
       font-variant-numeric: tabular-nums;
     }
 
-    /* 界面预览 · 纸墨刻度示意图（脱敏通识课 + 老师 A/B） */
-    .preview-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-    }
-    @media (max-width: 680px) {
-      .preview-grid { grid-template-columns: 1fr; }
-    }
-    .mock {
+    /* 软件介绍卡 · 纸墨刻度风格 */
+    .intro-card {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: 8px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
+      padding: 20px 20px 18px;
+    }
+    .intro-lead {
+      margin: 0;
+      font-size: 14.5px;
+      color: var(--ink);
+      line-height: 1.75;
+    }
+    .intro-sub {
+      margin: 10px 0 0;
+      font-size: 13.5px;
+      color: var(--sub);
+      line-height: 1.72;
+    }
+    .intro-pillars {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
     }
-    .mock-head {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      border-bottom: 1px solid var(--line);
-      padding-bottom: 8px;
+    @media (max-width: 600px) {
+      .intro-pillars { grid-template-columns: 1fr; }
     }
-    .mock-title { font-size: 13px; font-weight: 700; }
-    .mock-tag { font-family: var(--mono); font-size: 10px; color: var(--mute); letter-spacing: 0.06em; }
-    .mock-screen {
-      background: var(--paper);
+    .pillar {
+      padding: 11px 12px;
       border: 1px solid var(--line);
       border-radius: 6px;
-      padding: 10px;
-      font-size: 11px;
-      min-height: 156px;
+      background: var(--paper);
+    }
+    .pillar-k {
+      font-family: var(--mono);
+      font-size: 10.5px;
+      letter-spacing: 0.08em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+    .pillar-t {
+      margin-top: 4px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .pillar-d {
+      margin-top: 3px;
+      font-size: 12px;
+      color: var(--sub);
+      line-height: 1.5;
+    }
+
+    /* 软件介绍页画廊 · 5 张 9:16 实测展示图（已脱敏） */
+    .showcase-head {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 28px 0 10px 2px;
+    }
+    .showcase-head .section-label {
+      margin: 0;
+    }
+    .showcase-nav {
+      display: inline-flex;
+      align-items: center;
       gap: 6px;
     }
-    .mock-course {
-      border-radius: 3px;
-      padding: 6px 8px;
-      border-left: 2.5px solid var(--ink);
+    .showcase-nav .ghost-btn {
+      height: 28px;
+      padding: 0 10px;
+      font-size: 11px;
+    }
+    .showcase-strip {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 2px 2px 10px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+    .showcase-strip::-webkit-scrollbar { height: 6px; }
+    .showcase-strip::-webkit-scrollbar-thumb { background: var(--line); border-radius: 99px; }
+    .shot-card {
+      flex: 0 0 218px;
+      scroll-snap-align: start;
       background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      cursor: pointer;
+      transition: border-color 140ms ease, transform 140ms ease;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+      appearance: none;
+      color: inherit;
+      font: inherit;
     }
-    .mock-course.live {
-      border: 1.5px solid var(--accent);
-      border-left: 3px solid var(--accent);
+    .shot-card:hover {
+      border-color: var(--ink);
+      transform: translateY(-2px);
     }
-    .mock-course-name { font-weight: 700; font-size: 11.5px; color: var(--ink); }
-    .mock-course-meta { font-family: var(--mono); font-size: 10px; color: var(--sub); margin-top: 2px; }
-    .mock-live-tag { font-family: var(--mono); font-size: 10px; color: var(--accent); font-weight: 700; }
-    .mock-bar {
-      height: 3px;
-      background: var(--line);
-      border-radius: 2px;
+    .shot-frame {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      border-radius: 6px;
       overflow: hidden;
-      margin-top: 4px;
+      border: 1px solid var(--line);
+      background: var(--paper);
     }
-    .mock-bar > span { display: block; height: 100%; background: var(--accent); }
-    .mock-gpa-big {
-      font-family: var(--mono);
-      font-size: 28px;
+    .shot-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .shot-meta {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 0 2px 2px;
+    }
+    .shot-title {
+      font-size: 12.5px;
       font-weight: 700;
-      line-height: 1;
-      letter-spacing: -0.03em;
+      color: var(--ink);
     }
+    .shot-idx {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      color: var(--mute);
+    }
+    .showcase-note {
+      margin: 4px 2px 0;
+      font-size: 11.5px;
+      color: var(--mute);
+    }
+
+    /* 大图预览弹层 */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      background: rgba(14, 14, 13, 0.82);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox-inner {
+      position: relative;
+      max-width: 420px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .lightbox-img {
+      max-height: 82vh;
+      max-width: 100%;
+      width: auto;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+      display: block;
+    }
+    .lightbox-bar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: #ECEAE4;
+      font-size: 13px;
+    }
+    .lightbox-btns {
+      display: inline-flex;
+      gap: 8px;
+    }
+    .lb-btn {
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.24);
+      background: rgba(23, 23, 22, 0.85);
+      color: #ECEAE4;
+      border-radius: 6px;
+      height: 34px;
+      padding: 0 12px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      cursor: pointer;
+    }
+    .lb-btn:hover { border-color: #FFFFFF; }
 
     @media (max-width: 520px) {
       .hero { padding: 18px 16px 16px; }
+      .intro-card { padding: 16px 16px 14px; }
+      .shot-card { flex: 0 0 200px; }
       .row { padding: 13px 14px; gap: 10px; }
       .row + .row::before { left: 48px; right: 14px; }
       .btn-primary, .btn-outline { width: 100%; }
@@ -612,77 +754,89 @@
 3. 「地点隐藏词组」体验升级：自动提取当前课表高频校区/教学楼前缀支持一键快捷添加，已启用词组以标签流呈现并支持轻点 `×` 秒删；卡片内与自定义编辑弹窗均提供「原地点 → 简化结果」实时效果预览。</div>
     </section>
 
-    <div class="section-label">PREVIEW · 界面一览</div>
-    <section class="preview-grid" aria-label="界面预览示意图">
-      <div class="mock">
-        <div class="mock-head">
-          <span class="mock-title">周课表与实时进度</span>
-          <span class="mock-tag">01 · GAUGE</span>
+    <div class="section-label" id="intro">ABOUT · 软件介绍</div>
+    <section class="intro-card" aria-label="软件介绍">
+      <p class="intro-lead"><strong>驴驴课表</strong>是一款专为山东交通学院在校学生打造的轻量级校园课表与教务查询工具。通过学校统一身份认证（WebVPN）登录后，即可将课表、学业成绩、培养方案与考试安排同步至手机本地离线保存，并支持实时查询全校教学楼空教室，无论在校内还是校外断网环境下都能即点即看。</p>
+      <p class="intro-sub">应用采用「刻度 Gauge」克制设计语言，内置默认「磨砂玻璃」与可选「纸墨」两套浅色/深色主题。围绕日常上课与期末复习场景，集成了连堂自动合并、地点自定义简化、GPA 学期趋势图、考试时间轴与系统日历直写、多尺寸桌面小组件、课块下雨提示、作业待办与同学约空课等实用功能。所有数据仅保存在设备本地，无开屏广告与商业追踪 SDK。</p>
+      <div class="intro-pillars">
+        <div class="pillar">
+          <div class="pillar-k">01 · OFFLINE FIRST</div>
+          <div class="pillar-t">一次同步 离线秒开</div>
+          <div class="pillar-d">课表、成绩、培养方案与考试安排全部本地缓存，告别教务系统反复登录与卡顿</div>
         </div>
-        <div class="mock-screen">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;">
-            <span class="mono" style="font-weight:700;font-size:15px;">第 14 周</span>
-            <span class="mono" style="font-size:10px;color:var(--accent);">● 09:42</span>
-          </div>
-          <div class="mock-course live">
-            <div class="mock-course-name">高等数学 A</div>
-            <div class="mock-live-tag">● 进行中 · 剩 18 分</div>
-            <div class="mock-course-meta">老师 A · 教A-201</div>
-          </div>
-          <div class="mock-course">
-            <div class="mock-course-name">大学物理</div>
-            <div class="mock-course-meta">老师 B · 教B-305 · □1</div>
-          </div>
+        <div class="pillar">
+          <div class="pillar-k">02 · GAUGE DESIGN</div>
+          <div class="pillar-t">磨砂玻璃与纸墨双主题</div>
+          <div class="pillar-d">大号等宽数字配合朱砂「此刻」强调，支持深浅色跟随系统与桌面小组件倒计时</div>
+        </div>
+        <div class="pillar">
+          <div class="pillar-k">03 · PRIVACY</div>
+          <div class="pillar-t">纯本机存储 开源透明</div>
+          <div class="pillar-d">无广告、无自有云端服务器；可选自动登录凭据经 Android Keystore 本机加密保存</div>
         </div>
       </div>
+    </section>
 
-      <div class="mock">
-        <div class="mock-head">
-          <span class="mock-title">成绩与 GPA 刻度图</span>
-          <span class="mock-tag">02 · GRADES</span>
-        </div>
-        <div class="mock-screen">
-          <div style="display:flex;justify-content:space-between;align-items:flex-end;">
-            <div>
-              <div class="mock-tag">GPA</div>
-              <div class="mock-gpa-big">3.86</div>
-            </div>
-            <span class="mono" style="font-size:10px;color:var(--sub);">加权 89.4</span>
-          </div>
-          <svg viewBox="0 0 180 54" width="100%" height="54" aria-hidden="true">
-            <line x1="6" y1="12" x2="174" y2="12" stroke="var(--line)" stroke-width="1" />
-            <line x1="6" y1="32" x2="174" y2="32" stroke="var(--line)" stroke-width="1" />
-            <line x1="6" y1="48" x2="174" y2="48" stroke="var(--line)" stroke-width="1" />
-            <polyline fill="none" stroke="var(--ink)" stroke-width="1.6" points="18,36 72,26 126,20 166,13" />
-            <circle cx="18" cy="36" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
-            <circle cx="72" cy="26" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
-            <circle cx="126" cy="20" r="3" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.5" />
-            <circle cx="166" cy="13" r="3.6" fill="var(--accent)" />
-          </svg>
-          <div style="display:flex;justify-content:space-between;font-size:11px;">
-            <span>线性代数</span>
-            <span class="mono" style="font-weight:700;">94</span>
-          </div>
-        </div>
+    <div class="showcase-head">
+      <div class="section-label">SHOWCASE · 界面介绍</div>
+      <div class="showcase-nav">
+        <button class="ghost-btn" id="shotPrev" type="button" aria-label="向左滚动截图">‹</button>
+        <button class="ghost-btn" id="shotNext" type="button" aria-label="向右滚动截图">›</button>
       </div>
+    </div>
+    <section aria-label="软件界面展示画廊">
+      <div class="showcase-strip" id="showcaseStrip">
+        <button class="shot-card" type="button" data-shot="0" aria-label="放大查看：极简周课表">
+          <div class="shot-frame">
+            <img src="./showcase/01-timetable.jpg" alt="驴驴课表周课表界面展示（示例数据）" loading="lazy" width="720" height="1280" />
+          </div>
+          <div class="shot-meta">
+            <span class="shot-title">极简周课表</span>
+            <span class="shot-idx">01 / 05</span>
+          </div>
+        </button>
 
-      <div class="mock">
-        <div class="mock-head">
-          <span class="mock-title">多尺寸桌面小组件</span>
-          <span class="mock-tag">03 · WIDGET</span>
-        </div>
-        <div class="mock-screen">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <span class="mock-live-tag">NOW · 正在上课</span>
-            <span class="mono" style="font-size:10px;color:var(--mute);">2/4 门</span>
+        <button class="shot-card" type="button" data-shot="1" aria-label="放大查看：学业成绩与 GPA 趋势">
+          <div class="shot-frame">
+            <img src="./showcase/02-grades.jpg" alt="驴驴课表学业成绩与 GPA 趋势图展示" loading="lazy" width="720" height="1280" />
           </div>
-          <div class="mock-gpa-big" style="font-size:24px;color:var(--accent);">18:42</div>
-          <div class="mock-bar"><span style="width:62%;"></span></div>
-          <div class="mock-course-name" style="margin-top:4px;">大学英语</div>
-          <div class="mock-course-meta">10:00 下课 · 教C-108</div>
-          <div class="mock-course-meta" style="color:var(--accent);margin-top:auto;">考试 · 高等数学A（剩 5 天）</div>
-        </div>
+          <div class="shot-meta">
+            <span class="shot-title">成绩与 GPA 趋势</span>
+            <span class="shot-idx">02 / 05</span>
+          </div>
+        </button>
+
+        <button class="shot-card" type="button" data-shot="2" aria-label="放大查看：实时查空教室">
+          <div class="shot-frame">
+            <img src="./showcase/03-rooms.jpg" alt="驴驴课表实时查空教室节次矩阵展示" loading="lazy" width="720" height="1280" />
+          </div>
+          <div class="shot-meta">
+            <span class="shot-title">实时空教室矩阵</span>
+            <span class="shot-idx">03 / 05</span>
+          </div>
+        </button>
+
+        <button class="shot-card" type="button" data-shot="3" aria-label="放大查看：考试时间轴与提醒">
+          <div class="shot-frame">
+            <img src="./showcase/04-exams.jpg" alt="驴驴课表考试安排时间轴与日历提醒展示" loading="lazy" width="720" height="1280" />
+          </div>
+          <div class="shot-meta">
+            <span class="shot-title">考试时间轴与提醒</span>
+            <span class="shot-idx">04 / 05</span>
+          </div>
+        </button>
+
+        <button class="shot-card" type="button" data-shot="4" aria-label="放大查看：培养方案离线查询">
+          <div class="shot-frame">
+            <img src="./showcase/05-plan.jpg" alt="驴驴课表培养方案学分统计与课程搜索展示" loading="lazy" width="720" height="1280" />
+          </div>
+          <div class="shot-meta">
+            <span class="shot-title">培养方案离线查</span>
+            <span class="shot-idx">05 / 05</span>
+          </div>
+        </button>
       </div>
+      <p class="showcase-note">点击任意介绍图可查看大图 · 课表展示中课程与教师名称已替换为脱敏示例数据</p>
     </section>
 
     <div class="section-label">CAPABILITIES · 核心功能</div>
@@ -801,6 +955,20 @@
     </footer>
   </main>
 
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="界面截图预览">
+    <div class="lightbox-inner">
+      <img class="lightbox-img" id="lbImg" src="" alt="" />
+      <div class="lightbox-bar">
+        <span id="lbCaption">01 / 05 · 极简周课表</span>
+        <div class="lightbox-btns">
+          <button class="lb-btn" id="lbPrev" type="button">‹ 上一张</button>
+          <button class="lb-btn" id="lbNext" type="button">下一张 ›</button>
+          <button class="lb-btn" id="lbClose" type="button">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
       const FALLBACK = {
@@ -873,6 +1041,57 @@
         root.dataset.theme = next;
         localStorage.setItem("lvlv_theme", next);
       });
+
+      const SHOTS = [
+        { src: "./showcase/01-timetable.jpg", title: "01 / 05 · 极简周课表 离线秒开" },
+        { src: "./showcase/02-grades.jpg", title: "02 / 05 · 成绩与绩点 一目了然" },
+        { src: "./showcase/03-rooms.jpg", title: "03 / 05 · 实时空教室 矩阵速查" },
+        { src: "./showcase/04-exams.jpg", title: "04 / 05 · 考试时间轴 考前提醒" },
+        { src: "./showcase/05-plan.jpg", title: "05 / 05 · 培养方案 离线随手查" }
+      ];
+      const strip = el("showcaseStrip");
+      const lb = el("lightbox");
+      const lbImg = el("lbImg");
+      const lbCaption = el("lbCaption");
+      let lbIdx = 0;
+
+      function openLb(idx) {
+        lbIdx = (idx + SHOTS.length) % SHOTS.length;
+        lbImg.src = SHOTS[lbIdx].src;
+        lbImg.alt = SHOTS[lbIdx].title;
+        lbCaption.textContent = SHOTS[lbIdx].title;
+        lb.classList.add("open");
+      }
+      function closeLb() {
+        lb.classList.remove("open");
+      }
+
+      if (strip) {
+        strip.querySelectorAll(".shot-card").forEach(function (card) {
+          card.addEventListener("click", function () {
+            openLb(Number(card.getAttribute("data-shot")) || 0);
+          });
+        });
+        el("shotPrev").addEventListener("click", function () {
+          strip.scrollBy({ left: -240, behavior: "smooth" });
+        });
+        el("shotNext").addEventListener("click", function () {
+          strip.scrollBy({ left: 240, behavior: "smooth" });
+        });
+      }
+
+      if (lb) {
+        el("lbPrev").addEventListener("click", function (e) { e.stopPropagation(); openLb(lbIdx - 1); });
+        el("lbNext").addEventListener("click", function (e) { e.stopPropagation(); openLb(lbIdx + 1); });
+        el("lbClose").addEventListener("click", closeLb);
+        lb.addEventListener("click", function (e) { if (e.target === lb) closeLb(); });
+        document.addEventListener("keydown", function (e) {
+          if (!lb.classList.contains("open")) return;
+          if (e.key === "Escape") closeLb();
+          else if (e.key === "ArrowLeft") openLb(lbIdx - 1);
+          else if (e.key === "ArrowRight") openLb(lbIdx + 1);
+        });
+      }
     })();
   </script>
 </body>
