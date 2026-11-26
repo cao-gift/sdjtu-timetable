@@ -54,4 +54,34 @@ public class ClassroomLabelTest {
         List<String> phrases = ClassroomLabel.parsePhrases("无影山");
         assertEquals("1号教学楼1102", ClassroomLabel.compact("无影山1号教学楼1102", phrases));
     }
+
+    @Test public void suggestsFrequentBuildingAndCampusPrefixesFromLocations() {
+        List<String> locs = Arrays.asList(
+                "无影山1号教学楼1102",
+                "无影山1号教学楼2305",
+                "无影山1号教学楼1215",
+                "长清校区综合楼B203",
+                "体育馆");
+        List<String> suggestions = ClassroomLabel.suggestPhrases(locs, 4);
+        assertEquals(Arrays.asList("无影山1号教学楼", "无影山", "长清校区综合楼", "长清校区"), suggestions);
+    }
+
+    @Test public void picksMatchedSampleLocationForPreview() {
+        List<String> locs = Arrays.asList("体育馆", "无影山1号教学楼1102", "长清校区A座203");
+        assertEquals("无影山1号教学楼1102",
+                ClassroomLabel.pickSampleLocation(locs, Collections.emptyList()));
+        assertEquals("长清校区A座203",
+                ClassroomLabel.pickSampleLocation(locs, Collections.singletonList("长清校区A座")));
+        assertEquals(ClassroomLabel.DEFAULT_SAMPLE_LOCATION,
+                ClassroomLabel.pickSampleLocation(Collections.emptyList(), Collections.emptyList()));
+    }
+
+    @Test public void addRemoveAndFormatPhrasesMaintainOrder() {
+        List<String> list = ClassroomLabel.addPhrases(Collections.emptyList(), "无影山1号教学楼，长清校区");
+        assertEquals(Arrays.asList("无影山1号教学楼", "长清校区"), list);
+        list = ClassroomLabel.addPhrases(list, "长清校区\n综合楼");
+        assertEquals(Arrays.asList("无影山1号教学楼", "长清校区", "综合楼"), list);
+        list = ClassroomLabel.removePhrase(list, "长清校区");
+        assertEquals("无影山1号教学楼\n综合楼", ClassroomLabel.formatPhrases(list));
+    }
 }

@@ -47,13 +47,202 @@
         android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingHorizontal="18dp"
-        android:paddingBottom="24dp">
+        android:paddingBottom="32dp">
 
         <LinearLayout
             android:id="@+id/tt_settings_body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical">
+
+            <TextView
+                style="@style/G.SectionLabel.Tight"
+                android:layout_marginTop="6dp"
+                android:text="TERM · 学期与周次" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/G.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="18dp"
+                        android:paddingTop="16dp"
+                        android:paddingBottom="16dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="12dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:fontFamily="monospace"
+                                android:letterSpacing="0.08"
+                                android:text="CURRENT WEEK"
+                                android:textColor="?attr/gMute"
+                                android:textSize="10.5sp" />
+
+                            <TextView
+                                android:id="@+id/tv_current_week_preview"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="3dp"
+                                android:fontFamily="monospace"
+                                android:text="第 1 周"
+                                android:textColor="?attr/gInk"
+                                android:textSize="24sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tv_first_course_preview"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="首节课：暂无"
+                                android:textColor="?attr/gSub"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_calibrate_week"
+                            style="@style/Gauge.Button.Outline.Compact"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="校准周次" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1px"
+                        android:layout_marginHorizontal="18dp"
+                        android:background="?attr/gLine" />
+
+                    <LinearLayout
+                        android:id="@+id/row_semester_start"
+                        style="@style/G.Row.Tight">
+
+                        <TextView
+                            style="@style/G.RowIndex"
+                            android:text="01" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="10dp"
+                            android:orientation="vertical">
+
+                            <TextView
+                                style="@style/G.RowTitle"
+                                android:text="开学周一" />
+
+                            <TextView
+                                style="@style/G.RowSub"
+                                android:text="第 1 周周一日期，用于推算全部周次" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_semester_start_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="6dp"
+                            android:fontFamily="monospace"
+                            android:text="未设置"
+                            android:textColor="?attr/gInk"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView style="@style/G.RowChevron" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/G.SectionLabel.Tight"
+                android:text="DISPLAY · 课表显示" />
+
+            <com.google.android.material.card.MaterialCardView
+                style="@style/G.Card">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="18dp"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            style="@style/G.RowTitle"
+                            android:text="显示天数" />
+
+                        <TextView
+                            style="@style/G.RowSub"
+                            android:text="选择展示完整七天或仅周一至周五" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="40dp"
+                            android:layout_marginTop="10dp"
+                            android:orientation="horizontal"
+                            android:padding="3dp">
+
+                            <TextView
+                                android:id="@+id/btn_days_seven"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:text="七天"
+                                android:textColor="?attr/gInk"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/btn_days_five"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:gravity="center"
+                                android:text="五天"
+                                android:textColor="?attr/gSub"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1px"
+                        android:layout_marginHorizontal="18dp"
+                        android:background="?attr/gLine" />
+
+                    <LinearLayout
+                        android:id="@+id/tt_display_toggles"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                style="@style/G.SectionLabel.Tight"
+                android:text="LOCATION · 地点简化" />
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/G.Card">
@@ -64,103 +253,9 @@
                     android:orientation="vertical"
                     android:padding="18dp">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="学期第一周周一"
-                        android:textColor="?attr/gInk"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_semester_start_value"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/bg_gauge_outline"
-                        android:fontFamily="monospace"
-                        android:gravity="center_vertical"
-                        android:paddingHorizontal="16dp"
-                        android:text="未设置"
-                        android:textColor="?attr/gInk"
-                        android:textSize="14sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_calibrate_week"
-                        style="@style/Gauge.Button.Ghost"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="-12dp"
-                        android:text="校准本周周次" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:id="@+id/tv_total_weeks_label"
-                        android:visibility="gone"
-                        android:text="学期总周数"
-                        android:textColor="?attr/gInk"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <EditText
-                        android:id="@+id/et_total_weeks"
-                        android:visibility="gone"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="10dp"
-                        android:background="@drawable/bg_gauge_input"
-                        android:inputType="number"
-                        android:maxLength="2"
-                        android:paddingHorizontal="2dp"
-                        android:text="20"
-                        android:textColor="?attr/gInk"
-            android:textColorHint="?attr/gMute"
-                        android:textSize="14sp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
-                        android:text="显示天数"
-                        android:textColor="?attr/gInk"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="42dp"
-                        android:layout_marginTop="10dp"
-                        android:orientation="horizontal"
-                        android:padding="3dp">
-
-                        <TextView
-                            android:id="@+id/btn_days_seven"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:text="七天"
-                            android:textColor="?attr/gInk"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/btn_days_five"
-                            android:layout_width="0dp"
-                            android:layout_height="match_parent"
-                            android:layout_weight="1"
-                            android:gravity="center"
-                            android:text="五天"
-                            android:textColor="?attr/gSub"
-                            android:textSize="13sp" />
-                    </LinearLayout>
-
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
@@ -168,95 +263,135 @@
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
+                            android:layout_marginEnd="10dp"
                             android:orientation="vertical">
 
                             <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="显示非本周课程"
-                                android:textColor="?attr/gInk"
-                                android:textSize="15sp"
-                                android:textStyle="bold" />
+                                style="@style/G.RowTitle"
+                                android:text="地点隐藏词组" />
 
                             <TextView
+                                android:id="@+id/tv_location_phrase_count"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="关闭后仅显示本周有课的课程"
+                                android:fontFamily="monospace"
+                                android:text="未启用"
                                 android:textColor="?attr/gMute"
                                 android:textSize="11.5sp" />
                         </LinearLayout>
 
-                        <com.google.android.material.materialswitch.MaterialSwitch
-                            android:id="@+id/switch_show_inactive"
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_hidden_location_phrases"
+                            style="@style/Gauge.Button.Outline.Compact"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:text="自定义" />
                     </LinearLayout>
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_show_course_code"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="48dp"
-                        android:text="显示课程号"
-                        android:textColor="?attr/gInk"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_hidden_location_phrases"
-                        style="@style/Gauge.Button.Ghost"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="-12dp"
-                        android:text="地点隐藏词组" />
-
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="隐藏课表卡片中的指定地点文字"
-                        android:textColor="?attr/gMute"
-                        android:textSize="12sp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                style="@style/G.Card"
-                android:layout_marginTop="12dp"
-                app:cardBackgroundColor="?attr/gChip">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="当前教学周预览"
-                        android:textColor="?attr/gInk"
-                        android:textSize="12.5sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_current_week_preview"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="第 1 周"
-                        android:textColor="?attr/gInk"
-                        android:textSize="16sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tv_first_course_preview"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="首节课：暂无"
-                        android:textColor="?attr/gInk"
+                        android:layout_marginTop="8dp"
+                        android:lineSpacingExtra="2dp"
+                        android:text="隐藏课表卡片中重复的校区或教学楼前缀，点进课程详情仍保留完整地点。"
+                        android:textColor="?attr/gSub"
                         android:textSize="12.5sp" />
+
+                    <LinearLayout
+                        android:id="@+id/box_location_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="vertical"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:letterSpacing="0.06"
+                            android:text="PREVIEW · 卡片效果预览"
+                            android:textColor="?attr/gMute"
+                            android:textSize="10sp" />
+
+                        <TextView
+                            android:id="@+id/tv_location_preview"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:lineSpacingExtra="2dp"
+                            android:textColor="?attr/gInk"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/box_active_phrases_wrap"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:fontFamily="monospace"
+                                android:letterSpacing="0.05"
+                                android:text="已隐藏词组 · 轻点移除"
+                                android:textColor="?attr/gMute"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/btn_clear_location_phrases"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:background="?attr/selectableItemBackgroundBorderless"
+                                android:paddingHorizontal="6dp"
+                                android:paddingVertical="4dp"
+                                android:text="全部清空"
+                                android:textColor="?attr/gSub"
+                                android:textSize="11.5sp" />
+                        </LinearLayout>
+
+                        <FrameLayout
+                            android:id="@+id/container_active_phrases"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/box_suggest_phrases_wrap"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_suggest_phrases_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:letterSpacing="0.05"
+                            android:text="快捷添加 · 轻点启用"
+                            android:textColor="?attr/gMute"
+                            android:textSize="11sp" />
+
+                        <FrameLayout
+                            android:id="@+id/container_suggest_phrases"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

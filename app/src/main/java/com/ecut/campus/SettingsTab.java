@@ -419,7 +419,7 @@ final class SettingsTab {
         boolean connected = Prefs.hasPortalSession(a);
         boolean expired = Prefs.sessionExpired(a);
         boolean paused = SdjtuAutoLogin.isPaused(a);
-        autoLogin.setText(saved ? "管理统一门户自动登录" : "设置统一门户自动登录");
+        autoLogin.setText(saved ? "管理自动登录" : "设置自动登录");
         autoLogin.setEnabled(!SdjtuCredentials.isUpdating());
 
         long verifiedAt = Prefs.portalSessionVerifiedAt(a);
