@@ -12,7 +12,7 @@
 
 ## 相比原版的改动与新增功能
 
-本项目基于 [augustlies/tangli](https://github.com/augustlies/tangli) `v1.3.1` 衍生开发，针对**山东交通学院**（旧版强智教务 + WebVPN）做了定向改造与功能扩展：
+本项目基于开源项目 [augustlies/tangli](https://github.com/augustlies/tangli) 衍生开发，针对**山东交通学院**（旧版强智教务 + WebVPN）做了定向改造与功能扩展：
 
 ### 新增功能
 - **查空教室**：实时查询（不缓存），默认预置无影山校区、无影山1号教学楼、当前周次与当前星期（必选），节次与教室可选；按节次矩阵展示每间教室当天各时段空闲状态，支持顶部节次快速筛选。
@@ -101,4 +101,4 @@
 
 ## 开源许可
 
-驴驴课表基于 [烫梨（augustlies/tangli）](https://github.com/augustlies/tangli) 修改，遵循 [GPL-3.0](LICENSE)。原项目 © 2026 August Lies。v1.2.3 及以前的版本仍按 MIT 发布。磨砂玻璃主题的设计参考了 [Uiverse.io](https://uiverse.io) 上的 galaxy 组件（MIT），二维码功能使用 ZXing（Apache-2.0）。
+驴驴课表基于 [烫梨（augustlies/tangli）](https://github.com/augustlies/tangli) 修改，遵循 [GPL-3.0](LICENSE)。原项目 © 2026 August Lies。磨砂玻璃主题的设计参考了 [Uiverse.io](https://uiverse.io) 上的 galaxy 组件（MIT），二维码功能使用 ZXing（Apache-2.0）。

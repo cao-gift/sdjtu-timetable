@@ -1,6 +1,6 @@
 # 驴驴课表 · Lǘlǘ Timetable
 
-**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.4.1 (73)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
+**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.5.3 (78)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
 
 [简体中文](README.md) | **English**
 
@@ -12,14 +12,14 @@ Sign in once through SDJTU WebVPN to store your **timetable, grades, empty class
 
 ## Changes from Upstream
 
-Modified from [augustlies/tangli](https://github.com/augustlies/tangli) `v1.3.1` specifically for **Shandong Jiaotong University** (legacy Qiangzhi academic system via WebVPN):
+Modified from [augustlies/tangli](https://github.com/augustlies/tangli) specifically for **Shandong Jiaotong University** (legacy Qiangzhi academic system via WebVPN):
 
 ### Added Features
-- **Empty Classroom Finder**: Choose campus and week (optional building with cascading options) in-app, search rooms, filter by occupancy or all-day availability, with offline caching.
-- **Curriculum Plan**: Sync and browse the Qiangzhi execution plan grouped by category, supporting multiple plans, semester filters, name/code search, and offline caching.
-- **Exam Schedule**: Combines regular final exams and early in-class final exams for the current term into one deduplicated, chronological offline list.
+- **Empty Classroom Finder**: Live query (not cached) with required campus, building, week, and weekday (pre-filled with Wuyingshan Campus, Building 1, current week, and current weekday) plus optional period and room filters; displays each room's free/occupied slots in a period matrix with quick period filtering.
+- **Curriculum Plan**: Sync and browse the Qiangzhi execution plan offline with total course/credit/required stats, a horizontal semester ruler filter, category-grouped cards, and keyword/code search.
+- **Exam Schedule**: Combines regular final exams and early in-class final exams for the current term into one deduplicated, chronological offline timeline.
 - **Optional Portal Auto-Login**: Opt-in under Settings → Academic Account; credentials are encrypted locally via Android Keystore, automatically falling back to the visible WebVPN portal when extra verification is required.
-- **Location Hide Phrases & Course Code Toggle**: Displays full classroom locations by default with user-configurable hide phrases for compact cards (full location preserved in details/export), plus a toggle for showing course codes.
+- **Merged Consecutive Sessions, Location Simplification & Course Code Toggle**: Automatically merges adjacent sessions of the same course/room/teacher; shows full locations by default with smart frequent-prefix suggestions, tag-chip hide phrases, and live preview in Timetable Settings (full location preserved in details/export), plus a toggle for showing course codes.
 - **Manual Fallback Capture**: If automatic menu navigation fails inside legacy frames, locate the page manually in the academic portal and tap "Read this page".
 
 ### Key Modifications & Simplifications
@@ -33,9 +33,9 @@ Modified from [augustlies/tangli](https://github.com/augustlies/tangli) `v1.3.1`
 
 Settings displays Shandong Jiaotong University and its seal, and all academic tools share one WebVPN session:
 
-- **Timetable & Grades**: Background sync with offline storage, new-grade notifications, and revealable grade cards.
-- **Empty Classrooms (`查空教室`)**: Required campus and week, optional building, room search, status filter, and all-slot availability filter.
-- **Curriculum Plan (`培养方案`)**: Grouped by course category with semester filter, keyword/code search, credits, hours, and completion status.
+- **Timetable & Grades**: One-tap sync from the timetable top bar, offline storage, GPA trend chart, score sorting, new-grade notifications, and revealable grade cards.
+- **Empty Classrooms (`查空教室`)**: Manual trigger live query (no cache), pre-filled campus/building/week/weekday, and per-room period matrix view.
+- **Curriculum Plan (`培养方案`)**: Grouped by course category with stats summary, semester ruler filter, keyword/code search, credits, hours, and completion status.
 - **Exam Schedule (`考试安排`)**: Merges current-term final and early final exams into one timeline and updates offline cache when both succeed.
 
 ---
@@ -57,9 +57,9 @@ Settings displays Shandong Jiaotong University and its seal, and all academic to
 - You get a reminder if the timetable hasn't synced in a long time or the login has expired
 
 ### 🎓 Grades
-- View grades and GPA by term
+- View grades and GPA by term with trend chart and score sorting
 - A notification when new grades are posted (checked about every 6 hours, can be turned off)
-- New grades stay "covered" until you tap to reveal them; you can read a one-line comment before revealing the score
+- New grades stay "covered" until you tap to reveal them
 
 ### 👫 Classmates
 - Generate a QR code or share code to send your timetable to a classmate (only course names, rooms, times, and schedule — no teachers or student IDs); if their daily schedule differs, they can adopt yours in one tap
@@ -67,7 +67,7 @@ Settings displays Shandong Jiaotong University and its seal, and all academic to
 - Compute the **common free time** of you and one or more classmates in one tap — no more comparing timetables class by class to plan a meal or a study session
 
 ### 🎲 Little extras
-- Settings → Little extras: how much each class is worth in tuition, a red edge on the timetable when absences approach 1/3, a two-person timetable poster, and a term persona card — all computed on your phone
+- Settings → Little extras: how much each class is worth in tuition and a red edge on the timetable when absences approach 1/3 — all computed on your phone
 
 ### 🎨 Appearance & more
 - The launcher uses the 驴驴课表 donkey icon
@@ -95,4 +95,4 @@ Please open an [Issue](https://github.com/cao-gift/sdjtu-timetable/issues) in th
 
 ## License
 
-Derived from [Tangli (augustlies/tangli)](https://github.com/augustlies/tangli), © 2026 August Lies, and distributed under [GPL-3.0](LICENSE). Versions v1.2.3 and earlier were released under MIT. The Frosted Glass theme's design references the galaxy component on [Uiverse.io](https://uiverse.io) (MIT), and QR code features use ZXing (Apache-2.0).
+Derived from [Tangli (augustlies/tangli)](https://github.com/augustlies/tangli), © 2026 August Lies, and distributed under [GPL-3.0](LICENSE). The Frosted Glass theme's design references the galaxy component on [Uiverse.io](https://uiverse.io) (MIT), and QR code features use ZXing (Apache-2.0).
