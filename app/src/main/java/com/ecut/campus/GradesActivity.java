@@ -17,7 +17,6 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.ecut.campus.data.Grades;
 import com.ecut.campus.data.GradesStore;
-import com.ecut.campus.fun.GradeFlip;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,8 +72,6 @@ public class GradesActivity extends AppCompatActivity {
 
     /** 本次打开时已经翻开的新成绩。 */
     private final java.util.Set<String> revealed = new java.util.HashSet<>();
-    /** 已经翻出批语、还没看分数的新成绩 → 那句批语。 */
-    private final java.util.Map<String, String> verdicts = new java.util.HashMap<>();
 
     private void coverScore(TextView tv) {
         tv.setText("翻开");
@@ -327,22 +324,12 @@ public class GradesActivity extends AppCompatActivity {
             };
             ViewGroup.LayoutParams lp = bar.getLayoutParams();
             if (newIds.contains(cid) && !revealed.contains(cid)) {
-                // 新成绩先盖着：点一下翻开
+                // 新成绩先盖着：点一下直接翻开分数
                 coverScore(tvScore);
                 lp.width = 0;
                 bar.setLayoutParams(lp);
-                if (verdicts.containsKey(cid)) GradeFlip.applyVerdict(tvMeta, tvScore, verdicts.get(cid));
                 row.setOnClickListener(rv -> {
                     if (revealed.contains(cid)) return;
-                    if (!verdicts.containsKey(cid)) {
-                        // 翻牌批语：先给一句话，再点一下才看分数
-                        String verdict = GradeFlip.verdictFor(this, cg);
-                        if (!verdict.isEmpty()) {
-                            verdicts.put(cid, verdict);
-                            GradeFlip.flipToVerdict(tvMeta, tvScore, verdict);
-                            return;
-                        }
-                    }
                     revealed.add(cid);
                     markSeen(cid);
                     flipReveal((View) tvScore.getParent(), showScore, bar, barW);
@@ -410,7 +397,8 @@ public class GradesActivity extends AppCompatActivity {
         }
         lastSyncError = "";
         boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
-        Toast.makeText(this, autoLogin ? "正在自动登录并同步成绩…" : "正在后台同步成绩…", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, autoLogin ? "正在自动登录并同步成绩，预计 5-10 秒…" : "正在后台同步成绩…",
+                autoLogin ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
         activeSync = CampusSyncClient.startLazy(this, this::newWebViewForSync, CampusSyncClient.Kind.GRADES,
                 new CampusSyncClient.Callback() {
                     @Override

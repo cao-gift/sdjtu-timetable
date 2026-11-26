@@ -14,6 +14,96 @@ public final class TimetableLayout {
 
     /** 下课前多少分钟进入「即将下课」淡提示状态。 */
     public static final int ENDING_SOON_MINUTES = 5;
+    /** 连续两节（或两段）课之间允许合并为连堂块的最大课间分钟数（排除午休/晚饭长休）。 */
+    public static final int MAX_CONSECUTIVE_BREAK_MINUTES = 45;
+
+    /** 课表展示块：可将同一天、同课程、同教室、同教师的相邻连堂时段合为一个连续块展示。 */
+    public static final class DisplayBlock {
+        public final Timetable.Course course;
+        public final Timetable.Session displaySession;
+        public final Timetable.Session primarySession;
+
+        public DisplayBlock(Timetable.Course course, Timetable.Session displaySession,
+                            Timetable.Session primarySession) {
+            this.course = course;
+            this.displaySession = displaySession;
+            this.primarySession = primarySession;
+        }
+    }
+
+    /**
+     * 将同一天的有效课程中、相邻连堂的同课块合并（例如 1-2 节与 3-4 节同课同教室同教师合为 1-4 节）。
+     * 跨午休/晚休（课间超过 45 分钟）、不同教室、不同教师或自定义时间段不合并；不修改原始 Timetable 数据。
+     */
+    public static List<DisplayBlock> mergeConsecutiveActive(List<DisplayBlock> raw, int week,
+                                                            ScheduleSettings schedule) {
+        List<DisplayBlock> out = new ArrayList<>();
+        if (raw == null || raw.isEmpty()) return out;
+        List<DisplayBlock> sorted = new ArrayList<>(raw);
+        sorted.sort((a, b) -> {
+            float[] pa = position(a.displaySession, schedule);
+            float[] pb = position(b.displaySession, schedule);
+            int cmp = Float.compare(pa[0], pb[0]);
+            return cmp != 0 ? cmp : Float.compare(pa[1], pb[1]);
+        });
+        for (DisplayBlock item : sorted) {
+            Timetable.Session cur = item.displaySession;
+            if (cur.hasCustomTime()) {
+                out.add(item);
+                continue;
+            }
+            DisplayBlock target = null;
+            for (int i = out.size() - 1; i >= 0; i--) {
+                DisplayBlock prev = out.get(i);
+                Timetable.Session ps = prev.displaySession;
+                if (ps.hasCustomTime()) continue;
+                if (ps.dayOfWeek != cur.dayOfWeek) continue;
+                if (ps.endSection + 1 != cur.startSection) continue;
+                if (!canMerge(prev.course, ps, item.course, cur, week, schedule)) continue;
+                target = prev;
+                break;
+            }
+            if (target == null) {
+                out.add(item);
+            } else {
+                Timetable.Session merged = copySessionForDisplay(target.displaySession, cur.endSection);
+                int idx = out.indexOf(target);
+                out.set(idx, new DisplayBlock(target.course, merged, target.primarySession));
+            }
+        }
+        return out;
+    }
+
+    private static boolean canMerge(Timetable.Course c1, Timetable.Session s1,
+                                    Timetable.Course c2, Timetable.Session s2,
+                                    int week, ScheduleSettings schedule) {
+        if (c1 != c2) {
+            String n1 = norm(c1 == null ? null : c1.name);
+            String n2 = norm(c2 == null ? null : c2.name);
+            if (n1.isEmpty() || !n1.equals(n2)) return false;
+            if (c1.colorIndex != c2.colorIndex) return false;
+            if (!norm(c1.code).equals(norm(c2.code))) return false;
+        }
+        if (!norm(s1.location).equals(norm(s2.location))) return false;
+        String t1 = norm(s1.teacherFor(week, c1 == null ? "" : c1.teacher));
+        String t2 = norm(s2.teacherFor(week, c2 == null ? "" : c2.teacher));
+        if (!t1.equals(t2)) return false;
+        if (schedule != null) {
+            int gap = schedule.startMinutes(s2.startSection) - schedule.endMinutes(s1.endSection);
+            if (gap > MAX_CONSECUTIVE_BREAK_MINUTES) return false;
+        }
+        return true;
+    }
+
+    private static Timetable.Session copySessionForDisplay(Timetable.Session base, int newEndSection) {
+        Timetable.Session s = base.copy();
+        s.endSection = Math.max(base.endSection, newEndSection);
+        return s;
+    }
+
+    private static String norm(String s) {
+        return s == null ? "" : s.trim();
+    }
 
     private TimetableLayout() {}
 

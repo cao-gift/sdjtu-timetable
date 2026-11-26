@@ -29,7 +29,7 @@ public class ShareActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         G.init(this);
-        LinearLayout col = Ui.page(this, "同学", "分享我的课表", "包含课程名、课程号（如有）、地点、时间、周次和作息");
+        LinearLayout col = Ui.page(this, "同学", "分享我的课表", "包含课程名、课程号（如有）、地点、时间、周次和上课时间");
 
         Timetable t = TimetableStore.load(this);
         if (t.courses.isEmpty()) {

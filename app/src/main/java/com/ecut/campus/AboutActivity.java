@@ -71,8 +71,6 @@ public class AboutActivity extends AppCompatActivity {
         if (Updater.hasReleaseRepository()) {
             Ui.row(this, c1, rowIndex(idx++), "GitHub 项目主页", Updater.REPO_URL, "↗ WEB",
                     v -> Updater.open(this, Updater.REPO_URL));
-            Ui.row(this, c1, rowIndex(idx++), "全部版本与更新日志", "查看发布记录", "↗ WEB",
-                    v -> Updater.open(this, Updater.RELEASES_URL));
         }
         if (Updater.hasUpdateSource()) {
             Ui.row(this, c1, rowIndex(idx++), "自动检查更新", "联网时静默检查并以角标提醒",
@@ -81,8 +79,6 @@ public class AboutActivity extends AppCompatActivity {
                         recreate();
                     });
         }
-        Ui.row(this, c1, rowIndex(idx++), "使用指南", "同步课表和成绩", "?",
-                v -> LoginGuide.show(this));
 
         Ui.label(this, col, "CONTACT · 联系与赞赏");
         LinearLayout c2 = Ui.card(this, col);

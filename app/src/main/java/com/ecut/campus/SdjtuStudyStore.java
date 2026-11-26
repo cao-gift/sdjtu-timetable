@@ -77,6 +77,10 @@ final class SdjtuStudyStore {
                 || file(ctx, SdjtuAcademicPages.Feature.EXAMS).getBaseFile().exists();
     }
 
+    static synchronized void clearRooms(Context ctx) {
+        file(ctx, SdjtuAcademicPages.Feature.ROOMS).delete();
+    }
+
     static synchronized void clear(Context ctx) {
         SdjtuStudyRoute.clear(ctx);
         file(ctx, SdjtuAcademicPages.Feature.ROOMS).delete();

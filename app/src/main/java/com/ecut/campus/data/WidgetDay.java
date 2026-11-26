@@ -213,9 +213,17 @@ public final class WidgetDay {
         if (tomorrow == null || tomorrow.isEmpty()) {
             c.note = todoHint.isEmpty() ? "明天也没课，好好休息" : todoHint;
         } else {
-            Chip ch = chip(tomorrow.get(0), level);
-            ch.tag = "明天";
-            c.chips.add(ch);
+            int shown = Math.min(cap, tomorrow.size());
+            c.more = tomorrow.size() - shown;
+            for (int i = 0; i < shown; i++) {
+                Chip ch = chip(tomorrow.get(i), level);
+                ch.tag = "明天";
+                c.chips.add(ch);
+            }
+            if (c.more > 0) {
+                Chip last = c.chips.get(c.chips.size() - 1);
+                last.tag = "明天 · +" + c.more;
+            }
         }
         return c;
     }

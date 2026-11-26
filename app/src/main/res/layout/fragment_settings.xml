@@ -106,14 +106,14 @@
                     android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_settings_sync_now"
+                        android:id="@+id/btn_settings_auto_login"
                         style="@style/Gauge.Button"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
-                        android:text="同步课表"
+                        android:text="自动登录"
                         android:textSize="13sp" />
 
                     <com.google.android.material.button.MaterialButton
@@ -312,12 +312,12 @@
 
                     <TextView
                         style="@style/G.RowTitle"
-                        android:text="课表与作息" />
+                        android:text="课表与上课时间" />
 
                     <TextView
                         android:id="@+id/tv_settings_tt_page_sub"
                         style="@style/G.RowSub"
-                        android:text="作息 · 显示 · 导入导出" />
+                        android:text="上课时间 · 显示 · 导入导出" />
                 </LinearLayout>
 
                 <TextView
@@ -375,7 +375,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="批语 · 课价 · 缺勤" />
+                        android:text="课价 · 缺勤" />
                 </LinearLayout>
 
                 <TextView
@@ -454,7 +454,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:fontFamily="monospace"
-                    android:text="使用指南 · 诊断日志 · 开源许可  ›"
+                    android:text="官方网站 · 检查更新 · 联系与赞赏  ›"
                     android:textColor="?attr/gInk"
                     android:textSize="12sp" />
 
@@ -485,13 +485,13 @@
         <TextView
             style="@style/G.PageTitle"
             android:layout_marginTop="4dp"
-            android:text="课表与作息" />
+            android:text="课表与上课时间" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="显示规则、作息与备份"
+            android:text="显示规则、上课时间与备份"
             android:textColor="?attr/gSub"
             android:textSize="12.5sp" />
         <TextView
@@ -551,7 +551,7 @@
 
                     <TextView
                         style="@style/G.RowTitle"
-                        android:text="作息时间" />
+                        android:text="上课时间" />
 
                     <TextView
                         android:id="@+id/tv_settings_schedule_summary"

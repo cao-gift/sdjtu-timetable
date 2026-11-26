@@ -140,8 +140,8 @@ final class SettingsTab {
         }
 
 
-        View syncNowBtn = settingsFragment.findViewById(R.id.btn_settings_sync_now);
-        if (syncNowBtn != null) syncNowBtn.setOnClickListener(v -> a.syncTimetable());
+        View autoLoginNowBtn = settingsFragment.findViewById(R.id.btn_settings_auto_login);
+        if (autoLoginNowBtn != null) autoLoginNowBtn.setOnClickListener(v -> a.autoLogin());
 
         View openPortalBtn = settingsFragment.findViewById(R.id.btn_settings_open_portal);
         if (openPortalBtn != null) openPortalBtn.setOnClickListener(v -> a.openPortal());
@@ -181,7 +181,7 @@ final class SettingsTab {
         if (clearDataBtn != null) {
             clearDataBtn.setOnClickListener(v -> new AlertDialog.Builder(a)
                     .setTitle("清空本地数据")
-                    .setMessage("将清空课表、成绩、空教室查询结果、培养方案、考试安排、作业待办与作息配置，并删除本机保存的自动登录账号密码。清空后无法恢复。")
+                    .setMessage("将清空课表、成绩、空教室查询结果、培养方案、考试安排、作业待办与上课时间配置，并删除本机保存的自动登录账号密码。清空后无法恢复。")
                     .setNegativeButton("取消", null)
                     .setPositiveButton("清空", (d, w) -> {
                         boolean credentialsCleared = SdjtuCredentials.clear(a);
@@ -396,9 +396,21 @@ final class SettingsTab {
     }
 
     private void bindAccountStatus() {
+        TextView autoLoginBtn = settingsFragment.findViewById(R.id.btn_settings_auto_login);
         TextView autoLogin = settingsFragment.findViewById(R.id.btn_sdjtu_auto_login);
         TextView status = settingsFragment.findViewById(R.id.host_status_text);
         TextView badge = settingsFragment.findViewById(R.id.tv_settings_node_badge);
+        if (autoLoginBtn != null) {
+            autoLoginBtn.setEnabled(!a.autoLoginBusy && !SdjtuCredentials.isUpdating());
+            autoLoginBtn.setText(a.autoLoginBusy ? "同步中…" : "自动登录");
+        }
+        if (a.autoLoginBusy) {
+            status.setText("正在同步，预计 5-10 秒…");
+            badge.setText("○ 同步中");
+            badge.setTextColor(G.ACCENT);
+            autoLogin.setEnabled(false);
+            return;
+        }
         if (Prefs.hasPortalSession(a) && !SdjtuSessionProbe.hasSchoolCookie(a)) {
             Prefs.setPortalSession(a, false);
             Prefs.setSessionExpired(a, true);

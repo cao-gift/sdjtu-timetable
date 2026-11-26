@@ -39,7 +39,7 @@ public class ScheduleSettingsActivity extends AppCompatActivity {
         findViewById(R.id.btn_schedule_save).setOnClickListener(v -> save());
         findViewById(R.id.btn_schedule_reset).setOnClickListener(v ->
                 new androidx.appcompat.app.AlertDialog.Builder(this)
-                        .setTitle("恢复默认作息")
+                        .setTitle("恢复默认上课时间")
                         .setMessage("将每天节数恢复为 10 节，时长与课间休息全部恢复为默认值。")
                         .setNegativeButton("取消", null)
                         .setPositiveButton("恢复", (d, w) -> {
@@ -147,7 +147,7 @@ public class ScheduleSettingsActivity extends AppCompatActivity {
         title.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
         texts.addView(title);
         TextView sub = new TextView(this);
-        sub.setText("按你们学校的作息来，8–16 节；导入的课用到更后面的节次会自动加上（删课后不会自动缩回）");
+        sub.setText("按学校的上课时间设置，8–16 节；导入的课用到更后面的节次会自动加上（删课后不会自动缩回）");
         sub.setTextSize(12f);
         sub.setTextColor(G.SUB);
         texts.addView(sub);
@@ -328,7 +328,7 @@ public class ScheduleSettingsActivity extends AppCompatActivity {
         applyFirstStart();
         syncInputsToModel();
         if (ScheduleSettingsStore.save(this, settings)) {
-            Toast.makeText(this, "作息时间已保存", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "上课时间已保存", Toast.LENGTH_SHORT).show();
             setResult(RESULT_OK);
             finish();
         } else {

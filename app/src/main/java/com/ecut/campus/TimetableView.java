@@ -194,6 +194,7 @@ public class TimetableView extends View {
         final RectF rect;
         final Timetable.Course course;
         final Timetable.Session session;
+        Timetable.Session hitSession;
         final boolean active;
         String label;      // 非空 = 带标记（停课/放假/已调走/补课/调课）
         String adjustId = "";
@@ -204,6 +205,7 @@ public class TimetableView extends View {
             this.rect = rect;
             this.course = course;
             this.session = session;
+            this.hitSession = session;
             this.active = active;
         }
     }
@@ -633,14 +635,30 @@ public class TimetableView extends View {
     private void drawCourseBlocks(Canvas canvas, float colWidth, boolean activePass) {
         if (timetable == null || timetable.courses == null) return;
 
-        // 本周真正要上的课（去掉停课/放假，加上补课/调来的）按真实起止位置算重叠；重叠的一簇按列并排，全部可点。
+        // 本周真正要上的课（去掉停课/放假，加上补课/调来的）先合并同课连堂时段，再按真实起止位置算重叠。
         java.util.Map<Timetable.Session, int[]> laneOf = new java.util.IdentityHashMap<>();
+        List<List<TimetableLayout.DisplayBlock>> solidRaw = new ArrayList<>();
+        List<List<TimetableLayout.DisplayBlock>> solidMerged = new ArrayList<>();
         List<List<Timetable.Session>> perDay = new ArrayList<>();
-        for (int d = 0; d <= 7; d++) perDay.add(new ArrayList<>());
+        for (int d = 0; d <= 7; d++) {
+            solidRaw.add(new ArrayList<>());
+            solidMerged.add(new ArrayList<>());
+            perDay.add(new ArrayList<>());
+        }
         for (Timetable.Course c : timetable.courses) {
             for (Timetable.Session s : c.sessions) {
                 if (s.dayOfWeek < 1 || s.dayOfWeek > columnCount()) continue;
-                if (s.isActive(currentWeek) && !overlay.cancelled.containsKey(s)) perDay.get(s.dayOfWeek).add(s);
+                if (s.isActive(currentWeek) && !overlay.cancelled.containsKey(s)) {
+                    solidRaw.get(s.dayOfWeek).add(new TimetableLayout.DisplayBlock(c, s, s));
+                }
+            }
+        }
+        for (int d = 1; d <= columnCount(); d++) {
+            List<TimetableLayout.DisplayBlock> merged =
+                    TimetableLayout.mergeConsecutiveActive(solidRaw.get(d), currentWeek, schedule);
+            solidMerged.set(d, merged);
+            for (TimetableLayout.DisplayBlock b : merged) {
+                perDay.get(d).add(b.displaySession);
             }
         }
         for (com.ecut.campus.data.WeekOverlay.Extra e : overlay.extras) {
@@ -649,18 +667,29 @@ public class TimetableView extends View {
         }
         for (int d = 1; d <= 7; d++) assignLanes(perDay.get(d), laneOf);
 
+        if (activePass) {
+            for (int d = 1; d <= columnCount(); d++) {
+                for (TimetableLayout.DisplayBlock b : solidMerged.get(d)) {
+                    HitBlock hb = drawBlock(canvas, colWidth, b.course, b.displaySession, true,
+                            null, laneOf.get(b.displaySession));
+                    if (hb != null) hb.hitSession = b.primarySession;
+                }
+            }
+        }
+
         for (Timetable.Course course : timetable.courses) {
             for (Timetable.Session s : course.sessions) {
                 if (s.dayOfWeek < 1 || s.dayOfWeek > columnCount()) continue;
                 boolean isActive = s.isActive(currentWeek);
                 com.ecut.campus.data.WeekOverlay.Mark mark = isActive ? overlay.cancelled.get(s) : null;
-                // 被停/放假/调走的课总是画出来（虚线 + 标签），不受「显示非本周」开关影响
-                boolean pass = mark != null || isActive;
-                if (pass != activePass) continue;
                 boolean solid = isActive && mark == null;
-                if (!solid && overlapsActive(s, perDay.get(s.dayOfWeek))) continue;
+                if (solid) continue; // 已在上面的连堂合并分支绘制
+                // 被停/放假/调走的课总是画出来（虚线 + 标签），不受「显示非本周」开关影响
+                boolean pass = mark != null;
+                if (pass != activePass) continue;
+                if (overlapsActive(s, perDay.get(s.dayOfWeek))) continue;
                 String tag = mark != null ? "[" + mark.label + "] " : null;
-                HitBlock hb = drawBlock(canvas, colWidth, course, s, solid, tag, laneOf.get(s));
+                HitBlock hb = drawBlock(canvas, colWidth, course, s, false, tag, laneOf.get(s));
                 if (hb != null && mark != null) {
                     hb.label = mark.label;
                     hb.adjustId = mark.adjustId;
@@ -1503,8 +1532,8 @@ public class TimetableView extends View {
             HitBlock b = hitBlocks.get(i);
             if (b.rect.contains(x, y)) {
                 if (b.exam != null) listener.onExamClick(b.exam);
-                else if (b.label != null) listener.onMarkedClick(b.course, b.session, b.label, b.adjustId, b.extra);
-                else listener.onSessionClick(b.course, b.session, b.active);
+                else if (b.label != null) listener.onMarkedClick(b.course, b.hitSession, b.label, b.adjustId, b.extra);
+                else listener.onSessionClick(b.course, b.hitSession, b.active);
                 return;
             }
         }
@@ -1530,7 +1559,7 @@ public class TimetableView extends View {
                 longPressFired = true;
                 performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
                 if (b.exam != null) listener.onExamClick(b.exam);
-                else listener.onSessionLongPress(b.course, b.session, b.active, b.label,
+                else listener.onSessionLongPress(b.course, b.hitSession, b.active, b.label,
                         b.adjustId, b.extra, currentWeek);
                 return;
             }

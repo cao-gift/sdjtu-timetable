@@ -138,7 +138,7 @@
         <activity
             android:name=".ScheduleSettingsActivity"
             android:exported="false"
-            android:label="作息时间"
+            android:label="上课时间"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize" />
 

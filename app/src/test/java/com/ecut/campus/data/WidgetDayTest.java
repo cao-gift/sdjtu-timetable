@@ -70,14 +70,23 @@ public class WidgetDayTest {
     }
 
     @Test
-    public void doneTodayFallsBackToTomorrowFirstClass() {
+    public void doneTodayFallsBackToTomorrowClassesUpToCap() {
         WidgetDay.Card c = WidgetDay.build(WidgetDay.OK, "2026-10-27", 8, "", TUE, WED, 18 * H, 3);
         assertEquals("今天的课上完了", c.title);
         assertEquals(-1, c.numStart);
-        assertEquals(1, c.chips.size());
+        assertEquals(2, c.chips.size());
+        assertEquals(0, c.more);
         assertEquals("构造地质学", c.chips.get(0).name);
         assertEquals("明天", c.chips.get(0).tag);
         assertEquals("08:00 - 09:40  A201", c.chips.get(0).line);
+        assertEquals("大学物理", c.chips.get(1).name);
+        assertEquals("明天", c.chips.get(1).tag);
+        assertEquals("14:00 - 15:40  B105", c.chips.get(1).line);
+
+        WidgetDay.Card capped = WidgetDay.build(WidgetDay.OK, "2026-10-27", 8, "", TUE, WED, 18 * H, 1);
+        assertEquals(1, capped.chips.size());
+        assertEquals(1, capped.more);
+        assertEquals("明天 · +1", capped.chips.get(0).tag);
     }
 
     @Test

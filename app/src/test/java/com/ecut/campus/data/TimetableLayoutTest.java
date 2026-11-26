@@ -84,6 +84,42 @@ public class TimetableLayoutTest {
         assertEquals(1, tight[1]);
     }
 
+    @Test
+    public void mergeConsecutiveActiveCombinesSameCourseSameRoomAndSkipsLunchOrDifferentRoom() {
+        ScheduleSettings sched = ScheduleSettings.createDefault();
+        Timetable.Course plan = new Timetable.Course();
+        plan.name = "交通规划";
+        plan.teacher = "老师A";
+        plan.colorIndex = 2;
+        Timetable.Session p1 = session(1, 2);
+        p1.location = "无影山1号教学楼1102";
+        Timetable.Session p2 = session(3, 4);
+        p2.location = "无影山1号教学楼1102";
+        Timetable.Session p3 = session(5, 6);
+        p3.location = "无影山1号教学楼1102"; // 跨午休 105 分钟，不合并
+        Timetable.Session p4 = session(7, 8);
+        p4.location = "无影山1号教学楼1202"; // 不同教室，不合并
+
+        java.util.List<TimetableLayout.DisplayBlock> merged = TimetableLayout.mergeConsecutiveActive(
+                Arrays.asList(
+                        new TimetableLayout.DisplayBlock(plan, p1, p1),
+                        new TimetableLayout.DisplayBlock(plan, p2, p2),
+                        new TimetableLayout.DisplayBlock(plan, p3, p3),
+                        new TimetableLayout.DisplayBlock(plan, p4, p4)),
+                14, sched);
+
+        assertEquals(3, merged.size());
+        assertEquals(1, merged.get(0).displaySession.startSection);
+        assertEquals(4, merged.get(0).displaySession.endSection);
+        assertEquals(p1, merged.get(0).primarySession);
+        // 原始 Session 不被修改
+        assertEquals(2, p1.endSection);
+        assertEquals(5, merged.get(1).displaySession.startSection);
+        assertEquals(6, merged.get(1).displaySession.endSection);
+        assertEquals(7, merged.get(2).displaySession.startSection);
+        assertEquals(8, merged.get(2).displaySession.endSection);
+    }
+
     private static Timetable.Session session(int start, int end) {
         Timetable.Session s = new Timetable.Session();
         s.dayOfWeek = 1;

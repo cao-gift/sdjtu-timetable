@@ -55,6 +55,58 @@ final class MainSyncHelper {
         startSilentSync(a, kind, true);
     }
 
+    static void startAutoLogin(MainActivity a) {
+        if (a.activeSync != null && a.activeSync.isRunning()) {
+            Toast.makeText(a, "正在同步，请稍候", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (!SdjtuCredentials.isSaved(a)) {
+            SdjtuCredentialsDialog.show(a, () -> {
+                a.refreshSettingsTab();
+                if (SdjtuCredentials.isSaved(a)) {
+                    startAutoLogin(a);
+                }
+            });
+            return;
+        }
+        SdjtuAutoLogin.clearPause(a);
+        a.autoLoginBusy = true;
+        a.refreshSettingsTab();
+        Toast.makeText(a, "正在同步，预计 5-10 秒…", Toast.LENGTH_LONG).show();
+        a.activeSync = CampusSyncClient.startLazy(a,
+                () -> (a.isFinishing() || a.isDestroyed()) ? null : a.newWebViewForSync(),
+                CampusSyncClient.Kind.LOGIN,
+                new CampusSyncClient.Callback() {
+                    @Override
+                    public void onSuccess(int count) {
+                        a.activeSync = null;
+                        a.autoLoginBusy = false;
+                        a.refreshSettingsTab();
+                        a.refreshTimetableTab();
+                        Toast.makeText(a, "自动登录完成，已连接教务系统", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onLoginRequired(String message) {
+                        a.activeSync = null;
+                        a.autoLoginBusy = false;
+                        a.refreshSettingsTab();
+                        a.refreshTimetableTab();
+                        Toast.makeText(a, message == null || message.isEmpty()
+                                ? "需要手动完成验证，请点击手动登录" : message, Toast.LENGTH_LONG).show();
+                    }
+
+                    @Override
+                    public void onFailure(String message) {
+                        a.activeSync = null;
+                        a.autoLoginBusy = false;
+                        a.refreshSettingsTab();
+                        a.refreshTimetableTab();
+                        DiagLog.failDialog(a, "自动登录未成功", message);
+                    }
+                });
+    }
+
     static void startSilentSync(MainActivity a, CampusSyncClient.Kind kind, boolean allowLoginRedirect) {
         if (a.activeSync != null && a.activeSync.isRunning()) {
             Toast.makeText(a, "正在同步，请稍候", Toast.LENGTH_SHORT).show();
@@ -67,14 +119,17 @@ final class MainSyncHelper {
             return;
         }
         boolean autoLogin = !Prefs.hasPortalSession(a) || Prefs.sessionExpired(a);
-        Toast.makeText(a, (autoLogin ? "正在自动登录并同步" : "正在后台同步") + kind.label + "…",
-                Toast.LENGTH_SHORT).show();
+        Toast.makeText(a, autoLogin
+                        ? "正在自动登录并同步" + kind.label + "，预计 5-10 秒…"
+                        : "正在后台同步" + kind.label + "…",
+                autoLogin ? Toast.LENGTH_LONG : Toast.LENGTH_SHORT).show();
         a.activeSync = CampusSyncClient.startLazy(a,
                 () -> (a.isFinishing() || a.isDestroyed()) ? null : a.newWebViewForSync(), kind,
                 new CampusSyncClient.Callback() {
                     @Override
                     public void onSuccess(int count) {
                         a.activeSync = null;
+                        a.refreshTimetableSyncButton();
                         a.refreshTimetableTab();
                         a.refreshSettingsTab();
                         if (kind == CampusSyncClient.Kind.TIMETABLE) {
@@ -98,6 +153,7 @@ final class MainSyncHelper {
                     @Override
                     public void onLoginRequired(String message) {
                         a.activeSync = null;
+                        a.refreshTimetableSyncButton();
                         a.refreshSettingsTab();
                         if (allowLoginRedirect) {
                             WebShellActivity.startManualLoginForSync(a, requestCode, kind.label, message);
@@ -109,10 +165,12 @@ final class MainSyncHelper {
                     @Override
                     public void onFailure(String message) {
                         a.activeSync = null;
+                        a.refreshTimetableSyncButton();
                         a.refreshSettingsTab();
                         a.refreshTimetableTab();
                         DiagLog.failDialog(a, kind.label + "没同步成功", message);
                     }
                 });
+        a.refreshTimetableSyncButton();
     }
 }

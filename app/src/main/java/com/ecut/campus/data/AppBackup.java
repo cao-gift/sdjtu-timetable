@@ -89,7 +89,7 @@ public final class AppBackup {
         sb.append(semesters).append(" 个学期（共 ").append(courses).append(" 门课）");
         sb.append("、").append(friendCount).append(" 位同学");
         sb.append("、").append(todoCount).append(" 条作业待办");
-        sb.append("，以及作息、显示偏好与地点隐藏词组。");
+        sb.append("，以及上课时间、显示偏好与地点隐藏词组。");
         sb.append("\n\n不会包含门户账号密码；恢复后将覆盖当前本机课表与设置。");
         return sb.toString();
     }

@@ -95,12 +95,20 @@
     function roomFields(form) {
         var fields = {};
         array(form.elements).forEach(function(c) {
-            if (c.tagName !== 'SELECT') return;
             var key = (c.name || c.id || '').toLowerCase(), label = compact(fieldLabel(c));
+            if (c.tagName === 'INPUT' && /^(text|number|search)$/i.test(c.type)) {
+                if (/教室/.test(label) || /^(?:jsmc|jsbh|room|classroom)$/.test(key)) fields.roomInput = c;
+                return;
+            }
+            if (c.tagName !== 'SELECT') return;
             if (/校区/.test(label) || /^(?:xqid|xqbh|xqdm|campusid|campus)$/.test(key)) fields.campus = c;
             else if (/教学楼|楼栋|教学建筑/.test(label) || /^(?:jxlid|jxlbh|jxl|jzwid|buildingid|building)$/.test(key)) fields.building = c;
             else if (/结束周|截止周|终止周/.test(label) || /^(?:zc2|zcend|jszc)$/.test(key)) fields.end = c;
             else if (/周次|起始周|开始周|教学周/.test(label) || /^(?:zc|zc1|zcstar|zcstart|kszc|week|weekno)$/.test(key)) fields.week = c;
+            else if (/结束星期|截止星期|终止星期/.test(label) || /^(?:xq2|xqend|jsxq)$/.test(key)) fields.dayEnd = c;
+            else if (/星期|起始星期|开始星期/.test(label) || /^(?:xq|xq1|xqstart|ksxq)$/.test(key)) fields.dayStart = c;
+            else if (/结束节次|截止节次|终止节次/.test(label) || /^(?:jc2|jcend|jsjc)$/.test(key)) fields.periodEnd = c;
+            else if (/节次|起始节次|开始节次/.test(label) || /^(?:jc|jc1|jcstart|ksjc)$/.test(key)) fields.periodStart = c;
         });
         return fields;
     }
@@ -127,6 +135,20 @@
             (parts[0] ? digits.indexOf(parts[0]) : 1)*10 + (parts[1] ? digits.indexOf(parts[1]) : 0);
         return number > 0 && number <= 60 ? number : 0;
     }
+    function optionDay(o) {
+        if (!o || placeholder(o)) return 0;
+        var d = dayNumber(o.textContent);
+        if (d >= 1 && d <= 7) return d;
+        return /^[1-7]$/.test((o.value || '').trim()) ? Number(o.value.trim()) : 0;
+    }
+    function dayOption(select, day) {
+        return optionsOf(select).find(function(o){return optionDay(o)===Number(day) && Number(day)>=1 && Number(day)<=7;});
+    }
+    function emptyOptionValue(select) {
+        var options = optionsOf(select);
+        var blank = options.find(function(o){return !o.value;}) || options.find(placeholder);
+        return blank ? blank.value : '';
+    }
     function namedChoices(select) {
         return optionsOf(select).filter(function(o){return !placeholder(o);}).map(function(o) {
             return {value:o.value,label:o.textContent.trim()};
@@ -135,18 +157,39 @@
     function weekOption(select,week) {
         return optionsOf(select).find(function(o){return optionWeek(o)===Number(week) && Number(week)>0;});
     }
+    function matchByHint(list, hint) {
+        var needle = compact(hint);
+        if (!needle) return '';
+        var exact = list.find(function(o){return compact(o.label)===needle;});
+        if (exact) return exact.value;
+        var partial = list.find(function(o){return compact(o.label).indexOf(needle)>=0;});
+        return partial ? partial.value : '';
+    }
     function roomChoices(fields, wanted) {
-        var choices = {campuses:namedChoices(fields.campus),weeks:[],buildings:[]};
+        var choices = {campuses:namedChoices(fields.campus),weeks:[],buildings:[],days:[],periods:[]};
         optionsOf(fields.week).forEach(function(o) {
             var n=optionWeek(o);
             if (n && (!fields.end || weekOption(fields.end,n)) && !choices.weeks.some(function(w){return w.value===String(n);}))
                 choices.weeks.push({value:String(n),label:o.textContent.trim()});
         });
+        optionsOf(fields.dayStart).forEach(function(o) {
+            var d=optionDay(o);
+            if (d && (!fields.dayEnd || dayOption(fields.dayEnd,d)) && !choices.days.some(function(x){return x.value===String(d);}))
+                choices.days.push({value:String(d),label:days[d]});
+        });
+        if (!choices.days.length) {
+            for (var d=1; d<=7; d++) choices.days.push({value:String(d),label:days[d]});
+        }
+        choices.periods = namedChoices(fields.periodStart);
         function selected(list,value) {return list.some(function(o){return o.value===String(value);}) ? String(value) : '';}
-        choices.campus=selected(choices.campuses,wanted.campus);
-        choices.week=selected(choices.weeks,wanted.week);
+        choices.campus = selected(choices.campuses, wanted.campus) || matchByHint(choices.campuses, wanted.campusHint);
+        choices.week = selected(choices.weeks, wanted.week);
         if (choices.campus && fields.campus.value===choices.campus) choices.buildings=namedChoices(fields.building);
-        choices.building=selected(choices.buildings,wanted.building);
+        choices.building = selected(choices.buildings, wanted.building) || matchByHint(choices.buildings, wanted.buildingHint);
+        choices.day = selected(choices.days, wanted.day);
+        choices.period = selected(choices.periods, wanted.period);
+        choices.room = typeof wanted.room === 'string' ? wanted.room.trim() : '';
+        choices.hasRoomField = !!fields.roomInput;
         return choices;
     }
     function setValue(select,value) {
@@ -365,6 +408,30 @@
                 check = combine(columns.map(function (i) { return aligned(i) ? gridState(cells[i],week) : 'unknown'; }));
             }
             byRoom.set(name, byRoom.has(name) ? combine([byRoom.get(name),check]) : check);
+        });
+    }
+    function collectRoomPeriods(table, model, daySlots, week, byRoomPeriods) {
+        if (model.status >= 0 || !daySlots.length) return;
+        var periodNames = unique(daySlots.map(function(s){return s.period;}));
+        var colsByPeriod = periodNames.map(function(p) {
+            return {period:p, cols:daySlots.filter(function(s){return s.period===p;}).map(function(s){return s.col;})};
+        });
+        array(table.rows).slice(model.start).forEach(function(row) {
+            var cells = rowCells(row), room = cells[model.name];
+            if (!room || room.colSpan !== 1 || room.rowSpan !== 1) return;
+            var name = room.textContent.trim();
+            if (!name || name.length > 100 || /^(?:暂无|无记录|未查询到|合计|小计|共\d+条)/.test(compact(name))) return;
+            var place = model.locations.map(function(i){return cells[i] ? cells[i].textContent.trim() : '';}).filter(Boolean);
+            name = place.concat(name).join(' · ');
+            function aligned(i) {
+                return (!model.width || cells.length===model.width) && cells[i] && cells.slice(0,i+1).every(function(c){return c.colSpan === 1 && c.rowSpan === 1;});
+            }
+            var map = byRoomPeriods.get(name);
+            if (!map) { map = new Map(); byRoomPeriods.set(name, map); }
+            colsByPeriod.forEach(function(entry) {
+                var st = combine(entry.cols.map(function(i){return aligned(i) ? gridState(cells[i], week) : 'unknown';}));
+                map.set(entry.period, map.has(entry.period) ? combine([map.get(entry.period), st]) : st);
+            });
         });
     }
     function paint(panel, table, model, weeks) {
@@ -713,7 +780,9 @@
             if (buildingState==='unconfirmed') {choices.building='';choices.buildings=[];}
             if (!core.campus || !core.week) return {stage:'error',message:'未能识别学校表单的校区和周次，请打开教务原页核对。'};
             if (request.roomAction!=='query' || !choices.campus || !choices.week)
-                return choose('请选择校区和周次，教学楼可留空。');
+                return choose('请选择校区、教学楼、周次和星期后查询。');
+            if (wanted.requireBuilding && core.building && !choices.building)
+                return choose('请选择所在教学楼。');
             if (wanted.building && !choices.building)
                 return choose('该教学楼不在当前校区的选项中，请重新选择或选全部教学楼。');
             var weekControls=core.end ? [core.week,core.end] : [core.week];
@@ -724,10 +793,35 @@
             }
             if (core.building && !core.building.disabled && setValue(core.building,buildingValue(core.building,choices.building)))
                 return {stage:'loading'};
+            if (choices.day && core.dayStart && !core.dayStart.disabled) {
+                var dayControls = core.dayEnd ? [core.dayStart, core.dayEnd] : [core.dayStart];
+                for (var di=0; di<dayControls.length; di++) {
+                    var dOpt = dayOption(dayControls[di], choices.day);
+                    if (dOpt && setValue(dayControls[di], dOpt.value)) return {stage:'loading'};
+                }
+            }
+            if (core.periodStart && !core.periodStart.disabled && Object.prototype.hasOwnProperty.call(wanted, 'period')) {
+                var targetPeriod = choices.period || emptyOptionValue(core.periodStart);
+                if (setValue(core.periodStart, targetPeriod)) return {stage:'loading'};
+                if (core.periodEnd && !core.periodEnd.disabled) {
+                    var targetPeriodEnd = choices.period && optionsOf(core.periodEnd).some(function(o){return o.value===choices.period;})
+                        ? choices.period : emptyOptionValue(core.periodEnd);
+                    if (setValue(core.periodEnd, targetPeriodEnd)) return {stage:'loading'};
+                }
+            }
+            if (core.roomInput && !core.roomInput.disabled && Object.prototype.hasOwnProperty.call(wanted, 'room')) {
+                if (core.roomInput.value !== choices.room) {
+                    core.roomInput.value = choices.room;
+                    ['input','change'].forEach(function(type){core.roomInput.dispatchEvent(new core.roomInput.ownerDocument.defaultView.Event(type,{bubbles:true}));});
+                    return {stage:'loading'};
+                }
+            }
             // Other filters (for example a room name) retain the school's names and native change handlers.
             for (var f=0; f<controls.length; f++) {
                 var c=controls[f], key=c.name || c.id;
                 if (c===core.campus || c===core.week || c===core.end || c===core.building ||
+                    c===core.dayStart || c===core.dayEnd || c===core.periodStart || c===core.periodEnd ||
+                    (c===core.roomInput && Object.prototype.hasOwnProperty.call(wanted, 'room')) ||
                     !Object.prototype.hasOwnProperty.call(chosen,key) || c.value === String(chosen[key])) continue;
                 var target=String(chosen[key]);
                 if (c.options && !optionsOf(c).some(function(o) {return o.value===target;}))
@@ -750,7 +844,8 @@
             if (action.protocol !== 'https:' || !/(^|\.)sdjtu\.edu\.cn$/i.test(action.hostname) || action.username || action.password)
                 return {stage:'error',message:'教室查询地址不属于山东交通学院统一门户。'};
             var first=field(form,['xq1','xqStart','xq'],core.campus), option=first && first.options[first.selectedIndex];
-            context.query={week:0,day:option ? dayNumber(option.textContent) || Number(option.value) || 0 : 0,period:'all'};
+            var selectedDayNum = choices.day ? Number(choices.day) : (option ? dayNumber(option.textContent) || Number(option.value) || 0 : 0);
+            context.query={week:0,day:selectedDayNum,period:'all'};
             sync.context=context; sync.sent=true;
             sync.empty=empty.slice();
             models.forEach(function(m){
@@ -789,16 +884,26 @@
         if (slots.length && (Number(want.day)>0 && Number(want.day)!==day ||
             want.period && want.period!=='all' && want.period!==period))
             return choose('教务返回的时段已变化，请重新选择。');
-        var byRoom=new Map();
+        var byRoom=new Map(), byRoomPeriods=new Map();
         models.forEach(function(m){
             var daySlots=m.model.slots.filter(function(s){return s.day===day;});
             var matching=daySlots.filter(function(s){return period==='all' || s.period===period;});
             var cols=matching.map(function(s){return s.col;});
             collectRows(m.table,m.model,cols,week,byRoom);
+            collectRoomPeriods(m.table,m.model,daySlots,week,byRoomPeriods);
         });
         if (!byRoom.size && !confirmedEmpty) return {stage:'loading'};
         var rooms=[];
-        byRoom.forEach(function(state,name){rooms.push({name:name,state:state});});
+        byRoom.forEach(function(state,name){
+            var item = {name:name, state:state};
+            var pMap = byRoomPeriods.get(name);
+            if (pMap && pMap.size) {
+                var list = [];
+                pMap.forEach(function(st, p){ list.push({period:p, state:st}); });
+                item.periods = list;
+            }
+            rooms.push(item);
+        });
         sync.observers.forEach(function(observer){observer.disconnect();});
         var summary = request.capture ? '教务页当前显示的结果' : context.summary || '';
         if (day) {

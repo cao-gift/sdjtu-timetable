@@ -49,6 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private SettingsTab settings;
     private ViewGroup syncHost;
     CampusSyncClient activeSync;
+    boolean autoLoginBusy;
     int currentTab = TAB_TIMETABLE;
 
     @Override
@@ -341,6 +342,9 @@ public class MainActivity extends AppCompatActivity {
             backToCurrent.setOnClickListener(v -> jumpToWeek(actualCurrentWeek()));
         }
 
+        View syncBtn = campusFragment.findViewById(R.id.btn_sync_timetable);
+        if (syncBtn != null) syncBtn.setOnClickListener(v -> syncTimetable());
+
         View addBtn = campusFragment.findViewById(R.id.btn_add_course);
         if (addBtn != null) addBtn.setOnClickListener(v -> {
             int day = WeekMath.todayDayOfWeek();
@@ -553,6 +557,19 @@ public class MainActivity extends AppCompatActivity {
 
     void syncTimetable() {
         startSilentSync(CampusSyncClient.Kind.TIMETABLE);
+    }
+
+    void autoLogin() {
+        MainSyncHelper.startAutoLogin(this);
+    }
+
+    void refreshTimetableSyncButton() {
+        if (campusFragment == null) return;
+        TextView btn = campusFragment.findViewById(R.id.btn_sync_timetable);
+        if (btn == null) return;
+        boolean busy = activeSync != null && activeSync.isRunning();
+        btn.setEnabled(!busy);
+        btn.setText(busy ? "同步中…" : "↻ 同步");
     }
 
     private void syncGrades() {

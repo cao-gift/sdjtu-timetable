@@ -152,7 +152,9 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         loginRequired = false;
         failed = false;
         boolean autoLogin = !Prefs.hasPortalSession(this) || Prefs.sessionExpired(this);
-        message = autoLogin ? "正在自动登录并查询考试安排…" : "正在查询考试安排…";
+        message = autoLogin ? "正在自动登录并同步考试安排，预计 5-10 秒…" : "正在同步考试安排…";
+        android.widget.Toast.makeText(this, message,
+                autoLogin ? android.widget.Toast.LENGTH_LONG : android.widget.Toast.LENGTH_SHORT).show();
         query = SdjtuExamQuery.start(this, findViewById(R.id.study_sync_host), new SdjtuExamQuery.Callback() {
             @Override public void onSuccess(JSONObject data) {
                 query = null;
@@ -160,12 +162,16 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                 failed = false;
                 shown = data;
                 long now = System.currentTimeMillis();
+                int count = data.optJSONArray("exams") == null ? 0 : data.optJSONArray("exams").length();
                 if (SdjtuStudyStore.save(SdjtuExamActivity.this, EXAMS, data, now)) {
                     cached = data;
                     syncedAt = now;
                     message = "";
                     ExamReminder.reschedule(SdjtuExamActivity.this);
                     ClassWidget.updateAll(getApplicationContext());
+                    android.widget.Toast.makeText(SdjtuExamActivity.this,
+                            count > 0 ? "考试安排已更新：" + count + " 场" : "考试安排同步完毕：本学期暂无考试",
+                            android.widget.Toast.LENGTH_SHORT).show();
                 } else message = "已取得本次考试安排，保存到手机失败。";
                 render();
             }
@@ -177,9 +183,13 @@ public final class SdjtuExamActivity extends AppCompatActivity {
                 failed = true;
                 shown = data;
                 message = reason;
-                if (data.optJSONArray("exams").length() == 0 && cached != null) {
+                int count = data.optJSONArray("exams") == null ? 0 : data.optJSONArray("exams").length();
+                if (count == 0 && cached != null) {
                     shown = cached;
                     message += " 当前显示上次完整结果。";
+                } else if (count > 0) {
+                    android.widget.Toast.makeText(SdjtuExamActivity.this,
+                            "考试安排部分同步：" + count + " 场", android.widget.Toast.LENGTH_SHORT).show();
                 }
                 render();
                 if (needsLogin && allowLoginPrompt) openLogin(reason);
@@ -222,7 +232,7 @@ public final class SdjtuExamActivity extends AppCompatActivity {
     private void render() {
         boolean busy = query != null;
         syncButton.setEnabled(!busy && !awaitingLogin);
-        syncButton.setText(busy ? "查询中…" : "同步");
+        syncButton.setText(busy ? "同步中…" : "同步");
         banner.update(loginRequired, busy, !awaitingLogin);
 
         long now = System.currentTimeMillis();

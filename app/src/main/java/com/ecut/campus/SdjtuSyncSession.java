@@ -64,8 +64,8 @@ final class SdjtuSyncSession {
         }
         String home = SdjtuPortal.studentHome(cachedBase);
         base = SdjtuPortal.academicBase(SdjtuPortal.isSchoolUrl(home) ? home : SdjtuPortal.STUDENT_HOME);
-        // 明确未登录或会话已过期时直接走统一门户，省去先访问教务再被拦截等待的往返耗时。
-        if (!Prefs.hasPortalSession(context) || Prefs.sessionExpired(context)) {
+        // 明确未登录、会话已过期或用户主动点「自动登录」时直接走统一门户，完成认证并进入教务系统。
+        if (kind == CampusSyncClient.Kind.LOGIN || !Prefs.hasPortalSession(context) || Prefs.sessionExpired(context)) {
             openPortal();
         } else {
             web.loadUrl(target());
@@ -208,8 +208,8 @@ final class SdjtuSyncSession {
                 reading = true;
                 listener.ready();
             } else if (!found.isEmpty() && SdjtuPortal.isSchoolUrl(found)) {
-                if (kind == CampusSyncClient.Kind.GRADES) {
-                    // 成绩查询可直接复用已建立的教务根路径与 Cookie 发起 POST，不必再完整渲染 cjcx_list 页面。
+                if (kind == CampusSyncClient.Kind.GRADES || kind == CampusSyncClient.Kind.LOGIN) {
+                    // 成绩查询或纯自动登录在建立教务根路径与 Cookie 后即可完成，不必再渲染目标页。
                     reading = true;
                     listener.ready();
                 } else if (!targetAfterSso) {

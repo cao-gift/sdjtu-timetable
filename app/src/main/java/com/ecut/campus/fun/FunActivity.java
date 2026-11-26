@@ -40,14 +40,6 @@ public class FunActivity extends AppCompatActivity {
     private void render() {
         LinearLayout col = Ui.page(this, "设置", "小玩意", "纯本地计算，不联网");
 
-        Ui.label(this, col, "GRADES · 成绩");
-        LinearLayout grades = Ui.card(this, col);
-        boolean on = FunPrefs.verdictOn(this);
-        Ui.row(this, grades, "01", "翻牌批语", "新成绩先看批语，再翻分数", on ? "开" : "关", v -> {
-            FunPrefs.setVerdictOn(this, !FunPrefs.verdictOn(this));
-            render();
-        });
-
         Ui.label(this, col, "TIMETABLE · 课表");
         LinearLayout tt = Ui.card(this, col);
         double tuition = FunPrefs.tuition(this);

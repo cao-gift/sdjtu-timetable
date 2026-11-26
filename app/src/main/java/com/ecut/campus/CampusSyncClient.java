@@ -39,7 +39,8 @@ public final class CampusSyncClient {
 
     public enum Kind {
         TIMETABLE("课表"),
-        GRADES("成绩");
+        GRADES("成绩"),
+        LOGIN("自动登录");
 
         final String label;
 
@@ -278,7 +279,10 @@ public final class CampusSyncClient {
         handler.removeCallbacksAndMessages(null);
         handler.postDelayed(timeout, DATA_TIMEOUT_MS);
 
-        if (kind == Kind.TIMETABLE) {
+        if (kind == Kind.LOGIN) {
+            Prefs.setPortalSession(appContext, true);
+            finishSuccess(0);
+        } else if (kind == Kind.TIMETABLE) {
             extractTimetable();
         } else {
             extractGrades();

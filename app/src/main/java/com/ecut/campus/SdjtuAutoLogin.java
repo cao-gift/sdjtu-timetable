@@ -44,6 +44,12 @@ final class SdjtuAutoLogin {
         return SdjtuCredentials.isSaved(context) && !isPaused(context);
     }
 
+    static void clearPause(Context context) {
+        context.getApplicationContext()
+                .getSharedPreferences("sdjtu_login_state", Context.MODE_PRIVATE)
+                .edit().remove(PAUSED_GENERATION).apply();
+    }
+
     void resetPage() {
         readySince = 0;
     }
