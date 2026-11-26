@@ -508,8 +508,8 @@
       <div class="hero-head">
         <div>
           <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span>LATEST RELEASE · 国内直连分发</span></div>
-          <div class="ver-numeral" id="verTag">v1.5.0</div>
-          <p class="hero-desc">一次登录学校 WebVPN 教务系统，本地离线保存课表、成绩、空教室、培养方案与考试安排。应用内检查更新与下载均优先走本站节点。</p>
+          <div class="ver-numeral" id="verTag">v1.5.1</div>
+          <p class="hero-desc">一次登录学校 WebVPN 教务系统，本地离线保存课表、成绩、培养方案与考试安排，并支持实时查空教室。应用内检查更新与下载均优先走本站节点。</p>
         </div>
       </div>
 
@@ -518,7 +518,7 @@
       <div class="meta-grid">
         <div class="meta-cell">
           <div class="meta-k">BUILD</div>
-          <div class="meta-v" id="verBuild">75</div>
+          <div class="meta-v" id="verBuild">76</div>
         </div>
         <div class="meta-cell">
           <div class="meta-k">SIZE</div>
@@ -530,14 +530,14 @@
         </div>
         <div class="meta-cell">
           <div class="meta-k">UPDATED</div>
-          <div class="meta-v" id="verDate">2026-11-25</div>
+          <div class="meta-v" id="verDate">2026-11-26</div>
         </div>
       </div>
 
       <div class="cta-row">
-        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.0.apk" download>
+        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.1.apk" download>
           <span>下载安装包 APK</span>
-          <span class="mono" id="downloadName">lvlv-v1.5.0.apk</span>
+          <span class="mono" id="downloadName">lvlv-v1.5.1.apk</span>
         </a>
         <a class="btn-outline" id="githubBtn" href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">
           <span>GitHub Releases ↗</span>
@@ -545,18 +545,18 @@
       </div>
 
       <div class="sha-bar">
-        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">2d6c030e48a96fda5058619f8ab9dea12dd7880846f95dec038e0aae270166e0</span></div>
+        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">c78fba6be34ab6c263d16157bc58cadff1647f7b1ef1f26d4369934d8a3e148a</span></div>
         <button class="ghost-btn" id="copyShaBtn" type="button">COPY</button>
       </div>
     </section>
 
     <div class="section-label">RELEASE NOTES · 本次更新</div>
     <section class="card">
-      <div class="notes-body" id="verNotes">1. 大幅提速交院统一门户自动登录与同步链路：未登录直接进入统一门户跳过无效教务往返，提前探测 CAS 表单并取消人为等待，认证后直达教务 SSO。
-2. 修复未登录状态下点击同步成绩、查空教室、培养方案与考试安排无反应的问题：已保存凭据自动快速登录并同步，未保存则立即跳转登录并在进入教务系统后自动返回续接同步。
-3. 设置页「登录统一门户」按钮更名为「手动登录」，点击先弹框提示登录门户后需点击进入「教务系统」待加载完成后返回。
-4. 修复课表与考试 .ics 导出到手机日历缺失日期与全部冲突的问题（改用标准 UTC 时间戳、按时间升序排列、去重与确定性 UID）。
-5. 放宽课表卡片课程名称换行高度，按剩余空间尽量完整显示课名；移除小玩意与同学中的「学期人设卡」「双人课表海报」分享卡片功能。</div>
+      <div class="notes-body" id="verNotes">1. 同步课表入口移至课表页、设置页改为「自动登录」：课表页顶栏新增「↻ 同步」按钮；设置页「教务账号」点击「自动登录」提示「正在同步，预计 5-10 秒…」。
+2. 查空教室重构与美化（不缓存）：条件调整为校区（必选，默认无影山校区）、教学楼（必选，默认无影山1号教学楼）、周次（必选，默认当前周次）、星期（必选，默认当前星期）、节次（可选）、教室（可选）；按节次矩阵清晰展示每间教室当天各节课空闲状态，并提供顶部节次快速筛选条。
+3. 培养方案界面美化与同步提示统一：培养方案新增总课程/总学分/必修统计卡、横向学期刻度条与分类圆角卡片；查空教室、培养方案与考试安排的同步中与同步完毕均统一给出清晰文字提示。
+4. 课表连堂合并与小组件修复：课表页同一天同课程同教室相邻连堂自动合为连续课块；修复当天课上完后桌面小组件仅显示明天第 1 节课的问题，按组件高度展示明天全部课程。
+5. 文案与功能精简：全应用「作息时间」统一改为「上课时间」；去除关于页「全部版本与更新日志」「使用指南」及小玩意页「翻牌批语」。</div>
     </section>
 
     <div class="section-label">PREVIEW · 界面一览</div>
@@ -653,8 +653,8 @@
       <div class="row">
         <div class="row-idx">03</div>
         <div>
-          <div class="row-title">查空教室</div>
-          <div class="row-sub">按校区、周次与教学楼查询强智教室课表，支持筛选当日全空闲教室并离线可读</div>
+          <div class="row-title">实时查空教室</div>
+          <div class="row-sub">默认无影山校区与无影山1号教学楼、自动同步当前周次与星期，按节次矩阵清晰展示每间教室空闲时段</div>
         </div>
         <div class="row-tag">ROOMS</div>
       </div>
@@ -729,14 +729,14 @@
   <script>
     (function () {
       const FALLBACK = {
-        tag: "v1.5.0",
-        versionCode: 75,
-        fileName: "lvlv-v1.5.0.apk",
-        apkUrl: "/downloads/lvlv-v1.5.0.apk",
-        size: 3703549,
-        sha256: "2d6c030e48a96fda5058619f8ab9dea12dd7880846f95dec038e0aae270166e0",
-        publishedAt: "2026-11-25T13:33:03.635Z",
-        notes: "1. 会话过期统一提示与诊断包：成绩、考试、空教室与培养方案页统一使用「需要重新登录 / 统一门户需要验证」提示条；设置页新增「导出诊断包」打包脱敏日志与历史解析失败快照（zip）。\n2. 界面美化与主题统一：四大列表页统一 InkEmptyView 空态与 GaugeSkeletonView 骨架屏；修复 WebShellActivity 顶栏、校徽底盘与小组件在深色/磨砂玻璃主题下的配色与系统圆角；GPA 趋势图新增均值参考轨与相邻变化；考试页升级为发丝时间轴且仅最近一场标朱砂；设置页低频项收进「高级选项」折叠卡。\n3. 节假日调休与系统日历直写：补全 2026–2027 法定节假日与调休规则并在课表页提示；新增独立本地日历「驴驴课表」一键写入与变动自动更新（保留 .ics 导出）。\n4. 作业图片、快捷方式与学期小组件：课程作业支持拍照/相册附图、截止提醒与小组件提示；新增桌面长按快捷方式（今日课表 / 查空教室 / 学业成绩 / 考试安排）与「同步课表」下拉磁贴；桌面小组件随学期自动切换「距开学 N 天」与「假期倒计时」。"
+        tag: "v1.5.1",
+        versionCode: 76,
+        fileName: "lvlv-v1.5.1.apk",
+        apkUrl: "/downloads/lvlv-v1.5.1.apk",
+        size: 3714925,
+        sha256: "c78fba6be34ab6c263d16157bc58cadff1647f7b1ef1f26d4369934d8a3e148a",
+        publishedAt: "2026-11-26T11:42:08.124Z",
+        notes: "1. 同步课表入口移至课表页、设置页改为「自动登录」：课表页顶栏新增「↻ 同步」按钮；设置页「教务账号」点击「自动登录」提示「正在同步，预计 5-10 秒…」。\n2. 查空教室重构与美化（不缓存）：条件调整为校区（必选，默认无影山校区）、教学楼（必选，默认无影山1号教学楼）、周次（必选，默认当前周次）、星期（必选，默认当前星期）、节次（可选）、教室（可选）；按节次矩阵清晰展示每间教室当天各节课空闲状态，并提供顶部节次快速筛选条。\n3. 培养方案界面美化与同步提示统一：培养方案新增总课程/总学分/必修统计卡、横向学期刻度条与分类圆角卡片；查空教室、培养方案与考试安排的同步中与同步完毕均统一给出清晰文字提示。\n4. 课表连堂合并与小组件修复：课表页同一天同课程同教室相邻连堂自动合为连续课块；修复当天课上完后桌面小组件仅显示明天第 1 节课的问题，按组件高度展示明天全部课程。\n5. 文案与功能精简：全应用「作息时间」统一改为「上课时间」；去除关于页「全部版本与更新日志」「使用指南」及小玩意页「翻牌批语」。"
       };
 
       const el = (id) => document.getElementById(id);
