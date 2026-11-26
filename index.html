@@ -399,12 +399,63 @@
       padding: 0 2px;
       font-size: 12px;
       color: var(--mute);
-      line-height: 1.7;
+      line-height: 1.8;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .footnote a {
       text-decoration: underline;
       text-underline-offset: 2px;
+      transition: color 120ms ease;
+    }
+
+    .footnote a:hover {
+      color: var(--sub);
+    }
+
+    .footnote-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 4px 8px;
+    }
+
+    .footnote-sep {
+      opacity: 0.6;
+      user-select: none;
+    }
+
+    .sponsor-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footnote a.sponsor-link {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+      vertical-align: middle;
+    }
+
+    .sponsor-logo {
+      height: 17px;
+      width: auto;
+      display: block;
+      transform: translateY(-0.5px);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .sponsor-logo {
+        filter: invert(1) hue-rotate(180deg) brightness(1.08);
+      }
+    }
+
+    :root[data-theme="dark"] .sponsor-logo {
+      filter: invert(1) hue-rotate(180deg) brightness(1.08);
     }
 
     .mono {
@@ -728,10 +779,22 @@
     </section>
 
     <footer class="footnote">
-      非官方校园工具，与山东交通学院及教务系统厂商无关。教务数据以学校系统为准，课表、成绩与可选自动登录凭据均仅保存在本机。
-      · <a href="./privacy.html">隐私声明</a>
-      · <a href="./privacy.html#rights">隐私权利</a>
-      · 更新清单：<a class="mono" href="./latest.json">/latest.json</a>
+      <div class="footnote-row">
+        <a href="./privacy.html">隐私声明</a>
+        <span class="footnote-sep" aria-hidden="true">·</span>
+        <a href="./privacy.html#rights">隐私权利</a>
+        <span class="footnote-sep" aria-hidden="true">·</span>
+        <span>更新清单：<a class="mono" href="./latest.json">/latest.json</a></span>
+        <span class="footnote-sep" aria-hidden="true">·</span>
+        <a class="mono" href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank" rel="noopener noreferrer">鲁ICP备2024101898号-1</a>
+      </div>
+      <div class="sponsor-row">
+        <span>本项目 CDN 加速及安全防护由</span>
+        <a class="sponsor-link" href="https://edgeone.ai/?from=github" target="_blank" rel="noopener noreferrer" title="Tencent EdgeOne">
+          <img class="sponsor-logo" src="./edgeone-logo.png" alt="Tencent EdgeOne" width="119" height="17" />
+        </a>
+        <span>赞助</span>
+      </div>
     </footer>
   </main>
 
