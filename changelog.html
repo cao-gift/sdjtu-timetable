@@ -51,7 +51,7 @@
     a { color: inherit; text-decoration: none; }
     .wrap { max-width: 780px; margin: 0 auto; padding: 20px 18px 64px; }
     .topbar {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
       gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line);
     }
     .back-link {
@@ -62,7 +62,7 @@
     .ghost-btn {
       appearance: none; border: 1px solid var(--line); background: var(--card); color: var(--sub);
       border-radius: 6px; padding: 0 12px; height: 34px; font-family: var(--mono);
-      font-size: 11px; letter-spacing: 0.06em; cursor: pointer;
+      font-size: 11px; letter-spacing: 0.06em; cursor: pointer; white-space: nowrap;
     }
     .ghost-btn:hover { border-color: var(--ink); color: var(--ink); }
     .page-title { font-size: 26px; font-weight: 700; margin: 22px 0 4px; }
@@ -72,7 +72,7 @@
       padding: 18px 20px; margin-bottom: 14px;
     }
     .rel-head {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px;
       padding-bottom: 10px; border-bottom: 1px solid var(--line);
     }
     .rel-ver {
@@ -85,14 +85,19 @@
       font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em;
       color: var(--mute); margin: 12px 0 4px; font-weight: 700;
     }
-    .rel-list { margin: 10px 0 0; padding-left: 18px; color: var(--sub); font-size: 14px; }
+    .rel-list { margin: 10px 0 0; padding-left: 18px; color: var(--sub); font-size: 14px; overflow-wrap: anywhere; }
     .rel-list li { margin: 5px 0; }
     .rel-list code {
       font-family: var(--mono); font-size: 12.5px; color: var(--ink);
       background: var(--paper); border: 1px solid var(--line); border-radius: 4px;
-      padding: 0 5px;
+      padding: 0 5px; overflow-wrap: anywhere; word-break: break-word;
     }
     .empty { color: var(--mute); font-family: var(--mono); font-size: 13px; padding: 24px 0; }
+    @media (max-width: 520px) {
+      .wrap { padding: 16px 14px 56px; }
+      .release { padding: 14px 16px; }
+      .page-title { font-size: 22px; }
+    }
   </style>
 </head>
 <body>

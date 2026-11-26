@@ -75,6 +75,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
       gap: 12px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--line);
@@ -84,6 +85,11 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      min-width: 0;
+      flex: 1 1 220px;
+    }
+
+    .brand > div {
       min-width: 0;
     }
 
@@ -101,7 +107,7 @@
       font-size: 16px;
       font-weight: 700;
       letter-spacing: -0.01em;
-      line-height: 1.2;
+      line-height: 1.25;
     }
 
     .brand-sub {
@@ -110,11 +116,14 @@
       letter-spacing: 0.06em;
       color: var(--mute);
       margin-top: 2px;
+      line-height: 1.4;
+      word-break: break-word;
     }
 
     .top-actions {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 8px;
       flex-shrink: 0;
     }
@@ -133,7 +142,9 @@
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
+      white-space: nowrap;
       transition: border-color 120ms ease, color 120ms ease;
     }
 
@@ -264,14 +275,16 @@
 
     .btn-primary, .btn-outline {
       min-height: 48px;
-      padding: 0 20px;
+      padding: 10px 20px;
       border-radius: 6px;
       font-size: 14.5px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      flex-wrap: wrap;
+      text-align: center;
+      gap: 4px 8px;
       cursor: pointer;
       border: 1px solid transparent;
       transition: opacity 120ms ease, border-color 120ms ease;
@@ -344,12 +357,16 @@
 
     .row {
       display: grid;
-      grid-template-columns: 36px 1fr auto;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
       align-items: center;
       gap: 12px;
       padding: 14px 18px;
       min-height: 60px;
       position: relative;
+    }
+
+    .row > div {
+      min-width: 0;
     }
 
     .row + .row::before {
@@ -373,12 +390,14 @@
       font-size: 15px;
       font-weight: 700;
       line-height: 1.3;
+      overflow-wrap: anywhere;
     }
 
     .row-sub {
       font-size: 13px;
       color: var(--sub);
       margin-top: 2px;
+      overflow-wrap: anywhere;
     }
 
     .row-tag {
@@ -673,13 +692,51 @@
     }
     .lb-btn:hover { border-color: #FFFFFF; }
 
+    @media (max-width: 640px) {
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+      }
+      .brand {
+        flex: none;
+        width: 100%;
+      }
+      .top-actions {
+        width: 100%;
+        gap: 6px;
+      }
+      .top-actions .ghost-btn {
+        flex: 1 1 auto;
+        padding: 0 10px;
+        height: 34px;
+      }
+    }
+
     @media (max-width: 520px) {
+      .wrap { padding: 16px 14px 56px; }
       .hero { padding: 18px 16px 16px; }
       .intro-card { padding: 16px 16px 14px; }
       .shot-card { flex: 0 0 200px; }
-      .row { padding: 13px 14px; gap: 10px; }
+      .row {
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        padding: 13px 14px;
+        gap: 10px;
+      }
       .row + .row::before { left: 48px; right: 14px; }
-      .btn-primary, .btn-outline { width: 100%; }
+      .btn-primary, .btn-outline { width: 100%; padding: 10px 14px; }
+      .lightbox { padding: 14px; }
+      .lightbox-bar {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+      }
+      .lightbox-btns {
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
     }
   </style>
 </head>
