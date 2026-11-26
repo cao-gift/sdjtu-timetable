@@ -119,9 +119,6 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
 
         if (saved != null && (saved.getBoolean("syncing") || saved.getBoolean("roomPicker"))) {
             startSync(saved.getBoolean("allowLoginPrompt"));
-        } else if (saved == null && rooms() && !WebShellActivity.needsManualLoginFirst(this)) {
-            // 已有会话或已配置自动登录时，进入查空教室即按默认条件自动查询
-            startSync(true);
         }
     }
 
@@ -507,10 +504,11 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
 
     private void render() {
         boolean busy = sync != null;
-        syncButton.setEnabled(!busy && !awaitingLogin);
         if (rooms()) {
-            syncButton.setText(busy ? "查询中…" : "修改条件");
+            syncButton.setVisibility(View.GONE);
         } else {
+            syncButton.setVisibility(View.VISIBLE);
+            syncButton.setEnabled(!busy && !awaitingLogin);
             syncButton.setText(busy ? "同步中…" : "↻ 同步");
         }
 
@@ -540,17 +538,16 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
                     emptyTitle.setText(rooms() ? "空教室查询失败" : "培养方案同步失败");
                     emptySub.setText(notice.isEmpty() ? "未能读取教务数据，请稍后重试。" : notice);
                     emptyAction.setText("重试");
+                    emptyAction.setVisibility(View.VISIBLE);
                 } else if (rooms()) {
-                    int w = actualCurrentWeek();
-                    String d = SdjtuStudyFormat.weekdayLabel(WeekMath.todayDayOfWeek());
-                    emptyTitle.setText("实时查询空教室");
-                    emptySub.setText("默认：" + SdjtuStudyFormat.DEFAULT_CAMPUS_HINT + " · "
-                            + SdjtuStudyFormat.DEFAULT_BUILDING_HINT + "\n第 " + w + " 周 · " + d + "（不缓存）");
-                    emptyAction.setText("立即查询");
+                    emptyTitle.setText("点击上方「查询」获取空教室");
+                    emptySub.setText("可先修改校区、教学楼、周次或星期，查询结果不缓存。");
+                    emptyAction.setVisibility(View.GONE);
                 } else {
                     emptyTitle.setText("暂无本地培养方案");
                     emptySub.setText("点「同步」读取课程体系、学分与开设学期。");
                     emptyAction.setText("同步培养方案");
+                    emptyAction.setVisibility(View.VISIBLE);
                 }
                 emptyAction.setEnabled(!awaitingLogin);
             }
@@ -579,22 +576,12 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
             String periodLbl = cond == null ? "" : labelOfOption(cond, "periods", cond.optString("period"), cond.optString("periodLabel"));
             String roomFilter = cond == null ? "" : cond.optString("room").trim();
 
-            LinearLayout top = new LinearLayout(this);
-            top.setOrientation(LinearLayout.HORIZONTAL);
-            top.setGravity(Gravity.CENTER_VERTICAL);
             TextView cap = text(11, G.MUTE);
             cap.setTypeface(Typeface.MONOSPACE);
             cap.setText(syncedAt > 0
-                    ? "QUERY · 实时查询 " + new SimpleDateFormat("HH:mm", Locale.US).format(new Date(syncedAt))
+                    ? "QUERY · 实时查询 " + new SimpleDateFormat("HH:mm", Locale.US).format(new Date(syncedAt)) + "（不缓存）"
                     : "QUERY · 实时查询（不缓存）");
-            top.addView(cap, new LinearLayout.LayoutParams(0, -2, 1f));
-
-            TextView change = text(12, G.INK);
-            change.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            change.setText(busy ? "查询中…" : "切换条件 ›");
-            change.setEnabled(!busy && !awaitingLogin);
-            top.addView(change);
-            heroCard.addView(top);
+            heroCard.addView(cap);
 
             TextView place = text(16, G.INK);
             place.setTypeface(Typeface.DEFAULT_BOLD);
@@ -612,8 +599,28 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
             sub.setText(meta.toString());
             heroCard.addView(sub);
 
-            heroCard.setClickable(!busy && !awaitingLogin);
-            heroCard.setOnClickListener(v -> openRoomConditionPicker());
+            LinearLayout actions = new LinearLayout(this);
+            actions.setOrientation(LinearLayout.HORIZONTAL);
+            actions.setPadding(0, dp(14), 0, 0);
+
+            TextView queryBtn = Ui.button(this, busy ? "查询中…" : "查询", true, v -> {
+                if (!"query".equals(request.optString("roomAction"))) {
+                    put(request, "roomAction", "query");
+                }
+                startSync();
+            });
+            queryBtn.setEnabled(!busy && !awaitingLogin);
+            actions.addView(queryBtn, new LinearLayout.LayoutParams(0, -2, 1f));
+
+            TextView pickBtn = Ui.button(this, "修改条件", false, v -> openRoomConditionPicker());
+            pickBtn.setEnabled(!busy && !awaitingLogin);
+            LinearLayout.LayoutParams plp = new LinearLayout.LayoutParams(0, -2, 1f);
+            plp.setMarginStart(dp(10));
+            actions.addView(pickBtn, plp);
+            heroCard.addView(actions);
+
+            heroCard.setClickable(false);
+            heroCard.setOnClickListener(null);
         } else {
             if (data == null) {
                 heroCard.setVisibility(View.GONE);

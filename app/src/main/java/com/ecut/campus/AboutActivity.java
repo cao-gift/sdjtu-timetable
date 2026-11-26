@@ -48,52 +48,59 @@ public class AboutActivity extends AppCompatActivity {
         return String.format(java.util.Locale.US, "%02d", n);
     }
 
+    private static final String PRIVACY_URL = "https://lvlv.freeblock.cn/privacy.html";
+
     private void render() {
         LinearLayout col = Ui.page(this, "设置", getString(R.string.app_name), "v" + BuildConfig.VERSION_NAME
-                + " · 非官方校园课表工具");
+                + " · 山东交通学院校园课表工具");
 
         Ui.label(this, col, "PROJECT · 项目");
         LinearLayout c1 = Ui.card(this, col);
         int idx = 1;
         if (Updater.hasOfficialSite()) {
-            Ui.row(this, c1, rowIndex(idx++), "官方网站", Updater.SITE_URL, "↗ WEB",
+            Ui.row(this, c1, rowIndex(idx++), "官方网站", "获取最新版与更新日志", "访问 ›",
                     v -> Updater.open(this, Updater.SITE_URL));
         }
         if (Updater.hasUpdateSource()) {
             String cachedTag = Updater.availableUpdateTag(this);
             boolean hasCached = !cachedTag.isEmpty();
             View upd = Ui.row(this, c1, rowIndex(idx++), "检查更新",
-                    hasCached ? ("新版本 " + cachedTag + " 可以下载") : "正在检查…",
+                    hasCached ? ("发现新版本 " + cachedTag) : "正在检查…",
                     hasCached ? "● NEW" : "…", v -> check(true));
             bindUpdateRow(upd);
-            if (hasCached) setUpdate("新版本 " + cachedTag + " 可以下载", "● NEW", G.alarm());
-        }
-        if (Updater.hasReleaseRepository()) {
-            Ui.row(this, c1, rowIndex(idx++), "GitHub 项目主页", Updater.REPO_URL, "↗ WEB",
-                    v -> Updater.open(this, Updater.REPO_URL));
+            if (hasCached) setUpdate("发现新版本 " + cachedTag, "● NEW", G.alarm());
         }
         if (Updater.hasUpdateSource()) {
-            Ui.row(this, c1, rowIndex(idx++), "自动检查更新", "联网时静默检查并以角标提醒",
+            Ui.row(this, c1, rowIndex(idx++), "自动检查更新", "联网时静默检测新版本",
                     Prefs.updateAutoCheck(this) ? "ON" : "OFF", v -> {
                         Prefs.setUpdateAutoCheck(this, !Prefs.updateAutoCheck(this));
                         recreate();
                     });
         }
+        if (Updater.hasReleaseRepository()) {
+            Ui.row(this, c1, rowIndex(idx++), "开源仓库", "查看源码与问题反馈", "访问 ›",
+                    v -> Updater.open(this, Updater.REPO_URL));
+        }
+        Ui.row(this, c1, rowIndex(idx++), "隐私声明", "本地存储与权限使用说明", "查看 ›",
+                v -> Updater.open(this, PRIVACY_URL));
 
         Ui.label(this, col, "CONTACT · 联系与赞赏");
         LinearLayout c2 = Ui.card(this, col);
         Ui.row(this, c2, "01", "联系邮箱", Updater.FEEDBACK_EMAIL, "COPY", v -> copyEmail());
-        Ui.row(this, c2, "02", "赞赏码", "微信扫码支持开发", "QR", v -> showDonateDialog());
+        Ui.row(this, c2, "02", "赞赏支持", "微信扫码支持开发", "QR", v -> showDonateDialog());
 
         TextView note = Ui.text(this, col,
-                "非官方工具，与学校及教务系统厂商无关。教务数据以学校系统为准，成绩计算仅供参考。交院自动登录由你开启，账号密码加密保存在本机，可在设置中删除。",
+                "非官方校园工具，数据以学校教务为准。\n课表、成绩与可选自动登录凭据均仅保存在本机。",
                 12f, G.MUTE);
-        note.setPadding(Ui.dp(this, 4), Ui.dp(this, 18), Ui.dp(this, 4), 0);
+        note.setGravity(Gravity.CENTER);
+        note.setLineSpacing(Ui.dp(this, 3), 1f);
+        note.setPadding(Ui.dp(this, 8), Ui.dp(this, 22), Ui.dp(this, 8), 0);
 
-        TextView ver = Ui.text(this, col, "驴驴课表 v" + BuildConfig.VERSION_NAME + " · build " + BuildConfig.VERSION_CODE,
+        TextView ver = Ui.text(this, col, "v" + BuildConfig.VERSION_NAME + " · BUILD " + BuildConfig.VERSION_CODE,
                 11f, G.MUTE);
+        ver.setGravity(Gravity.CENTER);
         ver.setTypeface(android.graphics.Typeface.MONOSPACE);
-        ver.setPadding(Ui.dp(this, 4), Ui.dp(this, 18), Ui.dp(this, 4), Ui.dp(this, 8));
+        ver.setPadding(Ui.dp(this, 4), Ui.dp(this, 10), Ui.dp(this, 4), Ui.dp(this, 8));
     }
 
     /** Ui.row 返回的行：[序号, 文字列, 右侧]；拿到副标题和右侧标记，用来显示检查结果。 */

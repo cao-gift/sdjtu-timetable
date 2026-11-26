@@ -57,27 +57,30 @@
         <item name="android:textSize">22sp</item>
     </style>
     <style name="G.RowIndex">
-        <item name="android:layout_width">30dp</item>
+        <item name="android:layout_width">32dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:fontFamily">monospace</item>
+        <item name="android:letterSpacing">0.04</item>
         <item name="android:textColor">?attr/gMute</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">11.5sp</item>
+        <item name="android:textStyle">bold</item>
     </style>
     <style name="G.Hair">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">1px</item>
-        <item name="android:layout_marginStart">48dp</item>
+        <item name="android:layout_marginStart">50dp</item>
+        <item name="android:layout_marginEnd">18dp</item>
         <item name="android:background">?attr/gLine</item>
     </style>
-    <!-- 设置首页：压紧到一屏放下，避免只多出一小截的发飘滚动 -->
+    <!-- 设置首页：保持舒适呼吸感与整齐两位数编号 -->
     <style name="G.SectionLabel.Tight">
-        <item name="android:layout_marginTop">16dp</item>
-        <item name="android:layout_marginBottom">6dp</item>
+        <item name="android:layout_marginTop">18dp</item>
+        <item name="android:layout_marginBottom">7dp</item>
     </style>
     <style name="G.Row.Tight">
-        <item name="android:minHeight">52dp</item>
-        <item name="android:paddingTop">10dp</item>
-        <item name="android:paddingBottom">10dp</item>
+        <item name="android:minHeight">56dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
     </style>
     <style name="G.PageTitle">
         <item name="android:layout_width">wrap_content</item>

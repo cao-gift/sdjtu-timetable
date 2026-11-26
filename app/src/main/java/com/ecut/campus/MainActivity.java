@@ -563,13 +563,30 @@ public class MainActivity extends AppCompatActivity {
         MainSyncHelper.startAutoLogin(this);
     }
 
+    private android.animation.ObjectAnimator syncSpinAnim;
+
     void refreshTimetableSyncButton() {
         if (campusFragment == null) return;
-        TextView btn = campusFragment.findViewById(R.id.btn_sync_timetable);
+        View btn = campusFragment.findViewById(R.id.btn_sync_timetable);
         if (btn == null) return;
         boolean busy = activeSync != null && activeSync.isRunning();
         btn.setEnabled(!busy);
-        btn.setText(busy ? "同步中…" : "↻ 同步");
+        btn.setAlpha(busy ? 0.55f : 1f);
+        if (busy) {
+            if (android.animation.ValueAnimator.areAnimatorsEnabled() && syncSpinAnim == null) {
+                syncSpinAnim = android.animation.ObjectAnimator.ofFloat(btn, View.ROTATION, 0f, 360f);
+                syncSpinAnim.setDuration(900L);
+                syncSpinAnim.setRepeatCount(android.animation.ValueAnimator.INFINITE);
+                syncSpinAnim.setInterpolator(new android.view.animation.LinearInterpolator());
+                syncSpinAnim.start();
+            }
+        } else {
+            if (syncSpinAnim != null) {
+                syncSpinAnim.cancel();
+                syncSpinAnim = null;
+            }
+            btn.setRotation(0f);
+        }
     }
 
     private void syncGrades() {
@@ -592,6 +609,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
+        if (syncSpinAnim != null) {
+            syncSpinAnim.cancel();
+            syncSpinAnim = null;
+        }
         if (activeSync != null) {
             activeSync.cancel();
             activeSync = null;

@@ -143,7 +143,7 @@
 
         <TextView
             style="@style/G.SectionLabel.Tight"
-            android:text="ENTRIES · 入口" />
+            android:text="ACADEMIC · 教务查询" />
         <com.google.android.material.card.MaterialCardView
             style="@style/G.Card">
 
@@ -189,7 +189,7 @@
 
                 <TextView
                     style="@style/G.RowIndex"
-                    android:text="02a" />
+                    android:text="02" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -203,7 +203,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="校区 · 教学楼 · 空闲时段" />
+                        android:text="按教学楼与节次实时查空" />
                 </LinearLayout>
 
                 <TextView style="@style/G.RowChevron" />
@@ -213,62 +213,6 @@
 
             <LinearLayout
                 android:id="@+id/row_settings_plan"
-                style="@style/G.Row.Tight">
-
-                <TextView
-                    style="@style/G.RowIndex"
-                    android:text="02b" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/G.RowTitle"
-                        android:text="培养方案" />
-
-                    <TextView
-                        style="@style/G.RowSub"
-                        android:text="课程体系 · 学分与学时" />
-                </LinearLayout>
-
-                <TextView style="@style/G.RowChevron" />
-            </LinearLayout>
-
-            <View style="@style/G.Hair" />
-
-            <LinearLayout
-                android:id="@+id/row_settings_exams"
-                style="@style/G.Row.Tight">
-
-                <TextView
-                    style="@style/G.RowIndex"
-                    android:text="02c" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
-
-                    <TextView
-                        style="@style/G.RowTitle"
-                        android:text="考试安排" />
-
-                    <TextView
-                        style="@style/G.RowSub"
-                        android:text="考试时间 · 考场与座位" />
-                </LinearLayout>
-
-                <TextView style="@style/G.RowChevron" />
-            </LinearLayout>
-
-            <View style="@style/G.Hair" />
-
-            <LinearLayout
-                android:id="@+id/row_settings_classmates"
                 style="@style/G.Row.Tight">
 
                 <TextView
@@ -283,21 +227,20 @@
 
                     <TextView
                         style="@style/G.RowTitle"
-                        android:text="同学" />
+                        android:text="培养方案" />
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="分享课表 · 共同空闲" />
+                        android:text="课程体系、学分与开设学期" />
                 </LinearLayout>
 
-                <TextView
-                    style="@style/G.RowChevron" />
+                <TextView style="@style/G.RowChevron" />
             </LinearLayout>
 
             <View style="@style/G.Hair" />
 
             <LinearLayout
-                android:id="@+id/row_settings_timetable_page"
+                android:id="@+id/row_settings_exams"
                 style="@style/G.Row.Tight">
 
                 <TextView
@@ -312,12 +255,80 @@
 
                     <TextView
                         style="@style/G.RowTitle"
+                        android:text="考试安排" />
+
+                    <TextView
+                        style="@style/G.RowSub"
+                        android:text="考试倒计时、考场与座位" />
+                </LinearLayout>
+
+                <TextView style="@style/G.RowChevron" />
+            </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/G.SectionLabel.Tight"
+            android:text="TOOLS · 工具与偏好" />
+        <com.google.android.material.card.MaterialCardView
+            style="@style/G.Card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+            <LinearLayout
+                android:id="@+id/row_settings_classmates"
+                style="@style/G.Row.Tight">
+
+                <TextView
+                    style="@style/G.RowIndex"
+                    android:text="01" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/G.RowTitle"
+                        android:text="同学课表" />
+
+                    <TextView
+                        style="@style/G.RowSub"
+                        android:text="扫码分享与共同空闲时段" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/G.RowChevron" />
+            </LinearLayout>
+
+            <View style="@style/G.Hair" />
+
+            <LinearLayout
+                android:id="@+id/row_settings_timetable_page"
+                style="@style/G.Row.Tight">
+
+                <TextView
+                    style="@style/G.RowIndex"
+                    android:text="02" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/G.RowTitle"
                         android:text="课表与上课时间" />
 
                     <TextView
                         android:id="@+id/tv_settings_tt_page_sub"
                         style="@style/G.RowSub"
-                        android:text="上课时间 · 显示 · 导入导出" />
+                        android:text="节次时间、显示规则与导入导出" />
                 </LinearLayout>
 
                 <TextView
@@ -332,7 +343,7 @@
 
                 <TextView
                     style="@style/G.RowIndex"
-                    android:text="05" />
+                    android:text="03" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -342,11 +353,11 @@
 
                     <TextView
                         style="@style/G.RowTitle"
-                        android:text="通用" />
+                        android:text="通用设置" />
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="外观 · 通知 · 数据" />
+                        android:text="主题外观、桌面小组件与通知" />
                 </LinearLayout>
 
                 <TextView
@@ -361,7 +372,7 @@
 
                 <TextView
                     style="@style/G.RowIndex"
-                    android:text="06" />
+                    android:text="04" />
 
                 <LinearLayout
                     android:layout_width="0dp"
@@ -375,7 +386,7 @@
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="课价 · 缺勤" />
+                        android:text="单节课成本与缺勤安全气囊" />
                 </LinearLayout>
 
                 <TextView

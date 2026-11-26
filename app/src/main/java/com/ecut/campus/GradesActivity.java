@@ -27,6 +27,7 @@ public class GradesActivity extends AppCompatActivity {
 
     private Grades currentGrades = new Grades();
     private String selectedSemesterFilter = "ALL";
+    private int sortMode = com.ecut.campus.data.GradeSort.DEFAULT;
     private CampusSyncClient activeSync;
     private boolean awaitingLogin;
     private String lastSyncError = "";
@@ -281,14 +282,24 @@ public class GradesActivity extends AppCompatActivity {
         }
 
         LinearLayout listBox = findViewById(R.id.grades_list_container);
+        View sortHeader = findViewById(R.id.grades_sort_header);
+        View listCard = findViewById(R.id.card_grades_list);
+        if (sortHeader != null) sortHeader.setVisibility(displayCourses.isEmpty() ? View.GONE : View.VISIBLE);
+        if (listCard != null) listCard.setVisibility(displayCourses.isEmpty() ? View.GONE : View.VISIBLE);
+        renderSortBar();
         if (listBox == null) return;
         listBox.removeAllViews();
 
+        List<Grades.CourseGrade> sortedCourses = com.ecut.campus.data.GradeSort.sorted(displayCourses, sortMode);
+
         LayoutInflater inf = LayoutInflater.from(this);
         int idx = 0;
-        for (Grades.CourseGrade cg : displayCourses) {
+        int totalShown = sortedCourses.size();
+        for (Grades.CourseGrade cg : sortedCourses) {
             idx++;
             View row = inf.inflate(R.layout.item_grade_card, listBox, false);
+            View divider = row.findViewById(R.id.grade_row_divider);
+            if (divider != null) divider.setVisibility(idx == totalShown ? View.GONE : View.VISIBLE);
             View bar = row.findViewById(R.id.grade_color_bar);
             TextView tvIdx = row.findViewById(R.id.tv_grade_index);
             TextView tvName = row.findViewById(R.id.tv_grade_course_name);
@@ -313,7 +324,7 @@ public class GradesActivity extends AppCompatActivity {
             int ink = failed ? G.alarm() : G.INK;
             // 非数字成绩（优秀/合格）字号收小，保持右侧刻度对齐
             boolean numeric = cg.score != null && cg.score.matches("[0-9.]+");
-            int barW = Math.round(dp(56) * (float) Math.max(0.0, Math.min(100.0, v)) / 100f);
+            int barW = Math.round(dp(58) * (float) Math.max(0.0, Math.min(100.0, v)) / 100f);
             Runnable showScore = () -> {
                 tvScore.setText(cg.score);
                 tvScore.setTextColor(ink);
@@ -341,6 +352,39 @@ public class GradesActivity extends AppCompatActivity {
             }
 
             listBox.addView(row);
+        }
+    }
+
+    /** 分数排序栏：默认 / 分数↓ / 分数↑。 */
+    private void renderSortBar() {
+        LinearLayout bar = findViewById(R.id.grades_sort_bar);
+        if (bar == null) return;
+        bar.removeAllViews();
+        bar.setBackground(Ui.segmentBox(this));
+        int pad = dp(2);
+        bar.setPadding(pad, pad, pad, pad);
+        String[] labels = {"默认", "分数 ↓", "分数 ↑"};
+        int[] modes = {
+                com.ecut.campus.data.GradeSort.DEFAULT,
+                com.ecut.campus.data.GradeSort.SCORE_DESC,
+                com.ecut.campus.data.GradeSort.SCORE_ASC
+        };
+        for (int i = 0; i < labels.length; i++) {
+            final int mode = modes[i];
+            TextView tv = new TextView(this);
+            tv.setText(labels[i]);
+            tv.setGravity(android.view.Gravity.CENTER);
+            tv.setTextSize(11.5f);
+            tv.setPadding(dp(9), 0, dp(9), 0);
+            Ui.segmentItem(tv, sortMode == mode);
+            tv.setOnClickListener(v -> {
+                if (sortMode == mode) return;
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
+                sortMode = mode;
+                refresh();
+            });
+            bar.addView(tv, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
         }
     }
 

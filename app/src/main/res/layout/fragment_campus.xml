@@ -91,17 +91,15 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
+        <ImageView
             android:id="@+id/btn_sync_timetable"
-            style="@style/Gauge.Button.Outline.Compact"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="2dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="同步课表"
-            android:minWidth="0dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:text="↻ 同步" />
+            android:padding="13dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_refresh" />
 
         <TextView
             android:id="@+id/btn_add_course"

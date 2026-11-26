@@ -5,7 +5,8 @@
     android:layout_height="match_parent"
     android:background="?attr/gBg"
     android:clipToPadding="false"
-    android:paddingHorizontal="20dp"
+    android:overScrollMode="never"
+    android:paddingHorizontal="18dp"
     android:paddingTop="4dp"
     android:paddingBottom="28dp">
 
@@ -14,36 +15,23 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- 1. 摘要行 + 同步 -->
-        <LinearLayout
+        <!-- 1. 摘要行 -->
+        <TextView
+            android:id="@+id/tv_grades_subtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/tv_grades_subtitle"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:fontFamily="monospace"
-                android:text="GPA 与加权分仅供参考"
-                android:textColor="?attr/gMute"
-                android:textSize="11.5sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_sync_grades"
-                style="@style/Gauge.Button.Outline.Compact"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="↻ 同步" />
-        </LinearLayout>
+            android:fontFamily="monospace"
+            android:paddingHorizontal="2dp"
+            android:text="GPA 与加权分仅供参考"
+            android:textColor="?attr/gMute"
+            android:textSize="11.5sp" />
 
         <!-- 2. 学期刻度标签 -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="10dp"
+            android:overScrollMode="never"
             android:scrollbars="none">
 
             <LinearLayout
@@ -58,112 +46,150 @@
             android:layout_height="1px"
             android:background="?attr/gHair" />
 
-        <!-- 3. 读数区：GPA / 加权平均分 -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:orientation="horizontal">
+        <!-- 3. 核心读数 + 趋势图卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_grades_summary"
+            style="@style/G.Card"
+            android:layout_marginTop="14dp">
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
+                android:orientation="vertical"
+                android:paddingHorizontal="18dp"
+                android:paddingVertical="16dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="monospace"
-                    android:letterSpacing="0.08"
-                    android:text="GPA"
-                    android:textColor="?attr/gMute"
-                    android:textSize="11sp" />
+                    android:orientation="horizontal">
 
-                <TextView
-                    android:id="@+id/tv_gpa_value"
-                    android:layout_width="wrap_content"
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="monospace"
+                            android:letterSpacing="0.08"
+                            android:text="GPA"
+                            android:textColor="?attr/gMute"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tv_gpa_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:fontFamily="monospace"
+                            android:includeFontPadding="false"
+                            android:text="0.00"
+                            android:textColor="?attr/gInk"
+                            android:textSize="40sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1px"
+                        android:layout_height="match_parent"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="?attr/gLine" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:letterSpacing="0.04"
+                            android:text="加权平均分"
+                            android:textColor="?attr/gMute"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/tv_weighted_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:fontFamily="monospace"
+                            android:includeFontPadding="false"
+                            android:text="0.0"
+                            android:textColor="?attr/gInk"
+                            android:textSize="40sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:fontFamily="monospace"
-                    android:includeFontPadding="false"
-                    android:text="0.00"
-                    android:textColor="?attr/gInk"
-                    android:textSize="44sp"
-                    android:textStyle="bold" />
+                    android:layout_marginTop="14dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tv_grades_credit_summary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="monospace"
+                        android:text=""
+                        android:textColor="?attr/gSub"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/tv_grades_scope_tag"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:text="全部学期"
+                        android:textColor="?attr/gMute"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <com.ecut.campus.view.GpaGaugeChartView
+                    android:id="@+id/gpa_gauge_chart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
             </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
-            <View
-                android:layout_width="1px"
-                android:layout_height="match_parent"
-                android:layout_marginHorizontal="16dp"
-                android:background="?attr/gHair" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:letterSpacing="0.04"
-                    android:text="加权平均分"
-                    android:textColor="?attr/gMute"
-                    android:textSize="11sp" />
-
-                <TextView
-                    android:id="@+id/tv_weighted_value"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:fontFamily="monospace"
-                    android:includeFontPadding="false"
-                    android:text="0.0"
-                    android:textColor="?attr/gInk"
-                    android:textSize="44sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-        </LinearLayout>
-
+        <!-- 4. 成绩明细标题 + 分数排序栏 -->
         <LinearLayout
+            android:id="@+id/grades_sort_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="8dp"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:paddingHorizontal="2dp">
 
             <TextView
-                android:id="@+id/tv_grades_credit_summary"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:fontFamily="monospace"
-                android:text=""
-                android:textColor="?attr/gSub"
-                android:textSize="12sp" />
-
-            <TextView
-                android:id="@+id/tv_grades_scope_tag"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="全部学期"
+                android:letterSpacing="0.08"
+                android:text="COURSES · 成绩明细"
                 android:textColor="?attr/gMute"
                 android:textSize="11sp" />
+
+            <LinearLayout
+                android:id="@+id/grades_sort_bar"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal" />
         </LinearLayout>
-
-        <com.ecut.campus.view.GpaGaugeChartView
-            android:id="@+id/gpa_gauge_chart"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:visibility="gone" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1px"
-            android:layout_marginTop="14dp"
-            android:background="?attr/gInk" />
 
         <com.ecut.campus.view.GaugeSkeletonView
             android:id="@+id/grades_skeleton"
@@ -172,7 +198,7 @@
             android:layout_marginTop="8dp"
             android:visibility="gone" />
 
-        <!-- 4. 空态 -->
+        <!-- 5. 空态 -->
         <LinearLayout
             android:id="@+id/empty_grades_card"
             android:layout_width="match_parent"
@@ -223,12 +249,17 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- 5. 成绩行 -->
-        <LinearLayout
-            android:id="@+id/grades_list_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+        <!-- 6. 成绩列表卡片 -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_grades_list"
+            style="@style/G.Card">
+
+            <LinearLayout
+                android:id="@+id/grades_list_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>
 </ScrollView>
