@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>隐私声明 · 驴驴课表</title>
+  <meta name="description" content="驴驴课表（app.lvlv.timetable）隐私政策与个人信息保护声明：纯本机存储、无商业账号体系、无第三方广告与统计 SDK。" />
+  <link rel="icon" type="image/png" href="./icon.png" />
+  <style>
+    :root {
+      --paper: #F5F4F0;
+      --card: #FBFAF7;
+      --ink: #111111;
+      --sub: #55554F;
+      --mute: #9A9993;
+      --line: #E9E7E1;
+      --chip: #ECEAE4;
+      --accent: #FF4A1C;
+      --on-ink: #FBFAF7;
+      --ok: #2F5D3A;
+      --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #0E0E0D;
+        --card: #171716;
+        --ink: #ECEAE4;
+        --sub: #B3B1AA;
+        --mute: #7C7B75;
+        --line: #2A2A27;
+        --chip: #21211E;
+        --accent: #FF5A2E;
+        --on-ink: #0E0E0D;
+        --ok: #6FB37E;
+      }
+    }
+
+    :root[data-theme="dark"] {
+      --paper: #0E0E0D;
+      --card: #171716;
+      --ink: #ECEAE4;
+      --sub: #B3B1AA;
+      --mute: #7C7B75;
+      --line: #2A2A27;
+      --chip: #21211E;
+      --accent: #FF5A2E;
+      --on-ink: #0E0E0D;
+      --ok: #6FB37E;
+    }
+
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.7;
+    }
+    a { color: inherit; }
+    .wrap {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 20px 18px 64px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .brand img {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      border: 1px solid var(--line);
+      background: var(--card);
+    }
+    .brand-title { font-size: 15px; font-weight: 700; line-height: 1.2; }
+    .brand-sub { font-family: var(--mono); font-size: 11px; color: var(--mute); letter-spacing: 0.06em; }
+    .top-actions { display: flex; gap: 8px; }
+    .ghost-btn {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--sub);
+      border-radius: 6px;
+      padding: 0 12px;
+      height: 34px;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+    }
+    .ghost-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+    .hero {
+      margin-top: 22px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px 20px;
+    }
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--mute);
+      text-transform: uppercase;
+    }
+    h1 {
+      margin: 8px 0 8px;
+      font-size: 26px;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+    }
+    .meta-line {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--sub);
+      margin: 0;
+    }
+    .summary-box {
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 6px;
+      background: var(--paper);
+      border-left: 3px solid var(--ok);
+      font-size: 13.5px;
+      color: var(--sub);
+    }
+    .summary-box strong { color: var(--ink); }
+
+    .toc {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .toc a {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--sub);
+      text-decoration: none;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--paper);
+    }
+    .toc a:hover { border-color: var(--ink); color: var(--ink); }
+
+    .section-card {
+      margin-top: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+    }
+    h2 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      line-height: 1.35;
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .sec-num {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--mute);
+      letter-spacing: 0.06em;
+    }
+    h3 {
+      margin: 16px 0 6px;
+      font-size: 14.5px;
+      color: var(--ink);
+    }
+    p { margin: 8px 0; font-size: 14px; color: var(--sub); }
+    ul { margin: 8px 0 10px 0; padding-left: 20px; font-size: 14px; color: var(--sub); }
+    li { margin: 5px 0; }
+    li strong { color: var(--ink); }
+    .mono { font-family: var(--mono); font-size: 12.5px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 13px;
+    }
+    th, td {
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--mute);
+      font-weight: 600;
+      background: var(--paper);
+    }
+    td { color: var(--sub); }
+    td strong { color: var(--ink); }
+
+    .footnote {
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--mute);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <a class="brand" href="./index.html">
+        <img src="./icon.png" alt="驴驴课表图标" width="36" height="36" />
+        <div>
+          <div class="brand-title">驴驴课表</div>
+          <div class="brand-sub">PRIVACY POLICY · 隐私声明</div>
+        </div>
+      </a>
+      <div class="top-actions">
+        <a class="ghost-btn" href="./index.html">首页</a>
+        <button class="ghost-btn" id="themeBtn" type="button">THEME</button>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">PRIVACY STATEMENT · 个人信息保护声明</div>
+      <h1>驴驴课表隐私政策</h1>
+      <p class="meta-line">应用名称：驴驴课表 · 包名：app.lvlv.timetable · 更新与生效日期：2026 年 11 月 26 日</p>
+      <div class="summary-box">
+        <strong>核心承诺：</strong>「驴驴课表」是由学生个人开发维护的非官方校园课表工具。本应用<strong>无独立注册账号、无自建云端服务器、不收集或上传您的学籍与个人数据、不接入任何商业广告或行为统计 SDK</strong>。您同步的课表、成绩、培养方案、考试安排、作业待办与可选的加密自动登录凭据均仅保存在您本机设备中，您可随时查看、导出或一键清空。
+      </div>
+      <nav class="toc" aria-label="目录导航">
+        <a href="#collect">01 信息收集与使用</a>
+        <a href="#permissions">02 系统权限清单</a>
+        <a href="#sdk">03 第三方服务与 SDK</a>
+        <a href="#storage">04 本地存储与安全</a>
+        <a href="#rights">05 您的隐私权利</a>
+        <a href="#contact">06 联系与更新</a>
+      </nav>
+    </section>
+
+    <section class="section-card" id="collect">
+      <h2><span class="sec-num">01</span>我们如何收集和使用您的个人信息</h2>
+      <p>本应用严格遵循「合法、正当、必要、最小化」原则。除您主动触发以下具体功能外，本应用不会在后台主动采集您的任何个人信息：</p>
+      <ul>
+        <li><strong>校园教务同步（课表、成绩、培养方案、考试安排、空教室）：</strong>当您点击登录或同步时，应用仅在您手机本地通过 WebView 与山东交通学院官方统一门户（<span class="mono">wwebvpn.sdjtu.edu.cn</span>）及教务系统页面直接通信。解析后的课表、成绩、培养方案与考试安排仅保存于本机应用私有目录，查空教室结果仅在内存中实时展示、不写入本地缓存。开发者无法获取、也不存储您的任何学号、姓名或教务数据。</li>
+        <li><strong>统一门户自动登录凭据（可选，默认关闭）：</strong>仅在您主动前往「设置 → 教务账号 → 管理统一门户自动登录」输入并明示同意保存后，应用才会使用 Android Keystore 生成的 AES-256-GCM 硬件级密钥对账号密码进行加密，并仅存放于本机 <span class="mono">no_backup</span> 私有目录中。该凭据仅用于本机自动填充学校官方认证表单，绝不会发送至学校官方域名以外的任何服务器，您可随时点击「忘记账号密码」彻底删除。</li>
+        <li><strong>课块下雨提示（可选）：</strong>仅在您手动开启「课块下雨提示」并授予粗略位置权限后，应用通过系统网络定位获取约 1 公里级粗略经纬度，仅用于向开放气象接口（Open-Meteo）查询未来数天对应上课时段的降雨概率。本应用不申请精确定位权限，不记录您的历史位置轨迹。</li>
+        <li><strong>课程作业附图与扫码分享（可选）：</strong>当您主动为作业添加照片、或扫描同学的脱敏课表二维码时，仅在本地处理图像与二维码内容，图片仅存于本机应用私有目录。课表分享码仅包含课程名、教室、上课时间与周次，不包含学号、姓名及教师信息。</li>
+        <li><strong>应用内检查更新：</strong>仅拉取官网静态更新清单（<span class="mono">lvlv.freeblock.cn/latest.json</span> 及备用镜像）对比版本号与安装包 SHA-256 校验值，不上传设备唯一标识（如 IMEI、OAID、MAC 地址、Android ID 等）。</li>
+        <li><strong>诊断包导出（主动触发）：</strong>仅在您遇到同步异常并主动点击「导出诊断包」时在本地生成脱敏日志压缩包，导出前会自动剔除账号密码、Cookie、会话令牌、学号、姓名、邮箱与 URL 参数，且仅由您自行决定是否保存或发送给开发者。</li>
+      </ul>
+    </section>
+
+    <section class="section-card" id="permissions">
+      <h2><span class="sec-num">02</span>系统权限申请与使用说明</h2>
+      <p>本应用所有敏感权限均遵循「使用具体功能时按需申请」原则；拒绝可选权限不会影响基础课表查看功能：</p>
+      <table>
+        <thead>
+          <tr>
+            <th>系统权限</th>
+            <th>用途与触发场景</th>
+            <th>是否必需</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>网络访问</strong><br /><span class="mono">INTERNET / ACCESS_NETWORK_STATE</span></td>
+            <td>直连学校 WebVPN 教务同步数据、查询天气预报（开启下雨提示时）及检查应用更新。</td>
+            <td>基础联网</td>
+          </tr>
+          <tr>
+            <td><strong>粗略位置信息</strong><br /><span class="mono">ACCESS_COARSE_LOCATION</span></td>
+            <td>仅在开启「课块下雨提示」时获取约 1 公里级大致位置，用于查询上课时段是否可能下雨。</td>
+            <td>可选</td>
+          </tr>
+          <tr>
+            <td><strong>相机权限</strong><br /><span class="mono">CAMERA</span></td>
+            <td>仅在点击「扫同学的二维码」导入课表或为课程作业拍照附图时调用。</td>
+            <td>可选</td>
+          </tr>
+          <tr>
+            <td><strong>日历读写权限</strong><br /><span class="mono">READ_CALENDAR / WRITE_CALENDAR</span></td>
+            <td>仅在点击「同步到手机日历」时将课表与考试安排写入本地独立日历账户。</td>
+            <td>可选</td>
+          </tr>
+          <tr>
+            <td><strong>通知与精确闹钟</strong><br /><span class="mono">POST_NOTIFICATIONS / USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM</span></td>
+            <td>用于您开启的课前提醒、考前提醒、作业截止提醒、常驻下一节课通知及桌面小组件按上下课时刻准点刷新。</td>
+            <td>可选</td>
+          </tr>
+          <tr>
+            <td><strong>开机启动与忽略电池优化</strong><br /><span class="mono">RECEIVE_BOOT_COMPLETED / REQUEST_IGNORE_BATTERY_OPTIMIZATIONS</span></td>
+            <td>设备重启后恢复已设定的上课提醒与桌面小组件定时刷新；仅在您主动点击引导配置时请求电池白名单。</td>
+            <td>可选</td>
+          </tr>
+          <tr>
+            <td><strong>安装应用权限</strong><br /><span class="mono">REQUEST_INSTALL_PACKAGES</span></td>
+            <td>仅在您主动确认下载并安装本应用新版本 APK 时调起系统安装器。</td>
+            <td>可选</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section-card" id="sdk">
+      <h2><span class="sec-num">03</span>第三方服务与 SDK 说明</h2>
+      <p>本应用<strong>未接入任何第三方广告 SDK、数据分析/统计埋点 SDK、推送 SDK 或社交登录 SDK</strong>，不存在向第三方共享、转让或公开披露您个人信息的情形。</p>
+      <ul>
+        <li><strong>学校官方门户（<span class="mono">*.sdjtu.edu.cn</span>）：</strong>由用户自行登录访问，用于获取本人教务数据。</li>
+        <li><strong>Open-Meteo 气象服务（<span class="mono">api.open-meteo.com</span>）：</strong>仅在用户开启「课块下雨提示」并授权定位时发送粗略经纬度（保留约两位小数精度）以获取天气预报，不附带任何个人或设备身份信息。</li>
+        <li><strong>本地开源组件：</strong>应用内集成的 AndroidX、Material Components 与 ZXing 二维码库均为纯本地运行组件，不发起联网数据上报。</li>
+      </ul>
+    </section>
+
+    <section class="section-card" id="storage">
+      <h2><span class="sec-num">04</span>数据的本地存储与安全保护</h2>
+      <ul>
+        <li><strong>存储地点：</strong>您的所有课表、成绩、培养方案、考试安排、同学课表与作业待办均仅保存在您设备的应用私有存储目录内，不会上传至开发者服务器。</li>
+        <li><strong>安全加密：</strong>可选的统一门户自动登录凭据采用 Android Keystore 托管的 AES-256-GCM 密钥加密存储，且标记为不参与系统云备份（<span class="mono">no_backup</span>）；全量本地备份文件导出时亦严格排除任何账号密码、Cookie 与会话令牌。</li>
+        <li><strong>存储期限：</strong>数据仅在您使用本应用期间留存于本机。当您执行清空本地数据或卸载本应用时，相关本地数据将被彻底清除。</li>
+      </ul>
+    </section>
+
+    <section class="section-card" id="rights">
+      <h2><span class="sec-num">05</span>您的隐私权利与管理方式</h2>
+      <p>依据《中华人民共和国个人信息保护法》及相关法规，您对本机存储的个人信息享有以下完整权利，并可直接在应用内自主行使：</p>
+      <ul>
+        <li><strong>查阅与复制权：</strong>您可随时在应用内查阅已同步的课表、成绩、培养方案、考试安排与作业待办，并可通过「设置 → 课表与上课时间 → 备份课表」或「设置 → 通用设置 → 高级选项 → 导出全量备份」导出标准 JSON 数据副本。</li>
+        <li><strong>更正与补充权：</strong>您可在课表页直接修改或删改课程信息，在「设置 → 教务账号 → 管理统一门户自动登录」中随时更新凭据，或在「课表设置」中校准学期日期与上课时间。</li>
+        <li><strong>删除与清空权：</strong>
+          <ul>
+            <li>删除自动登录凭据：进入「设置 → 教务账号 → 管理统一门户自动登录 → 忘记账号密码」，立即删除加密凭据与密钥。</li>
+            <li>一键清空全部本地数据：进入「设置 → 通用设置 → 高级选项 → 清空本地数据」，彻底清除本机全部课表、成绩、培养方案、考试安排、作业待办、上课时间配置及自动登录凭据。</li>
+          </ul>
+        </li>
+        <li><strong>撤回同意与权限管理：</strong>您可随时在应用内关闭「课块下雨提示」「上课提醒」「成绩更新通知」等功能开关，或在手机系统「设置 → 应用管理 → 驴驴课表 → 权限」中随时撤回位置、相机、日历、通知等任意权限授权。</li>
+        <li><strong>账号注销说明：</strong>本应用不提供也不强制注册自有账号，无云端用户档案。当您执行「清空本地数据」或直接卸载本应用后，即视为终止使用并彻底删除所有本机留存数据。</li>
+        <li><strong>响应时限与投诉反馈：</strong>如您对隐私保护有任何疑问、建议或投诉，可通过下方开发者邮箱联系我们，我们将在收到核验请求后的 <strong>15 个工作日</strong> 内予以回复与处理。</li>
+      </ul>
+    </section>
+
+    <section class="section-card" id="contact">
+      <h2><span class="sec-num">06</span>未成年人保护、政策更新与联系我们</h2>
+      <p><strong>未成年人保护：</strong>本应用主要面向在校大学生提供校园课表辅助服务。若您为未满 18 周岁的未成年人，请在监护人指导下阅读本声明并使用本应用。</p>
+      <p><strong>政策更新：</strong>如因功能调整或法律法规变化需要修订本隐私声明，我们将在本页面及时更新并标注生效日期；若涉及权限或数据处理方式重大变更，将在应用内以醒目方式告知。</p>
+      <p><strong>开发者信息与联系方式：</strong><br />
+        开发者：驴驴课表独立开发者（个人）<br />
+        联系邮箱：<a class="mono" href="mailto:3514088137@qq.com">3514088137@qq.com</a><br />
+        官方网站：<a class="mono" href="https://lvlv.freeblock.cn">https://lvlv.freeblock.cn</a><br />
+        开源仓库：<a class="mono" href="https://github.com/cao-gift/sdjtu-timetable" target="_blank" rel="noopener">https://github.com/cao-gift/sdjtu-timetable</a>
+      </p>
+    </section>
+
+    <footer class="footnote">
+      驴驴课表（app.lvlv.timetable）· 隐私政策网址：<span class="mono">https://lvlv.freeblock.cn/privacy.html</span>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const saved = localStorage.getItem("lvlv_theme");
+      if (saved === "light" || saved === "dark") root.dataset.theme = saved;
+      document.getElementById("themeBtn").addEventListener("click", function () {
+        const isDark = root.dataset.theme === "dark" ||
+          (!root.dataset.theme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const next = isDark ? "light" : "dark";
+        root.dataset.theme = next;
+        localStorage.setItem("lvlv_theme", next);
+      });
+    })();
+  </script>
+</body>
+</html>

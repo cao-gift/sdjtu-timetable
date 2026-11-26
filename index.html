@@ -499,6 +499,7 @@
       </div>
       <div class="top-actions">
         <a class="ghost-btn" href="./changelog.html">更新日志</a>
+        <a class="ghost-btn" href="./privacy.html">隐私声明</a>
         <a class="ghost-btn" href="./latest.json" target="_blank" rel="noopener">JSON</a>
         <button class="ghost-btn" id="themeBtn" type="button" aria-label="切换浅色或深色主题">THEME</button>
       </div>
@@ -508,7 +509,7 @@
       <div class="hero-head">
         <div>
           <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span>LATEST RELEASE · 国内直连分发</span></div>
-          <div class="ver-numeral" id="verTag">v1.5.1</div>
+          <div class="ver-numeral" id="verTag">v1.5.2</div>
           <p class="hero-desc">一次登录学校 WebVPN 教务系统，本地离线保存课表、成绩、培养方案与考试安排，并支持实时查空教室。应用内检查更新与下载均优先走本站节点。</p>
         </div>
       </div>
@@ -518,7 +519,7 @@
       <div class="meta-grid">
         <div class="meta-cell">
           <div class="meta-k">BUILD</div>
-          <div class="meta-v" id="verBuild">76</div>
+          <div class="meta-v" id="verBuild">77</div>
         </div>
         <div class="meta-cell">
           <div class="meta-k">SIZE</div>
@@ -535,9 +536,9 @@
       </div>
 
       <div class="cta-row">
-        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.1.apk" download>
+        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.2.apk" download>
           <span>下载安装包 APK</span>
-          <span class="mono" id="downloadName">lvlv-v1.5.1.apk</span>
+          <span class="mono" id="downloadName">lvlv-v1.5.2.apk</span>
         </a>
         <a class="btn-outline" id="githubBtn" href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">
           <span>GitHub Releases ↗</span>
@@ -545,18 +546,18 @@
       </div>
 
       <div class="sha-bar">
-        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">c78fba6be34ab6c263d16157bc58cadff1647f7b1ef1f26d4369934d8a3e148a</span></div>
+        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">5577d5c03be60d4c27f53a5ace3cafc65846b06a2efda2911031a602cd0aeca3</span></div>
         <button class="ghost-btn" id="copyShaBtn" type="button">COPY</button>
       </div>
     </section>
 
     <div class="section-label">RELEASE NOTES · 本次更新</div>
     <section class="card">
-      <div class="notes-body" id="verNotes">1. 同步课表入口移至课表页、设置页改为「自动登录」：课表页顶栏新增「↻ 同步」按钮；设置页「教务账号」点击「自动登录」提示「正在同步，预计 5-10 秒…」。
-2. 查空教室重构与美化（不缓存）：条件调整为校区（必选，默认无影山校区）、教学楼（必选，默认无影山1号教学楼）、周次（必选，默认当前周次）、星期（必选，默认当前星期）、节次（可选）、教室（可选）；按节次矩阵清晰展示每间教室当天各节课空闲状态，并提供顶部节次快速筛选条。
-3. 培养方案界面美化与同步提示统一：培养方案新增总课程/总学分/必修统计卡、横向学期刻度条与分类圆角卡片；查空教室、培养方案与考试安排的同步中与同步完毕均统一给出清晰文字提示。
-4. 课表连堂合并与小组件修复：课表页同一天同课程同教室相邻连堂自动合为连续课块；修复当天课上完后桌面小组件仅显示明天第 1 节课的问题，按组件高度展示明天全部课程。
-5. 文案与功能精简：全应用「作息时间」统一改为「上课时间」；去除关于页「全部版本与更新日志」「使用指南」及小玩意页「翻牌批语」。</div>
+      <div class="notes-body" id="verNotes">1. 课表顶栏同步按钮美化：替换为与「+」「⋯」风格统一的极简刷新图标按钮，同步期间附带平滑旋转动效。
+2. 查空教室手动触发查询：进入查空教室后不再自动发起请求，条件卡内置「查询」与「修改条件」双按钮，确认条件点击「查询」后再实时查询，结果继续保持不缓存。
+3. 学业成绩页美化与分数排序：顶部同步按钮收进标题栏，GPA / 加权分与趋势图整合为圆角仪表卡，成绩明细包裹在统一圆角列表卡中；新增「默认 / 分数 ↓ / 分数 ↑」三段排序（兼容百分制与等级制成绩）。
+4. 设置页入口与关于页重构润色：设置页将原 `02a/02b/02c` 拆分为「教务查询（01–04）」与「工具与偏好（01–04）」两组整齐编号卡片并优化文案间距；关于页隐藏冗长网址、润色底部说明文字，新增「隐私声明」入口。
+5. 华为应用商店合规隐私声明页：官网新增完整隐私政策与隐私权利页面（https://lvlv.freeblock.cn/privacy.html 与 #rights），详述纯本地存储架构、系统权限清单与数据管理权利。</div>
     </section>
 
     <div class="section-label">PREVIEW · 界面一览</div>
@@ -710,8 +711,16 @@
         </div>
         <div class="row-tag">GITHUB ↗</div>
       </a>
-      <a class="row row-link" href="mailto:3514088137@qq.com">
+      <a class="row row-link" href="./privacy.html">
         <div class="row-idx">04</div>
+        <div>
+          <div class="row-title">隐私声明与隐私权利</div>
+          <div class="row-sub">了解本地存储原则、系统权限清单与数据删除方式</div>
+        </div>
+        <div class="row-tag">PRIVACY ›</div>
+      </a>
+      <a class="row row-link" href="mailto:3514088137@qq.com">
+        <div class="row-idx">05</div>
         <div>
           <div class="row-title">联系邮箱</div>
           <div class="row-sub"><span class="mono">3514088137@qq.com</span></div>
@@ -722,21 +731,23 @@
 
     <footer class="footnote">
       非官方校园工具，与山东交通学院及教务系统厂商无关。教务数据以学校系统为准，课表、成绩与可选自动登录凭据均仅保存在本机。
-      · 更新清单接口：<a class="mono" href="./latest.json">/latest.json</a>
+      · <a href="./privacy.html">隐私声明</a>
+      · <a href="./privacy.html#rights">隐私权利</a>
+      · 更新清单：<a class="mono" href="./latest.json">/latest.json</a>
     </footer>
   </main>
 
   <script>
     (function () {
       const FALLBACK = {
-        tag: "v1.5.1",
-        versionCode: 76,
-        fileName: "lvlv-v1.5.1.apk",
-        apkUrl: "/downloads/lvlv-v1.5.1.apk",
-        size: 3714925,
-        sha256: "c78fba6be34ab6c263d16157bc58cadff1647f7b1ef1f26d4369934d8a3e148a",
-        publishedAt: "2026-11-26T11:42:08.124Z",
-        notes: "1. 同步课表入口移至课表页、设置页改为「自动登录」：课表页顶栏新增「↻ 同步」按钮；设置页「教务账号」点击「自动登录」提示「正在同步，预计 5-10 秒…」。\n2. 查空教室重构与美化（不缓存）：条件调整为校区（必选，默认无影山校区）、教学楼（必选，默认无影山1号教学楼）、周次（必选，默认当前周次）、星期（必选，默认当前星期）、节次（可选）、教室（可选）；按节次矩阵清晰展示每间教室当天各节课空闲状态，并提供顶部节次快速筛选条。\n3. 培养方案界面美化与同步提示统一：培养方案新增总课程/总学分/必修统计卡、横向学期刻度条与分类圆角卡片；查空教室、培养方案与考试安排的同步中与同步完毕均统一给出清晰文字提示。\n4. 课表连堂合并与小组件修复：课表页同一天同课程同教室相邻连堂自动合为连续课块；修复当天课上完后桌面小组件仅显示明天第 1 节课的问题，按组件高度展示明天全部课程。\n5. 文案与功能精简：全应用「作息时间」统一改为「上课时间」；去除关于页「全部版本与更新日志」「使用指南」及小玩意页「翻牌批语」。"
+        tag: "v1.5.2",
+        versionCode: 77,
+        fileName: "lvlv-v1.5.2.apk",
+        apkUrl: "/downloads/lvlv-v1.5.2.apk",
+        size: 3717273,
+        sha256: "5577d5c03be60d4c27f53a5ace3cafc65846b06a2efda2911031a602cd0aeca3",
+        publishedAt: "2026-11-26T12:36:21.253Z",
+        notes: "1. 课表顶栏同步按钮美化：替换为与「+」「⋯」风格统一的极简刷新图标按钮，同步期间附带平滑旋转动效。\n2. 查空教室手动触发查询：进入查空教室后不再自动发起请求，条件卡内置「查询」与「修改条件」双按钮，确认条件点击「查询」后再实时查询，结果继续保持不缓存。\n3. 学业成绩页美化与分数排序：顶部同步按钮收进标题栏，GPA / 加权分与趋势图整合为圆角仪表卡，成绩明细包裹在统一圆角列表卡中；新增「默认 / 分数 ↓ / 分数 ↑」三段排序（兼容百分制与等级制成绩）。\n4. 设置页入口与关于页重构润色：设置页将原 `02a/02b/02c` 拆分为「教务查询（01–04）」与「工具与偏好（01–04）」两组整齐编号卡片并优化文案间距；关于页隐藏冗长网址、润色底部说明文字，新增「隐私声明」入口。\n5. 华为应用商店合规隐私声明页：官网新增完整隐私政策与隐私权利页面（https://lvlv.freeblock.cn/privacy.html 与 #rights），详述纯本地存储架构、系统权限清单与数据管理权利。"
       };
 
       const el = (id) => document.getElementById(id);
