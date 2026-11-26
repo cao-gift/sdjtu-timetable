@@ -137,7 +137,7 @@
             return;
           }
           document.getElementById("summary").textContent =
-            "CHANGELOG · 共 " + data.releases.length + " 个历史版本";
+            "CHANGELOG · v1.5.0 起共 " + data.releases.length + " 个版本";
           box.innerHTML = data.releases.map((rel, idx) => {
             let body = "";
             let openUl = false;
