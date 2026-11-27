@@ -14,10 +14,10 @@
     "name": "驴驴课表",
     "operatingSystem": "Android 7.0+",
     "applicationCategory": "EducationalApplication",
-    "softwareVersion": "1.5.3",
+    "softwareVersion": "1.6.1",
     "license": "https://www.gnu.org/licenses/gpl-3.0.html",
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "CNY" },
-    "downloadUrl": "https://lvlv.freeblock.cn/downloads/lvlv-v1.5.3.apk"
+    "downloadUrl": "https://lvlv.freeblock.cn/downloads/lvlv-v1.6.1.apk"
   }
   </script>
   <style>
@@ -1665,14 +1665,14 @@
 
       /* ---------- latest.json Dynamic Sync + Copy SHA-256 ---------- */
       const FALLBACK = {
-        tag: "v1.6.0",
-        versionCode: 79,
-        fileName: "lvlv-v1.6.0.apk",
-        apkUrl: "/downloads/lvlv-v1.6.0.apk",
-        size: 3619146,
-        sha256: "c0a76f5b11ff298c262958b7f5552b42f3487b7a26998611a9e7839cde0b3702",
-        publishedAt: "2026-11-27T06:13:00.000Z",
-        notes: "1. **自动登录提速与稳定性修复**：为交院 CAS 表单水合增加瞬态防误判窗口并延长提交等待上限，非拒登取消时自动解除防重锁；未登录态从空教室/培养方案进入统一门户后直达教务 SSO，成绩同步改走同源 WebView XHR 避免 Cookie 落盘竞态。\n2. **Android 15 适配与全面屏**：升级 `compileSdk / targetSdk` 至 35，新增 `EdgeToEdge` 统一适配状态栏、手势导航条、刘海区与输入法 `WindowInsets`，浮动胶囊底栏自动避让手势条。\n3. **敏感权限精简（零定位、零相机）**：课块下雨提示改为无影山 / 长清 / 威海三校区固定坐标并支持一键切换，彻底移除 `ACCESS_COARSE_LOCATION`；作业附图与同学二维码改由系统相机/相册选图 + ZXing Core 本地解码，移除 `CAMERA`；移除 `USE_EXACT_ALARM`，统一改用 `SCHEDULE_EXACT_ALARM` 并支持未授权自动降级。\n4. **GPA 目标模拟器与「小工具」更名**：全应用「小玩意」统一更名为「小工具」；新增「GPA 目标模拟器」，支持按目标 GPA 与剩余学分反推所需均分/均绩，并添加多门预估课程实时推算总 GPA 变化。\n5. **后台调课提醒与系统视觉升级**：新增每 6 小时后台静默检查课表变动并在调课/换教室/课程增删时推送提醒（可在通用设置开关）；开启 Android 14+ 预测性返回手势，补全 Android 13+ 单色主题图标与 Android 12+ 暖纸/深墨启动页。"
+        tag: "v1.6.1",
+        versionCode: 80,
+        fileName: "lvlv-v1.6.1.apk",
+        apkUrl: "/downloads/lvlv-v1.6.1.apk",
+        size: 3630270,
+        sha256: "51ea840ad52486e6683e6fa26383cb9f26178eb352b82a4927d176efbf3a9207",
+        publishedAt: "2026-11-27T16:18:17.825Z",
+        notes: "1. **重修与时间冲突课程错层叠卡显示**：优化课表多门课时间重叠（如重修与主修部分重叠或完全同时段冲突）的排版算法，告别窄列挤压与角标遮字；采用「错层叠卡 + 切缝描边」保持横向完整可读，轻点冲突叠卡可弹出完整对比卡片，一览全部冲突课程的节次、周次、教室与教师，并支持一键「本周停课 / 作业待办 / 查看编辑」。\n2. **软件默认浅色模式**：新安装及未手动指定深色模式的用户默认启用浅色模式（桌面小组件同步生效），仍可在「设置 → 通用设置 → 深色模式」随时切换「跟随系统 / 浅色 / 深色」。\n3. **课程右下角作业与待办提示美化**：以矢量清单图标 + 等宽数字微胶囊取代原先生硬的纯红 `□1` 方块，与课块同色相及圆角呼应并预留文字底部安全区；常规待办克制柔和，仅今日截止或逾期作业点亮暖朱砂强调，轻点角标可直达该课程的作业待办专页。\n4. **查空教室升级（连空智能推荐 + 记住常用教学楼）**：自动记住上次查询的校区与教学楼，并与课块下雨预报的校区偏好双向联动（长清 / 威海校区同学无需每次重选）；查询当日空教室时按当前时刻优先推荐「从现在起连空 N 节（直至 20:35 不必换座）」的自习好教室，明确标注当前或下节有课时间点。"
       };
       function formatSize(bytes) { return (!bytes || bytes <= 0) ? "--" : (bytes / 1048576).toFixed(1) + " MB"; }
       function formatDate(iso) { const m = String(iso || "").match(/^(\d{4}-\d{2}-\d{2})/); return m ? m[1] : "--"; }
