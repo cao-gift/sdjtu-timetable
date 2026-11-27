@@ -145,6 +145,7 @@
     }
     .rel-list { margin: 10px 0 0; padding-left: 20px; color: var(--ink-2); font-size: 14.5px; overflow-wrap: anywhere; }
     .rel-list li { margin: 6px 0; }
+    .rel-list strong { color: var(--ink); font-weight: 700; }
     .rel-list code {
       font-family: var(--mono); font-size: 12.5px; color: var(--ink);
       background: var(--chip); border-radius: 6px; padding: 1px 6px; overflow-wrap: anywhere;
@@ -227,7 +228,15 @@
         return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       }
       function formatInline(s) {
-        return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+        return escapeHtml(s)
+          .split(/(`[^`]+`)/g)
+          .map((part) => {
+            if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+              return "<code>" + part.slice(1, -1) + "</code>";
+            }
+            return part.replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>");
+          })
+          .join("");
       }
 
       fetch("./changelog.json?t=" + Date.now(), { cache: "no-store" })

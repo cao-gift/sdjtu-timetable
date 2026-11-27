@@ -678,6 +678,7 @@
       font-size: 14.5px; line-height: 1.85; color: var(--ink-2);
       white-space: pre-wrap; word-break: break-word;
     }
+    .rel-notes strong { color: var(--ink); font-weight: 700; }
     .rel-notes code {
       font-family: var(--mono); font-size: 12.5px; color: var(--ink);
       background: var(--chip); border-radius: 6px; padding: 1px 6px;
@@ -1679,7 +1680,14 @@
           .replace(/&/g, "&amp;")
           .replace(/</g, "&lt;")
           .replace(/>/g, "&gt;")
-          .replace(/`([^`]+)`/g, "<code>$1</code>");
+          .split(/(`[^`]+`)/g)
+          .map((part) => {
+            if (part.startsWith("`") && part.endsWith("`") && part.length >= 2) {
+              return "<code>" + part.slice(1, -1) + "</code>";
+            }
+            return part.replace(/\*\*([^*\n]+?)\*\*/g, "<strong>$1</strong>");
+          })
+          .join("");
       }
 
       function renderRelease(data) {
