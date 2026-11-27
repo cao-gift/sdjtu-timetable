@@ -1,98 +1,116 @@
+<div align="center">
+
+<img src="app/src/main/res/drawable-nodpi/lvlv_artwork.png" width="96" height="96" alt="Lǘlǘ Timetable Icon" />
+
 # 驴驴课表 · Lǘlǘ Timetable
 
-**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)** (current version **1.5.3 (78)**), derived from [augustlies/tangli](https://github.com/augustlies/tangli) and open-sourced under **GPL-3.0**.
+**An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)**
+Sign in once via WebVPN for instant offline access to timetables, grades, empty rooms, curriculum plans, and exams.
 
-[简体中文](README.md) | **English**
+[![Version](https://img.shields.io/badge/Version-v1.6.0_(79)-1B1B1F?style=flat-square)](https://github.com/cao-gift/sdjtu-timetable/releases)
+[![Android](https://img.shields.io/badge/Android-7.0+-2F5D3A?style=flat-square)](https://lvlv.freeblock.cn)
+[![License](https://img.shields.io/badge/License-GPL--3.0-555450?style=flat-square)](LICENSE)
+[![Website](https://img.shields.io/badge/Mirror-lvlv.freeblock.cn-FF4A1C?style=flat-square)](https://lvlv.freeblock.cn)
 
-Sign in once through SDJTU WebVPN to store your **timetable, grades, empty classrooms, curriculum plan, and exam schedule** locally for instant offline access — featuring the **Frosted Glass** theme by default, home-screen widgets, class/rain reminders, and classmate free-time matching.
+[简体中文](README.md) · **English**
 
-[Changes from Upstream](#changes-from-upstream) · [SDJTU Features](#sdjtu-features) · [Features](#features) · [Installation](#installation)
+[Screenshots](#screenshots) · [SDJTU Academic Tools](#sdjtu-academic-tools) · [Everyday Experience](#everyday-experience) · [Diff from Upstream](#diff-from-upstream) · [Install & Build](#install--build) · [Privacy & License](#privacy--license)
 
----
-
-## Changes from Upstream
-
-Modified from [augustlies/tangli](https://github.com/augustlies/tangli) specifically for **Shandong Jiaotong University** (legacy Qiangzhi academic system via WebVPN):
-
-### Added Features
-- **Empty Classroom Finder**: Live query (not cached) with required campus, building, week, and weekday (pre-filled with Wuyingshan Campus, Building 1, current week, and current weekday) plus optional period and room filters; displays each room's free/occupied slots in a period matrix with quick period filtering.
-- **Curriculum Plan**: Sync and browse the Qiangzhi execution plan offline with total course/credit/required stats, a horizontal semester ruler filter, category-grouped cards, and keyword/code search.
-- **Exam Schedule**: Combines regular final exams and early in-class final exams for the current term into one deduplicated, chronological offline timeline.
-- **Optional Portal Auto-Login**: Opt-in under Settings → Academic Account; credentials are encrypted locally via Android Keystore, automatically falling back to the visible WebVPN portal when extra verification is required.
-- **Merged Consecutive Sessions, Location Simplification & Course Code Toggle**: Automatically merges adjacent sessions of the same course/room/teacher; shows full locations by default with smart frequent-prefix suggestions, tag-chip hide phrases, and live preview in Timetable Settings (full location preserved in details/export), plus a toggle for showing course codes.
-- **Manual Fallback Capture**: If automatic menu navigation fails inside legacy frames, locate the page manually in the academic portal and tap "Read this page".
-
-### Key Modifications & Simplifications
-- **SDJTU-Only Focus**: Locked to SDJTU WebVPN (`wwebvpn.sdjtu.edu.cn`) with the university seal in Settings; removed the multi-school directory, school picker, custom school URLs, and other universities' adapters/assets.
-- **Legacy Qiangzhi, Calendar & Schedule Defaults**: Fixed course code being parsed as course name on legacy Qiangzhi timetables; calibrated SDJTU 2026–2027 Term 1 start date (2026-08-24) with one-tap current-week calibration in Settings; aligned default class bell times to SDJTU's schedule (08:30–11:45, 13:30–16:45, 19:00–20:35).
-- **Standalone App & Streamlined Scope**: Renamed to Lǘlǘ Timetable with donkey icon and standalone package ID `app.lvlv.timetable` (installable alongside upstream); completely removed DNS ad-filtering, VPN service, domain rules, and AI/text-command editing (`lvlv://` / `tangli://`); simplified the bottom bar to Timetable / Settings, enabled Frosted Glass by default, and unified buttons and cards across all screens.
+</div>
 
 ---
 
-## SDJTU Features
+## Screenshots
 
-Settings displays Shandong Jiaotong University and its seal, and all academic tools share one WebVPN session:
+> Sample course and instructor names are anonymized. Ships with **Frosted Glass** by default and optional **Paper & Ink**, both supporting light and dark modes.
 
-- **Timetable & Grades**: One-tap sync from the timetable top bar, offline storage, GPA trend chart, score sorting, new-grade notifications, and revealable grade cards.
-- **Empty Classrooms (`查空教室`)**: Manual trigger live query (no cache), pre-filled campus/building/week/weekday, and per-room period matrix view.
-- **Curriculum Plan (`培养方案`)**: Grouped by course category with stats summary, semester ruler filter, keyword/code search, credits, hours, and completion status.
-- **Exam Schedule (`考试安排`)**: Merges current-term final and early final exams into one timeline and updates offline cache when both succeed.
+<table>
+  <tr>
+    <td align="center" width="20%">
+      <img src="https://lvlv.freeblock.cn/showcase/01-timetable.jpg" alt="Weekly Timetable" />
+      <br /><sub><b>Weekly Timetable</b></sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="https://lvlv.freeblock.cn/showcase/02-grades.jpg" alt="Grades & GPA Trend" />
+      <br /><sub><b>Grades &amp; GPA Trend</b></sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="https://lvlv.freeblock.cn/showcase/03-rooms.jpg" alt="Live Empty Rooms" />
+      <br /><sub><b>Live Empty Rooms</b></sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="https://lvlv.freeblock.cn/showcase/04-exams.jpg" alt="Exam Timeline" />
+      <br /><sub><b>Exam Timeline</b></sub>
+    </td>
+    <td align="center" width="20%">
+      <img src="https://lvlv.freeblock.cn/showcase/05-plan.jpg" alt="Curriculum Plan" />
+      <br /><sub><b>Curriculum Plan</b></sub>
+    </td>
+  </tr>
+</table>
 
 ---
 
-## Features
+## SDJTU Academic Tools
 
-### 📅 Timetable
-- A whole week on one screen, opening on the current week; swipe to change weeks, or **press and drag the big week number in the top-left** — one cell, one week
-- The class you are currently in "fills with time", showing how many minutes are left; 15 minutes before the next class, a countdown appears on its corner
-- **Rain hint on class blocks** (on by default, can be turned off in Settings): when rain is expected during a class, its card on the timetable and the home-screen widget glows with a rainy-blue halo and drizzle streaks to remind you to take an umbrella; tap the class to see the rain probability. Weather is checked against Open-Meteo using a coarse location only (accurate to about 1 km)
-- **"Today's classes" home-screen widget**: see today's remaining classes without opening the app, with live countdowns ("mm:ss left" for the current class, "starts in mm:ss" for the next); resizable down to 2×2, with your own background image. Long-press the Lǘlǘ Timetable icon and tap "Add today's classes widget" to place it
-- **Pre-class reminders** (off by default): a silent notification 5–20 minutes ahead, with class name, room, and countdown
-- **Next class pinned in the notification shade** (off by default): a silent notification with the next class's name, time, and room; during class it counts down to the end, and it flips automatically between classes
-- Two classes at the same time are shown side by side, never overlapping
-- **Long-press an empty cell and drag up or down** to draw a class directly; you can also add and edit classes manually
-- 8–16 periods a day, period length, breaks, and 5- or 7-day display can all be adjusted to your school's schedule
-- Same-name courses share a color; different courses in the same term never clash
-- Holidays are greyed out automatically; make-up days automatically carry the classes of the day they replace; long-press a class to suspend just this week, or move it elsewhere
-- You get a reminder if the timetable hasn't synced in a long time or the login has expired
+Locked directly to SDJTU Unified Portal (`wwebvpn.sdjtu.edu.cn`) so all five academic modules share one session from on- or off-campus networks:
 
-### 🎓 Grades
-- View grades and GPA by term with trend chart and score sorting
-- A notification when new grades are posted (checked about every 6 hours, can be turned off)
-- New grades stay "covered" until you tap to reveal them
+| Module | Highlights | Mode |
+| :--- | :--- | :---: |
+| **Timetable Sync** | One-tap top-bar sync for current & historical terms; merges adjacent identical sessions, separates course code from title, and preserves custom entries | Offline |
+| **Grades & GPA** | Term breakdown with GPA trend chart, score sorting, periodic new-grade notifications, and tap-to-reveal anti-spoiler grade cards | Offline |
+| **Empty Rooms** | Live uncached query pre-filled with Wuyingshan Campus, Building 1, current week, and weekday; renders per-room period matrix with quick slot filters | Live |
+| **Curriculum Plan** | Syncs legacy Qiangzhi execution plans with total course/credit/required stats, horizontal semester ruler, category grouping, and search | Offline |
+| **Exam Schedule** | Merges regular final exams and early in-class finals into a single deduplicated hairline timeline with reminders & system calendar sync | Offline |
+| **Auto-Login** | Opt-in local credential encryption via Android Keystore (AES-256-GCM); automatically falls back to the visible portal when extra verification is required | Opt-in |
 
-### 👫 Classmates
-- Generate a QR code or share code to send your timetable to a classmate (only course names, rooms, times, and schedule — no teachers or student IDs); if their daily schedule differs, they can adopt yours in one tap
-- Scan a code or paste one to import a classmate's timetable
-- Compute the **common free time** of you and one or more classmates in one tap — no more comparing timetables class by class to plan a meal or a study session
+> [!TIP]
+> Because SDJTU's legacy Qiangzhi queries run inside sub-frames, every academic screen includes a **"Locate in Portal → Read this page"** manual fallback if menu routes ever change.
 
-### 🎲 Little extras
-- Settings → Little extras: how much each class is worth in tuition and a red edge on the timetable when absences approach 1/3 — all computed on your phone
+---
 
-### 🎨 Appearance & more
-- The launcher uses the 驴驴课表 donkey icon
-- Two themes: "Frosted Glass" (default) and "Paper & Ink", each in light / dark, expanding in a circle from where you tap when switching; dialogs under Frosted Glass are nearly opaque, so text never blends into the background
-- Export your timetable to your phone's calendar, or back it up to a file to restore on a new phone
+## Everyday Experience
 
-## Installation
+- **Tactile Timetable**: Full week on one screen; drag the top-left week numeral like a precision dial; ongoing classes fill with time and upcoming classes display a 15-minute countdown; long-press empty cells to draw a class directly.
+- **Smart Location Simplifier & SDJTU Defaults**: Automatically extracts frequent campus/building prefixes for one-tap hiding with live preview (details & exports retain raw locations); pre-calibrated to SDJTU bell times (`08:30–11:45`, `13:30–16:45`, `19:00–20:35`) and 2026–2027 Term 1 (`2026-08-24`), with one-tap week calibration and statutory holiday make-up handling.
+- **Widgets & Reminders**: Resizable 2×2 to wide "Today's Classes" widget with live countdowns; rain-alert glow via Open-Meteo using built-in SDJTU campus coordinates (Wuyingshan / Changqing / Weihai — zero location permission); background schedule-change notifications, silent pre-class alerts, persistent next-class shade notification, and homework deadlines with photo attachments.
+- **Utilities & Classmate Free-Time Matching**: Built-in GPA target simulator, tuition per-class cost, and absence tracker; exchange sanitized timetables (no student IDs or instructors) via QR image or share code and compute shared free slots in one tap.
+- **Dual Themes & Local Ownership**: Frosted Glass (default) and Paper & Ink with circular reveal switching, direct Android calendar sync, and local JSON backup/restore.
 
-1. Download the latest APK from the official mirror [lvlv.freeblock.cn](https://lvlv.freeblock.cn) or [GitHub Releases](https://github.com/cao-gift/sdjtu-timetable/releases) and install it on Android 7.0+. In-app update checks and downloads prioritize the official site with multi-mirror fallback.
-2. Open Settings → Sign in to Unified Portal (WebVPN) to sync your timetable, grades, classrooms, curriculum plan, and exam schedule.
+---
 
-The independently signed build uses `app.lvlv.timetable` and can be installed alongside the previous app. To transfer a timetable, export it from the old app and import it into the new one.
+## Diff from Upstream
 
-For a local installable debug build, run `./gradlew assembleDebug` with JDK 17, or `./gradlew testDebugUnitTest` to run unit tests.
+Derived from [augustlies/tangli](https://github.com/augustlies/tangli) under **GPL-3.0**, signed with standalone package ID `app.lvlv.timetable` so it can coexist with upstream.
 
-## Feedback
+<details>
+<summary>View key additions and removals relative to upstream</summary>
 
-Please open an [Issue](https://github.com/cao-gift/sdjtu-timetable/issues) in this repository or email `3514088137@qq.com`. Include the page you were on, steps to reproduce, and what happened.
+- **Added for SDJTU**: Live empty classroom period matrix, offline curriculum plan browser, merged regular + early final exam timeline, opt-in Android Keystore auto-login, automatic consecutive-session merging, smart location hide-phrases with live preview, course code toggle, and manual portal capture fallback.
+- **Streamlined**: Dedicated exclusively to SDJTU WebVPN and legacy Qiangzhi parsing; removed multi-school directory/adapters, DNS ad-blocking, VPN service, and AI/text-command editing (`lvlv://`); simplified bottom navigation to Timetable / Settings and unified Gauge UI components across all screens.
 
-## Notes
+</details>
 
-- Lǘlǘ Timetable is an unofficial tool made by a student, and is not affiliated with Shandong Jiaotong University or any academic-system vendor
-- Timetables, grades, classrooms, curriculum plans, and exam schedules from the university system are authoritative; GPA calculations are for reference only
-- Your data stays on your phone. Optional portal auto-login encrypts saved credentials locally with Android Keystore and can be cleared anytime in Settings. If the rain hint is on and location is allowed, a coarse location (~1 km) is sent to Open-Meteo for weather (can be turned off in Settings).
+---
 
-## License
+## Install & Build
 
-Derived from [Tangli (augustlies/tangli)](https://github.com/augustlies/tangli), © 2026 August Lies, and distributed under [GPL-3.0](LICENSE). The Frosted Glass theme's design references the galaxy component on [Uiverse.io](https://uiverse.io) (MIT), and QR code features use ZXing (Apache-2.0).
+### Download
+
+1. Grab the latest APK from **[lvlv.freeblock.cn](https://lvlv.freeblock.cn)** (fast mainland China CDN) or **[GitHub Releases](https://github.com/cao-gift/sdjtu-timetable/releases)** on **Android 7.0+**. In-app updates verify SHA-256 automatically with multi-mirror fallback.
+2. Open **Settings → Sign in to Unified Portal** to sync via SDJTU WebVPN.
+
+### Build Locally (JDK 17)
+
+```bash
+./gradlew assembleDebug        # Build debug APK
+./gradlew testReleaseUnitTest  # Run JVM unit tests
+```
+
+---
+
+## Privacy & License
+
+- **Privacy First**: An unofficial student-built tool unaffiliated with SDJTU. **Zero cloud backends, zero ads, zero analytics SDKs** — all academic data and optional encrypted credentials remain strictly on your device. See [Privacy Policy](https://lvlv.freeblock.cn/privacy.html) and [CHANGELOG](CHANGELOG.md).
+- **Feedback**: Open a [GitHub Issue](https://github.com/cao-gift/sdjtu-timetable/issues) or email `3514088137@qq.com`.
+- **License & Credits**: Derived from [Tangli (augustlies/tangli)](https://github.com/augustlies/tangli) (© 2026 August Lies) under [GPL-3.0](LICENSE). Frosted Glass references [Uiverse.io](https://uiverse.io) galaxy (MIT); QR scanning/generation uses ZXing (Apache-2.0).
