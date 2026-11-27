@@ -141,6 +141,7 @@
 
     .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
     .container { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    @media (max-width: 520px) { .container { padding: 0 16px; } }
 
     /* Sticky Full-Width Modern Glass Topbar */
     .topbar {
@@ -280,11 +281,12 @@
       min-width: 0;
     }
     .metric-k { font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.05em; white-space: nowrap; }
-    .metric-v { font-size: 14.5px; font-weight: 700; margin-top: 3px; color: var(--ink); white-space: nowrap; }
+    .metric-v { font-size: 14px; font-weight: 700; margin-top: 3px; color: var(--ink); white-space: nowrap; }
     @media (max-width: 520px) {
       .hero-metrics { gap: 8px; }
-      .metric { padding: 10px 10px; }
-      .metric-v { font-size: 12.5px; }
+      .metric { padding: 10px 9px; }
+      .metric-k { font-size: 10px; }
+      .metric-v { font-size: 12px; }
     }
 
     /* Hero Right: Modern Interactive Device Stage with Real Screenshots */
@@ -340,17 +342,19 @@
     .screen-tabs {
       display: flex; flex-wrap: nowrap; justify-content: center; gap: 4px;
       padding: 5px; border-radius: 999px; max-width: 100%;
-      overflow-x: auto; scrollbar-width: none;
     }
-    .screen-tabs::-webkit-scrollbar { display: none; }
     .screen-tab {
-      padding: 6px 12px; border-radius: 999px; flex-shrink: 0;
+      padding: 6px 13px; border-radius: 999px; flex-shrink: 0;
       font-size: 12.5px; font-weight: 600; color: var(--ink-2);
+      white-space: nowrap;
       transition: background 0.2s var(--ease), color 0.2s var(--ease);
     }
-    @media (max-width: 440px) {
-      .screen-tabs { justify-content: flex-start; }
-      .screen-tab { padding: 6px 10px; font-size: 12px; }
+    @media (max-width: 520px) {
+      .screen-tabs {
+        display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+        width: 100%; padding: 4px; gap: 2px;
+      }
+      .screen-tab { padding: 7px 2px; font-size: 11.5px; text-align: center; }
     }
     .screen-tab:hover { color: var(--ink); }
     .screen-tab.on { background: var(--ink); color: var(--on-ink); }
@@ -400,6 +404,9 @@
     @media (max-width: 900px) {
       .span-7, .span-5, .span-6, .span-4, .span-8 { grid-column: span 12; }
     }
+    @media (max-width: 520px) {
+      .b-card { padding: 18px; border-radius: 20px; }
+    }
 
     .b-tag {
       display: inline-flex; align-items: center; gap: 6px;
@@ -448,10 +455,11 @@
       display: flex; flex-direction: column; gap: 12px;
     }
     .loc-preview {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap;
       font-size: 13px;
     }
     .loc-raw { color: var(--ink-3); text-decoration: line-through; }
+    .loc-arrow-group { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
     .loc-arrow { color: var(--ink-3); }
     .loc-out {
       padding: 3px 10px; border-radius: 8px;
@@ -539,24 +547,32 @@
     }
     .tp-bar {
       display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px;
       margin-bottom: 10px; font-size: 11.5px;
     }
     .tp-switch {
       display: inline-flex; padding: 3px; border-radius: 999px;
-      background: rgba(27, 27, 31, 0.08); gap: 2px;
+      background: rgba(27, 27, 31, 0.08); gap: 2px; flex-shrink: 0;
     }
     .tp-switch button {
       padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
-      color: #555450;
+      color: #555450; white-space: nowrap;
     }
     .tp-switch button.on { background: #1B1B1F; color: #FBFAF7; }
-    .tp-blocks { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .tp-blocks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
     .tp-blk {
       padding: 8px 9px; border-radius: 10px; font-size: 11.5px; font-weight: 700;
+      min-width: 0; overflow: hidden;
       transition: border-radius 0.25s ease;
     }
     .theme-preview.is-paper .tp-blk { border-radius: 4px; }
-    .tp-blk small { display: block; font-size: 10px; font-weight: 500; opacity: 0.75; margin-top: 2px; }
+    .tp-blk small {
+      display: block; font-size: 10px; font-weight: 500; opacity: 0.75; margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    @media (max-width: 420px) {
+      .tp-blk { padding: 7px 6px; font-size: 11px; }
+    }
     .tp-a { background: #EFE2CC; color: #5C3D14; }
     .tp-b { background: #DDE5D6; color: #31442A; box-shadow: inset 0 0 0 1.5px #FF4A1C; }
     .tp-c { background: #DCE1E6; color: #2E3D4C; }
@@ -581,33 +597,41 @@
       gap: 32px; align-items: center;
     }
     @media (max-width: 880px) {
-      .instrument-card { grid-template-columns: 1fr; padding: 22px; gap: 24px; }
+      .instrument-card { grid-template-columns: 1fr; padding: 20px 18px; gap: 22px; }
     }
     .week-switcher {
       margin-top: 20px; display: flex; flex-direction: column; gap: 12px;
     }
     .week-readout {
-      display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+      display: flex; align-items: baseline; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px 12px;
     }
-    .week-big { font-size: 46px; font-weight: 800; line-height: 1; letter-spacing: -0.04em; }
+    .week-big { font-size: 46px; font-weight: 800; line-height: 1; letter-spacing: -0.04em; white-space: nowrap; }
     .week-big small { font-size: 14px; font-weight: 500; color: var(--ink-3); margin: 0 4px; }
     .week-badge {
       padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600;
-      background: var(--chip); color: var(--ink-2);
+      background: var(--chip); color: var(--ink-2); white-space: nowrap;
+    }
+    @media (max-width: 440px) {
+      .week-big { font-size: 38px; }
+      .week-badge { font-size: 11px; padding: 4px 10px; }
     }
     .week-range {
       width: 100%; accent-color: var(--ink); cursor: pointer; height: 6px;
     }
     .week-marks {
-      display: flex; justify-content: space-between;
-      font-size: 11px; color: var(--ink-3);
+      display: flex; justify-content: space-between; gap: 6px;
+      font-size: 11px; color: var(--ink-3); white-space: nowrap;
+    }
+    @media (max-width: 440px) {
+      .week-marks { font-size: 10px; }
     }
 
     .bell-grid {
       display: grid; gap: 8px;
     }
     .bell-row {
-      display: grid; grid-template-columns: 58px 116px minmax(0, 1fr) auto;
+      display: grid; grid-template-columns: minmax(66px, auto) minmax(118px, auto) minmax(0, 1fr) auto;
       align-items: center; gap: 12px;
       padding: 11px 14px; border-radius: 12px;
       background: var(--surface-subtle); border: 1px solid var(--border);
@@ -617,13 +641,17 @@
       background: var(--surface-strong);
       border-color: var(--accent);
     }
-    .bell-idx { font-weight: 700; color: var(--ink); }
-    .bell-time { color: var(--ink-2); font-size: 12px; }
-    .bell-course { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bell-idx { font-weight: 700; color: var(--ink); white-space: nowrap; }
+    .bell-time { color: var(--ink-2); font-size: 12px; white-space: nowrap; }
+    .bell-course { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .bell-state { font-size: 11px; color: var(--ink-3); white-space: nowrap; }
     .bell-row.is-now .bell-state { color: var(--accent); font-weight: 700; }
-    @media (max-width: 560px) {
-      .bell-row { grid-template-columns: 48px 1fr auto; }
+    @media (max-width: 600px) {
+      .bell-row {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 10px; padding: 11px 12px;
+      }
+      .bell-idx { min-width: 56px; font-size: 12.5px; }
       .bell-time { display: none; }
     }
 
@@ -755,44 +783,69 @@
     .qr-box figcaption { margin-top: 10px; font-size: 12px; color: #555450; line-height: 1.45; }
     @media (max-width: 860px) { .qr-box { display: none; } }
 
-    /* Structured 3-Column Footer */
-    .footer {
-      margin-top: 40px;
-      border-top: 1px solid var(--border);
-      background: color-mix(in srgb, var(--surface) 75%, transparent);
+    /* Modern Floating Glass Footer */
+    .footer { padding: 12px 0 40px; }
+    .footer-card {
+      border-radius: 26px;
+      padding: 34px 36px 24px;
     }
-    .footer-grid {
-      padding: 48px 0 32px;
-      display: grid; grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 0.75fr));
-      gap: 32px;
+    .footer-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 44px;
     }
-    @media (max-width: 760px) { .footer-grid { grid-template-columns: 1fr; gap: 24px; } }
-    .footer-desc {
-      margin-top: 12px; font-size: 13.5px; color: var(--ink-3);
-      max-width: 420px; line-height: 1.7;
+    .footer-brand { max-width: 380px; }
+    .footer-brand-meta {
+      margin-top: 12px; font-size: 13px; color: var(--ink-3); line-height: 1.72;
     }
-    .footer-desc a { text-decoration: underline; text-underline-offset: 2px; color: var(--ink-2); }
+    .footer-brand-meta a { text-decoration: underline; text-underline-offset: 2px; color: var(--ink-2); }
+    .footer-badges {
+      margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .footer-chip {
+      padding: 3px 9px; border-radius: 999px;
+      font-size: 11px; color: var(--ink-2);
+      background: var(--chip); border: 1px solid var(--border);
+    }
+    .footer-cols {
+      display: grid; grid-template-columns: repeat(3, minmax(108px, auto));
+      gap: 20px 44px; flex-shrink: 0;
+    }
     .footer-col h4 {
-      font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
-      color: var(--ink-3); margin-bottom: 12px;
+      font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--ink-3); margin-bottom: 12px; font-weight: 700;
     }
-    .footer-col ul { list-style: none; display: grid; gap: 9px; font-size: 14px; color: var(--ink-2); }
+    .footer-col ul { list-style: none; display: grid; gap: 9px; font-size: 13.5px; color: var(--ink-2); }
+    .footer-col a {
+      display: inline-block; transition: color 0.18s ease;
+    }
     .footer-col a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
     .footer-bottom {
-      padding: 18px 0 28px;
+      margin-top: 28px; padding-top: 18px;
       border-top: 1px solid var(--border);
       display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 12px 20px;
+      flex-wrap: wrap; gap: 10px 20px;
       font-size: 12px; color: var(--ink-3);
     }
     .cdn-row { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; }
-    .cdn-brand { height: 17px; width: auto; }
+    .cdn-brand { height: 16px; width: auto; }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) .cdn-brand { filter: invert(1) hue-rotate(180deg) brightness(1.08); }
     }
     :root[data-theme="dark"] .cdn-brand { filter: invert(1) hue-rotate(180deg) brightness(1.08); }
     .icp-row { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
     .icp-row a:hover { color: var(--ink); text-decoration: underline; }
+    @media (max-width: 920px) {
+      .footer-top { flex-direction: column; gap: 28px; }
+      .footer-brand { max-width: none; }
+      .footer-cols { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+    }
+    @media (max-width: 600px) {
+      .footer { padding: 4px 0 28px; }
+      .footer-card { padding: 24px 18px 20px; border-radius: 20px; }
+      .footer-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 16px; }
+      .footer-col:last-child { grid-column: span 2; }
+      .footer-bottom { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
 
     /* Lightbox */
     .lightbox {
@@ -870,7 +923,7 @@
         <div>
           <div class="status-pill glass mono">
             <span class="now-dot" aria-hidden="true"></span>
-            <span>山东交通学院专属 · <strong id="verTag">v1.5.3</strong> 国内节点直连</span>
+            <span>山东交通学院专属 · <strong id="verTag">v1.5.3</strong> (<span id="verBuild">78</span>)</span>
           </div>
 
           <h1 class="hero-title">
@@ -898,8 +951,8 @@
 
           <div class="hero-metrics">
             <div class="metric">
-              <div class="metric-k mono">BUILD / SIZE</div>
-              <div class="metric-v mono"><span id="verBuild">78</span> · <span id="verSize">3.5 MB</span></div>
+              <div class="metric-k mono">SIZE</div>
+              <div class="metric-v mono" id="verSize">3.5 MB</div>
             </div>
             <div class="metric">
               <div class="metric-k mono">ANDROID</div>
@@ -933,9 +986,9 @@
 
           <div class="screen-tabs glass" id="screenTabs" role="tablist" aria-label="切换展示页面">
             <button class="screen-tab on" type="button" role="tab" aria-selected="true" data-shot="0">周课表</button>
-            <button class="screen-tab" type="button" role="tab" aria-selected="false" data-shot="1">成绩 GPA</button>
+            <button class="screen-tab" type="button" role="tab" aria-selected="false" data-shot="1">成绩</button>
             <button class="screen-tab" type="button" role="tab" aria-selected="false" data-shot="2">空教室</button>
-            <button class="screen-tab" type="button" role="tab" aria-selected="false" data-shot="3">考试安排</button>
+            <button class="screen-tab" type="button" role="tab" aria-selected="false" data-shot="3">考试</button>
             <button class="screen-tab" type="button" role="tab" aria-selected="false" data-shot="4">培养方案</button>
           </div>
         </div>
@@ -989,8 +1042,7 @@
             <div class="loc-demo">
               <div class="loc-preview mono">
                 <span class="loc-raw">无影山校区1号教学楼 1211</span>
-                <span class="loc-arrow">→</span>
-                <span class="loc-out" id="locResult">1号楼 1211</span>
+                <span class="loc-arrow-group"><span class="loc-arrow">→</span><span class="loc-out" id="locResult">1号楼 1211</span></span>
               </div>
               <div class="phrase-chips" id="phraseChips" aria-label="点击切换隐藏词组">
                 <button class="phrase-chip" type="button" data-phrase="无影山校区">无影山校区 <span class="chip-x">×</span></button>
@@ -1107,10 +1159,10 @@
               </div>
               <input class="week-range" id="weekRange" type="range" min="1" max="18" value="14" aria-label="滑动预览教学周" />
               <div class="week-marks mono">
-                <span>第 1 周</span>
-                <span>第 6 周 调休</span>
-                <span>第 14 周</span>
-                <span>第 17 周 考试</span>
+                <span>1周</span>
+                <span>6周·调休</span>
+                <span>14周</span>
+                <span>17周·考试</span>
               </div>
             </div>
           </div>
@@ -1284,53 +1336,75 @@
     </section>
   </main>
 
-  <!-- Structured 3-Column Footer -->
+  <!-- Modern Floating Glass Footer -->
   <footer class="footer">
     <div class="container">
-      <div class="footer-grid">
-        <div>
-          <a class="brand" href="#top">
-            <img class="brand-icon" src="./icon.png" alt="驴驴课表图标" width="32" height="32" />
-            <span class="brand-name">驴驴课表</span>
-          </a>
-          <p class="footer-desc">
-            学生个人开发维护的非官方校园课表工具，与山东交通学院及教务系统厂商无关。基于开源项目 <a href="https://github.com/augustlies/tangli" target="_blank" rel="noopener">tangli（烫梨）</a> 修改，遵循 GPL-3.0 协议开源。课表、成绩与考试信息请以学校教务系统为准。
-          </p>
+      <div class="footer-card glass">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a class="brand" href="#top">
+              <img class="brand-icon" src="./icon.png" alt="驴驴课表图标" width="32" height="32" />
+              <span class="brand-text">
+                <span class="brand-name">驴驴课表</span>
+                <span class="brand-tag mono">SDJTU</span>
+              </span>
+            </a>
+            <p class="footer-brand-meta">
+              学生个人开发维护的非官方校园课表工具，与山东交通学院及教务系统厂商无关。基于开源项目 <a href="https://github.com/augustlies/tangli" target="_blank" rel="noopener">tangli（烫梨）</a> 修改，遵循 GPL-3.0 协议开源。课表、成绩与考试信息请以学校教务系统为准。
+            </p>
+            <div class="footer-badges mono">
+              <span class="footer-chip">app.lvlv.timetable</span>
+              <span class="footer-chip">GPL-3.0 开源</span>
+              <span class="footer-chip">纯本机存储</span>
+            </div>
+          </div>
+
+          <div class="footer-cols">
+            <div class="footer-col">
+              <h4 class="mono">页面导航</h4>
+              <ul>
+                <li><a href="#features">核心体验</a></li>
+                <li><a href="#schedule">作息与周次</a></li>
+                <li><a href="#notes">本次更新</a></li>
+                <li><a href="#faq">常见问题</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-col">
+              <h4 class="mono">文档与清单</h4>
+              <ul>
+                <li><a href="./changelog.html">完整更新日志</a></li>
+                <li><a href="./privacy.html">隐私声明</a></li>
+                <li><a href="./privacy.html#rights">您的隐私权利</a></li>
+                <li><a class="mono" href="./latest.json" target="_blank" rel="noopener">/latest.json</a></li>
+              </ul>
+            </div>
+
+            <div class="footer-col">
+              <h4 class="mono">开源与联系</h4>
+              <ul>
+                <li><a href="https://github.com/cao-gift/sdjtu-timetable" target="_blank" rel="noopener">GitHub 源码</a></li>
+                <li><a href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">历史版本</a></li>
+                <li><a href="https://github.com/cao-gift/sdjtu-timetable/issues" target="_blank" rel="noopener">反馈 Issue</a></li>
+                <li><a class="mono" href="mailto:3514088137@qq.com">3514088137@qq.com</a></li>
+              </ul>
+            </div>
+          </div>
         </div>
 
-        <div class="footer-col">
-          <h4 class="mono">产品与文档</h4>
-          <ul>
-            <li><a href="./changelog.html">完整更新日志</a></li>
-            <li><a href="./privacy.html">隐私声明</a></li>
-            <li><a href="./privacy.html#rights">您的隐私权利</a></li>
-            <li><a class="mono" href="./latest.json" target="_blank" rel="noopener">/latest.json</a></li>
-          </ul>
-        </div>
-
-        <div class="footer-col">
-          <h4 class="mono">开源与联系</h4>
-          <ul>
-            <li><a href="https://github.com/cao-gift/sdjtu-timetable" target="_blank" rel="noopener">GitHub 项目仓库</a></li>
-            <li><a href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">GitHub Releases</a></li>
-            <li><a href="https://github.com/cao-gift/sdjtu-timetable/issues" target="_blank" rel="noopener">反馈问题 (Issues)</a></li>
-            <li><a class="mono" href="mailto:3514088137@qq.com">3514088137@qq.com</a></li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="footer-bottom">
-        <div class="cdn-row">
-          <span>本项目 CDN 加速与安全防护由</span>
-          <a href="https://edgeone.ai" target="_blank" rel="noopener noreferrer" title="Tencent EdgeOne">
-            <img class="cdn-brand" src="./edgeone-logo.png" alt="Tencent EdgeOne" width="119" height="17" />
-          </a>
-          <span>赞助</span>
-        </div>
-        <div class="icp-row mono">
-          <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank" rel="noopener noreferrer">鲁ICP备2024101898号-1</a>
-          <span>·</span>
-          <span>GPL-3.0</span>
+        <div class="footer-bottom">
+          <div class="cdn-row">
+            <span>本项目 CDN 加速与安全防护由</span>
+            <a href="https://edgeone.ai" target="_blank" rel="noopener noreferrer" title="Tencent EdgeOne">
+              <img class="cdn-brand" src="./edgeone-logo.png" alt="Tencent EdgeOne" width="112" height="16" />
+            </a>
+            <span>赞助</span>
+          </div>
+          <div class="icp-row mono">
+            <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank" rel="noopener noreferrer">鲁ICP备2024101898号-1</a>
+            <span>·</span>
+            <span>lvlv.freeblock.cn</span>
+          </div>
         </div>
       </div>
     </div>
