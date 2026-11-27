@@ -266,70 +266,130 @@
       word-break: break-all;
     }
 
-    .cta-row {
-      display: flex;
-      flex-wrap: wrap;
+    .platform-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
-      align-items: center;
     }
 
-    .btn-primary, .btn-outline {
-      min-height: 48px;
-      padding: 10px 20px;
+    .btn-platform {
+      min-height: 58px;
+      padding: 10px 14px;
       border-radius: 6px;
-      font-size: 14.5px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-align: left;
+      border: 1px solid transparent;
+      font-family: var(--sans);
+      transition: opacity 120ms ease, border-color 120ms ease;
+      width: 100%;
+    }
+
+    .btn-platform-primary {
+      background: var(--ink);
+      color: var(--on-ink);
+      cursor: pointer;
+    }
+
+    .btn-platform-primary:hover { opacity: 0.88; }
+
+    .btn-platform-soon {
+      background: var(--paper);
+      border: 1px dashed var(--line);
+      color: var(--sub);
+      cursor: not-allowed;
+      appearance: none;
+    }
+
+    .platform-icon {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-platform-soon .platform-icon {
+      color: var(--mute);
+    }
+
+    .platform-copy {
+      min-width: 0;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .platform-name {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .btn-platform-soon .platform-name {
+      font-weight: 600;
+    }
+
+    .platform-sub {
+      font-family: var(--mono);
+      font-variant-numeric: tabular-nums;
+      font-size: 11px;
+      line-height: 1.3;
+      letter-spacing: 0.02em;
+      word-break: break-word;
+    }
+
+    .btn-platform-primary .platform-sub {
+      color: var(--on-ink);
+      opacity: 0.72;
+    }
+
+    .btn-platform-soon .platform-sub {
+      color: var(--mute);
+    }
+
+    .platform-dl {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      opacity: 0.78;
+    }
+
+    .cta-secondary {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .cta-hint {
+      font-size: 12px;
+      color: var(--mute);
+    }
+
+    .btn-outline {
+      min-height: 40px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
-      text-align: center;
-      gap: 4px 8px;
+      gap: 6px;
       cursor: pointer;
-      border: 1px solid transparent;
-      transition: opacity 120ms ease, border-color 120ms ease;
-    }
-
-    .btn-primary {
-      background: var(--ink);
-      color: var(--on-ink);
-    }
-
-    .btn-primary:hover { opacity: 0.88; }
-
-    .btn-outline {
       background: transparent;
-      border-color: var(--line);
+      border: 1px solid var(--line);
       color: var(--ink);
+      transition: border-color 120ms ease;
     }
 
     .btn-outline:hover { border-color: var(--ink); }
-
-    .sha-bar {
-      margin-top: 14px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      background: var(--paper);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .sha-text {
-      font-family: var(--mono);
-      font-size: 11.5px;
-      color: var(--sub);
-      word-break: break-all;
-    }
-
-    .sha-text strong {
-      color: var(--mute);
-      font-weight: 600;
-      margin-right: 6px;
-    }
 
     .section-label {
       margin: 28px 0 10px 2px;
@@ -692,6 +752,12 @@
     }
     .lb-btn:hover { border-color: #FFFFFF; }
 
+    @media (max-width: 700px) {
+      .platform-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     @media (max-width: 640px) {
       .topbar {
         flex-direction: column;
@@ -724,7 +790,8 @@
         gap: 10px;
       }
       .row + .row::before { left: 48px; right: 14px; }
-      .btn-primary, .btn-outline { width: 100%; padding: 10px 14px; }
+      .btn-outline { width: 100%; padding: 10px 14px; }
+      .cta-secondary { flex-direction: column; align-items: stretch; }
       .lightbox { padding: 14px; }
       .lightbox-bar {
         flex-direction: column;
@@ -788,19 +855,59 @@
         </div>
       </div>
 
-      <div class="cta-row">
-        <a class="btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.3.apk" download>
-          <span>下载安装包 APK</span>
-          <span class="mono" id="downloadName">lvlv-v1.5.3.apk</span>
+      <div class="platform-grid" role="group" aria-label="各平台客户端下载">
+        <a class="btn-platform btn-platform-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.3.apk" download>
+          <span class="platform-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 16v-2a7 7 0 0 1 14 0v2Z" />
+              <path d="m8.2 7.8-1.7-2.6" />
+              <path d="m15.8 7.8 1.7-2.6" />
+              <circle cx="9.5" cy="12.5" r="0.8" fill="currentColor" stroke="none" />
+              <circle cx="14.5" cy="12.5" r="0.8" fill="currentColor" stroke="none" />
+            </svg>
+          </span>
+          <span class="platform-copy">
+            <span class="platform-name">安卓端</span>
+            <span class="platform-sub" id="downloadName">lvlv-v1.5.3.apk</span>
+          </span>
+          <svg class="platform-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 4v11" />
+            <path d="m7 11 5 5 5-5" />
+            <path d="M5 20h14" />
+          </svg>
         </a>
+
+        <button class="btn-platform btn-platform-soon" type="button" disabled aria-disabled="true">
+          <span class="platform-icon" aria-hidden="true">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.377 0-2.332-1.26-3.428-2.8-1.287-1.82-2.323-4.63-2.323-7.28 0-4.28 2.797-6.55 5.552-6.55 1.448 0 2.675.95 3.6.95.865 0 2.222-1.01 3.902-1.01.613 0 2.886.06 4.374 2.19-.13.09-2.383 1.37-2.383 4.19 0 3.26 2.854 4.42 2.955 4.45z" />
+            </svg>
+          </span>
+          <span class="platform-copy">
+            <span class="platform-name">苹果端（开发中）</span>
+            <span class="platform-sub">iOS · 敬请期待</span>
+          </span>
+        </button>
+
+        <button class="btn-platform btn-platform-soon" type="button" disabled aria-disabled="true">
+          <span class="platform-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="10.5" r="5.5" />
+              <path d="M8 19.5h8" />
+            </svg>
+          </span>
+          <span class="platform-copy">
+            <span class="platform-name">鸿蒙端（开发中）</span>
+            <span class="platform-sub">HarmonyOS · 敬请期待</span>
+          </span>
+        </button>
+      </div>
+
+      <div class="cta-secondary">
+        <span class="cta-hint">安卓版支持国内节点高速直连，历史版本可在 GitHub 获取</span>
         <a class="btn-outline" id="githubBtn" href="https://github.com/cao-gift/sdjtu-timetable/releases" target="_blank" rel="noopener">
           <span>GitHub Releases ↗</span>
         </a>
-      </div>
-
-      <div class="sha-bar">
-        <div class="sha-text"><strong>SHA-256</strong><span id="verSha">bd248aa17f3a4b5de4a2622b0403813efa085342b04a2eb1d8b64c6116fc7c6d</span></div>
-        <button class="ghost-btn" id="copyShaBtn" type="button">COPY</button>
       </div>
     </section>
 
@@ -1034,7 +1141,6 @@
         fileName: "lvlv-v1.5.3.apk",
         apkUrl: "/downloads/lvlv-v1.5.3.apk",
         size: 3722385,
-        sha256: "bd248aa17f3a4b5de4a2622b0403813efa085342b04a2eb1d8b64c6116fc7c6d",
         publishedAt: "2026-11-26T13:03:57.845Z",
         notes: "1. 设置页自动登录管理文案精简：「管理统一门户自动登录 / 设置统一门户自动登录」统一改为「管理自动登录 / 设置自动登录」。\n2. 课表设置页全面重构与美化：梳理为「学期与周次」「课表显示」「地点简化」「更多」四组 Gauge 卡片；顶部整合等宽当前周次预览与「校准周次」按钮，所有课表显示开关统一为整齐 `01–05` 编号行与 `ON/OFF` 胶囊。\n3. 「地点隐藏词组」体验升级：自动提取当前课表高频校区/教学楼前缀支持一键快捷添加，已启用词组以标签流呈现并支持轻点 `×` 秒删；卡片内与自定义编辑弹窗均提供「原地点 → 简化结果」实时效果预览。"
       };
@@ -1060,7 +1166,6 @@
         el("verBuild").textContent = data.versionCode ? String(data.versionCode) : "--";
         el("verSize").textContent = formatSize(data.size);
         el("verDate").textContent = formatDate(data.publishedAt);
-        el("verSha").textContent = data.sha256 || "--";
         el("verNotes").textContent = (data.notes || "").trim() || "暂无更新说明。";
         el("downloadName").textContent = fileName;
         const btn = el("downloadBtn");
@@ -1074,19 +1179,6 @@
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => { if (data && data.tag) render(data); })
         .catch(() => {});
-
-      el("copyShaBtn").addEventListener("click", function () {
-        const sha = el("verSha").textContent.trim();
-        if (!sha || sha === "--") return;
-        const btn = this;
-        const done = () => {
-          btn.textContent = "COPIED";
-          setTimeout(() => { btn.textContent = "COPY"; }, 1600);
-        };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(sha).then(done).catch(() => {});
-        }
-      });
 
       const root = document.documentElement;
       const saved = localStorage.getItem("lvlv_theme");
