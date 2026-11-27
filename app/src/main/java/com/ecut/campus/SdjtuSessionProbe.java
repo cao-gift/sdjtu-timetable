@@ -1,26 +1,14 @@
 package com.ecut.campus;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.webkit.CookieManager;
 
 import com.ecut.campus.data.SdjtuPortal;
 import com.ecut.campus.data.SdjtuSessionCheck;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Consumer;
-import java.util.zip.GZIPInputStream;
 
 /**
  * 轻量级交院 WebVPN / 教务会话存活探测，避免会话失效后设置页仍长时间显示「已登录」。
@@ -35,10 +23,7 @@ final class SdjtuSessionProbe {
     private static final int READ_TIMEOUT_MS = 4_000;
     private static final int MAX_REDIRECTS = 3;
     private static final int MAX_PROBE_BYTES = 64 * 1024;
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
 
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static final List<Consumer<SdjtuSessionCheck.State>> WAITERS = new ArrayList<>();
     private static boolean probing;
 
@@ -66,7 +51,7 @@ final class SdjtuSessionProbe {
             if (probing) return;
             probing = true;
         }
-        new Thread(() -> {
+        Bg.run(() -> {
             SdjtuSessionCheck.State state = probeBlocking(app);
             if (state == SdjtuSessionCheck.State.ACTIVE) {
                 Prefs.setPortalSession(app, true);
@@ -81,12 +66,12 @@ final class SdjtuSessionProbe {
                 WAITERS.clear();
                 probing = false;
             }
-            MAIN.post(() -> {
+            Bg.main(() -> {
                 for (Consumer<SdjtuSessionCheck.State> cb : callbacks) {
                     cb.accept(state);
                 }
             });
-        }, "sdjtu-session-probe").start();
+        });
     }
 
     private static SdjtuSessionCheck.State probeBlocking(Context ctx) {
@@ -97,90 +82,25 @@ final class SdjtuSessionProbe {
         if (!SdjtuPortal.isSchoolUrl(url)) {
             url = SdjtuPortal.STUDENT_HOME;
         }
-        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
-            HttpURLConnection conn = null;
-            try {
-                String cookie = CookieManager.getInstance().getCookie(url);
-                if (cookie == null || cookie.trim().isEmpty()) {
-                    return SdjtuSessionCheck.State.EXPIRED;
-                }
-                conn = (HttpURLConnection) new URL(url).openConnection();
-                conn.setRequestMethod("GET");
-                conn.setInstanceFollowRedirects(false);
-                conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-                conn.setReadTimeout(READ_TIMEOUT_MS);
-                conn.setRequestProperty("Cookie", cookie);
-                conn.setRequestProperty("User-Agent", USER_AGENT);
-                conn.setRequestProperty("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
-                conn.setRequestProperty("Accept-Encoding", "gzip");
-
-                int code = conn.getResponseCode();
-                if (code >= 300 && code < 400) {
-                    String loc = conn.getHeaderField("Location");
-                    String next = resolveUrl(url, loc);
-                    if (next == null || !SdjtuPortal.isSchoolUrl(next)
-                            || SdjtuSessionCheck.isLoginLocation(next)) {
-                        return SdjtuSessionCheck.State.EXPIRED;
-                    }
-                    url = next;
-                    continue;
-                }
-                String body = code == 200 ? readResponse(conn, MAX_PROBE_BYTES) : "";
-                return SdjtuSessionCheck.classifyStudentHome(code, null, body);
-            } catch (Throwable ignored) {
-                return SdjtuSessionCheck.State.UNKNOWN;
-            } finally {
-                if (conn != null) conn.disconnect();
-            }
-        }
-        return SdjtuSessionCheck.State.EXPIRED;
-    }
-
-    static String resolveUrl(String base, String location) {
-        if (location == null || location.trim().isEmpty()) return null;
         try {
-            return URI.create(base).resolve(location.trim()).toString();
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
+            Http.Options opts = new Http.Options();
+            opts.connectTimeoutMs = CONNECT_TIMEOUT_MS;
+            opts.readTimeoutMs = READ_TIMEOUT_MS;
+            opts.maxRedirects = MAX_REDIRECTS;
+            opts.maxBytes = MAX_PROBE_BYTES;
+            opts.userAgent = Http.MOBILE_UA;
+            opts.headers.put("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
+            opts.cookieProvider = u -> CookieManager.getInstance().getCookie(u);
+            opts.redirectValidator = next -> SdjtuPortal.isSchoolUrl(next)
+                    && !SdjtuSessionCheck.isLoginLocation(next);
 
-    static String readResponse(HttpURLConnection conn, int maxBytes) throws IOException {
-        InputStream raw = conn.getErrorStream();
-        if (raw == null) raw = conn.getInputStream();
-        if (raw == null) return "";
-        String enc = conn.getContentEncoding();
-        boolean gzip = enc != null && enc.toLowerCase(Locale.ROOT).contains("gzip");
-        try (InputStream in = gzip ? new GZIPInputStream(raw) : raw) {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            byte[] buf = new byte[4096];
-            int total = 0;
-            int n;
-            while ((n = in.read(buf)) > 0) {
-                int take = maxBytes > 0 ? Math.min(n, maxBytes - total) : n;
-                if (take > 0) {
-                    out.write(buf, 0, take);
-                    total += take;
-                }
-                if (maxBytes > 0 && total >= maxBytes) break;
+            Http.Response resp = Http.get(url, opts);
+            if (resp.missingCookie || resp.redirectBlocked || resp.tooManyRedirects) {
+                return SdjtuSessionCheck.State.EXPIRED;
             }
-            return new String(out.toByteArray(), detectCharset(conn.getContentType()));
+            return SdjtuSessionCheck.classifyStudentHome(resp.code, null, resp.code == 200 ? resp.body : "");
+        } catch (Throwable ignored) {
+            return SdjtuSessionCheck.State.UNKNOWN;
         }
-    }
-
-    private static Charset detectCharset(String contentType) {
-        if (contentType != null) {
-            for (String part : contentType.split(";")) {
-                String p = part.trim();
-                if (p.toLowerCase(Locale.ROOT).startsWith("charset=")) {
-                    String name = p.substring("charset=".length()).replace("\"", "").trim();
-                    try {
-                        return Charset.forName(name);
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-        }
-        return StandardCharsets.UTF_8;
     }
 }

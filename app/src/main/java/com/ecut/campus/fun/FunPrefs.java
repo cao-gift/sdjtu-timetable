@@ -10,7 +10,7 @@ import com.ecut.campus.data.Timetable;
 import java.util.Set;
 
 /**
- * 「小玩意」的本地设置与私人记录，单独一个 prefs 文件，不往 Prefs 里堆：
+ * 「小工具」的本地设置与私人记录，单独一个 prefs 文件，不往 Prefs 里堆：
  * 翻牌批语开关、每学期学费、各学期的缺勤记录（按学期 id 分开）。全部只在本机。
  */
 public final class FunPrefs {

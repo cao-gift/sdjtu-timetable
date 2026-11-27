@@ -18,13 +18,15 @@ import com.ecut.campus.data.Grades;
 
 import java.util.List;
 
-/** 新成绩通知。 */
+/** 新成绩与课表变动通知。 */
 public final class Notify {
     public static final int ID_NEW_GRADES = 2001;
+    public static final int ID_SCHEDULE_CHANGE = 2002;
 
     private Notify() {}
 
     private static final String CH_GRADES = "grades";
+    private static final String CH_SCHEDULE_CHANGE = "schedule_change";
 
     public static void cancelNewGrades(Context ctx) {
         try {
@@ -70,6 +72,40 @@ public final class Notify {
                 .setContentIntent(pi);
         try {
             NotificationManagerCompat.from(ctx).notify(ID_NEW_GRADES, b.build());
+        } catch (SecurityException ignored) {
+        }
+    }
+
+    /** 后台同步发现调课、教室变动或新增/取消课程时发出通知。 */
+    public static void scheduleChanged(Context ctx, String diffSummary) {
+        if (ctx == null || !Prefs.scheduleChangeNotify(ctx)) return;
+        int count = com.ecut.campus.data.SyncDiff.changeCount(diffSummary);
+        if (count <= 0) return;
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx,
+                Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return;
+        NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= 26 && nm != null) {
+            nm.createNotificationChannel(new NotificationChannel(CH_SCHEDULE_CHANGE, "课表变动提醒",
+                    NotificationManager.IMPORTANCE_DEFAULT));
+        }
+        Intent open = new Intent(ctx, MainActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(MainActivity.EXTRA_ACTION, "open")
+                .putExtra(MainActivity.EXTRA_VALUE, "today");
+        PendingIntent pi = PendingIntent.getActivity(ctx, 18, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        String title = count == 1 ? "课表有变动" : "课表有 " + count + " 项变动";
+        String first = com.ecut.campus.data.SyncDiff.firstLine(diffSummary);
+        NotificationCompat.Builder b = new NotificationCompat.Builder(ctx, CH_SCHEDULE_CHANGE)
+                .setSmallIcon(R.drawable.ic_nav_timetable)
+                .setContentTitle(title)
+                .setContentText(first)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(diffSummary))
+                .setColor(0xFFFF4A1C)
+                .setAutoCancel(true)
+                .setContentIntent(pi);
+        try {
+            NotificationManagerCompat.from(ctx).notify(ID_SCHEDULE_CHANGE, b.build());
         } catch (SecurityException ignored) {
         }
     }

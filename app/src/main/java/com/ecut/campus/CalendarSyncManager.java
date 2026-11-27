@@ -114,27 +114,24 @@ final class CalendarSyncManager {
     private static void runSyncWithFeedback(Activity a, Runnable onUpdated) {
         Toast.makeText(a, "正在写入系统日历…", Toast.LENGTH_SHORT).show();
         Context app = a.getApplicationContext();
-        new Thread(() -> {
-            Result res = syncNow(app);
-            a.runOnUiThread(() -> {
-                if (a.isFinishing()) return;
-                if (res.error != null) {
-                    Toast.makeText(a, res.error, Toast.LENGTH_LONG).show();
-                } else {
-                    String msg = "已写入系统日历：" + res.classCount + " 节课程"
-                            + (res.examCount > 0 ? "、" + res.examCount + " 场考试" : "");
-                    Toast.makeText(a, msg, Toast.LENGTH_LONG).show();
-                }
-                if (onUpdated != null) onUpdated.run();
-            });
-        }, "cal-sync").start();
+        Bg.io(() -> syncNow(app), res -> {
+            if (a.isFinishing() || a.isDestroyed()) return;
+            if (res.error != null) {
+                Toast.makeText(a, res.error, Toast.LENGTH_LONG).show();
+            } else {
+                String msg = "已写入系统日历：" + res.classCount + " 节课程"
+                        + (res.examCount > 0 ? "、" + res.examCount + " 场考试" : "");
+                Toast.makeText(a, msg, Toast.LENGTH_LONG).show();
+            }
+            if (onUpdated != null) onUpdated.run();
+        });
     }
 
     /** 开启自动更新且有权限时，在后台静默刷新「驴驴课表」系统日历。 */
     static void syncIfEnabledAsync(Context ctx) {
         if (ctx == null || !Prefs.calendarAutoSync(ctx) || !hasPermission(ctx)) return;
         Context app = ctx.getApplicationContext();
-        new Thread(() -> syncNow(app), "cal-auto-sync").start();
+        Bg.run(() -> syncNow(app));
     }
 
     static final class Result {

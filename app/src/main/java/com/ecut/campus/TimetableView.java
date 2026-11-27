@@ -152,13 +152,11 @@ public class TimetableView extends View {
     private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint gridPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint blockPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint accentPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final android.graphics.Path clipPath = new android.graphics.Path();
-    private final TextPaint bpSub = new TextPaint(), bpMono = new TextPaint(), bpTagCn = new TextPaint(), bpTagNum = new TextPaint();
     private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint subTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TimetablePainter painter;
+    private final TimetableBlockRenderer blockRenderer;
 
     private final List<HitBlock> hitBlocks = new ArrayList<>();
     /** 每周的停课/调课/放假叠加层，按周缓存，课表或开学日期变了就清空。 */
@@ -228,6 +226,7 @@ public class TimetableView extends View {
 
         android.util.DisplayMetrics dm = getResources().getDisplayMetrics();
         painter = new TimetablePainter(dm.density, dm.scaledDensity);
+        blockRenderer = new TimetableBlockRenderer(painter, dm.density, dm.scaledDensity);
 
         todayDayOfWeek = WeekMath.todayDayOfWeek();
         setWillNotDraw(false);
@@ -740,18 +739,14 @@ public class TimetableView extends View {
             RectF rect = new RectF(left, top, right, bottom);
             if (rect.bottom <= headerHeight || rect.top >= getHeight()) continue;
 
-            blockPaint.setStyle(Paint.Style.FILL);
-            blockPaint.setColor(G.alpha(G.alarm(), G.NIGHT ? 0x30 : 0x1E));
-            canvas.drawRoundRect(rect, radius, radius, blockPaint);
-            blockPaint.setStyle(Paint.Style.STROKE);
-            blockPaint.setStrokeWidth(dp(1.5f));
-            blockPaint.setColor(G.alarm());
-            canvas.drawRoundRect(rect, radius, radius, blockPaint);
+            blockRenderer.drawExamChrome(canvas, rect);
 
             Timetable.Course fake = new Timetable.Course();
             fake.name = ex.name;
             fake.key = "exam_" + ex.name;
-            drawBlockText(canvas, rect, fake, s, true, G.INK, "[考试] ", -1, com.ecut.campus.data.RainForecast.NONE);
+            blockRenderer.drawBlockText(canvas, rect, headerHeight, fake, s, currentWeek, true, G.INK,
+                    "[考试] ", -1, com.ecut.campus.data.RainForecast.NONE, showCourseCode,
+                    hiddenLocationPhrases, todoCounts, warnCourses);
             HitBlock hb = new HitBlock(rect, fake, s, true);
             hb.exam = ex;
             hitBlocks.add(hb);
@@ -766,11 +761,8 @@ public class TimetableView extends View {
     private HitBlock drawBlock(Canvas canvas, float colWidth, Timetable.Course course, Timetable.Session s,
                               boolean isActive, String tag, int[] laneInfo) {
         int colorIdx = Math.abs(course.colorIndex) % PALETTE_BG.length;
-        int bgColor = PALETTE_BG[colorIdx];
-        int fgColor = PALETTE_FG[colorIdx];
         float padH = dp(1.6f);
         float padV = dp(1.6f);
-        float radius = G.GLASS ? dp(10f) : dp(3f);
         float[] pos = position(s);
 
         int lane = 0;
@@ -786,122 +778,17 @@ public class TimetableView extends View {
         RectF rect = new RectF(left, top, right, bottom);
         if (rect.bottom <= headerHeight || rect.top >= getHeight()) return null;
 
-        int textColor = isActive ? fgColor : INK_3;
-        int liveLeft = -1;
         float progress = isActive && tag == null ? liveProgress(s) : -1f;
-        boolean live = progress >= 0f;
+        boolean endingSoon = progress >= 0f
+                && TimetableLayout.isEndingSoon(nowMinutesFloat, sessionStartMin(s), sessionEndMin(s));
+        int liveLeft = progress >= 0f ? Math.max(1, sessionEndMin(s) - nowMinutes) : -1;
         int rainLv = isActive && tag == null ? resolveRainLevel(s) : com.ecut.campus.data.RainForecast.NONE;
-        if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
-            drawRainOuterGlow(canvas, rect, radius, rainLv, live);
-        }
-        if (isActive) {
-            if (live) {
-                // 正在上的课：保留课色，已上的部分略深（夜间略浅），外加红框 + 左侧红书脊；不再用墨色实块
-                int fill = bgColor;
-                if (G.GLASS) {
-                    int glass = PALETTE_GLASS[colorIdx];
-                    fill = G.NIGHT ? G.alpha(G.mix(glass, 0xFF000000, 0.58f), 0xC8) : G.alpha(glass, 0xD6);
-                    textColor = glassInk(colorIdx);
-                }
-                blockPaint.setStyle(Paint.Style.FILL);
-                blockPaint.setColor(fill);
-                canvas.drawRoundRect(rect, radius, radius, blockPaint);
-                if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
-                    drawRainInnerMist(canvas, rect, radius, rainLv, true);
-                }
-                canvas.save();
-                clipPath.reset();
-                clipPath.addRoundRect(rect, radius, radius, android.graphics.Path.Direction.CW);
-                canvas.clipPath(clipPath);
-                // 已上部分叠淡淡朱砂色进度层，直觉表达「此刻走到了哪里」
-                boolean endingSoon = TimetableLayout.isEndingSoon(nowMinutesFloat, sessionStartMin(s), sessionEndMin(s));
-                blockPaint.setColor(G.alpha(G.alarm(), endingSoon ? 0x26 : 0x18));
-                float split = top + (bottom - top) * progress;
-                canvas.drawRect(left, top, right, split, blockPaint);
-                // 「现在」在块内画一条朱砂发丝线（在文字下面），块外的现在线遇到这里会跳过
-                blockPaint.setColor(G.alpha(G.alarm(), 0xB8));
-                float hl = Math.max(1f, dp(0.8f));
-                canvas.drawRect(left, split - hl / 2f, right, split + hl / 2f, blockPaint);
-                // 下课前 5 分钟：底缘淡淡朱砂提示条
-                if (endingSoon) {
-                    blockPaint.setColor(G.alpha(G.alarm(), 0x38));
-                    canvas.drawRect(left, bottom - dp(5f), right, bottom, blockPaint);
-                }
-                // 左侧进度书脊：已上部分实心朱砂，未上部分淡朱砂轨道
-                accentPaint.setStyle(Paint.Style.FILL);
-                accentPaint.setColor(G.alpha(G.alarm(), 0x38));
-                canvas.drawRect(left, top, left + dp(3f), bottom, accentPaint);
-                accentPaint.setColor(G.alarm());
-                canvas.drawRect(left, top, left + dp(3f), split, accentPaint);
-                canvas.restore();
-                if (G.GLASS) {
-                    blockPaint.setStyle(Paint.Style.STROKE);
-                    blockPaint.setStrokeWidth(Math.max(1f, dp(0.8f)));
-                    blockPaint.setColor(G.alpha(0xFFFFFFFF, G.NIGHT ? 0x26 : 0xCC));
-                    canvas.drawRoundRect(rect, radius, radius, blockPaint);
-                }
-                float sw = dp(2f), in = sw / 2f + (G.GLASS ? dp(0.8f) : 0f);
-                blockPaint.setStyle(Paint.Style.STROKE);
-                blockPaint.setStrokeWidth(sw);
-                blockPaint.setColor(G.alarm());
-                canvas.drawRoundRect(new RectF(left + in, top + in, right - in, bottom - in),
-                        Math.max(0f, radius - in), Math.max(0f, radius - in), blockPaint);
-                blockPaint.setStyle(Paint.Style.FILL);
-                liveLeft = Math.max(1, sessionEndMin(s) - nowMinutes);
-            } else if (G.GLASS) {
-                blockPaint.setStyle(Paint.Style.FILL);
-                int glass = PALETTE_GLASS[colorIdx];
-                blockPaint.setColor(G.NIGHT ? G.alpha(G.mix(glass, 0xFF000000, 0.58f), 0xC8) : G.alpha(glass, 0xD6));
-                canvas.drawRoundRect(rect, radius, radius, blockPaint);
-                if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
-                    drawRainInnerMist(canvas, rect, radius, rainLv, false);
-                }
-                blockPaint.setStyle(Paint.Style.STROKE);
-                blockPaint.setStrokeWidth(Math.max(1f, dp(0.8f)));
-                blockPaint.setColor(G.alpha(0xFFFFFFFF, G.NIGHT ? 0x26 : 0xCC));
-                canvas.drawRoundRect(rect, radius, radius, blockPaint);
-                textColor = glassInk(colorIdx);
-            } else {
-                blockPaint.setStyle(Paint.Style.FILL);
-                blockPaint.setColor(bgColor);
-                canvas.drawRoundRect(rect, radius, radius, blockPaint);
-                if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
-                    drawRainInnerMist(canvas, rect, radius, rainLv, false);
-                }
+        int until = isActive && tag == null ? minutesUntil(s) : -1;
 
-                // 发丝书脊：左侧 2dp 实色
-                accentPaint.setStyle(Paint.Style.FILL);
-                accentPaint.setColor(fgColor);
-                canvas.drawRect(left, top, left + dp(2f), bottom, accentPaint);
-            }
-
-            // 快上课了（15 分钟内）：右下角一圈刻度倒计时
-            int until = tag == null ? minutesUntil(s) : -1;
-            if (until >= 0 && until <= 15 && !live) drawCountdown(canvas, rect, until);
-
-            if (lanes > 1) {
-                // 冲突角标：朱砂小方块 + 数量
-                float bs = dp(11);
-                RectF badge = new RectF(right - bs - dp(2), top + dp(2), right - dp(2), top + dp(2) + bs);
-                badgePaint.setColor(G.alarm());
-                canvas.drawRoundRect(badge, dp(2), dp(2), badgePaint);
-                subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                subTextPaint.setTextSize(sp(7.5f));
-                subTextPaint.setColor(PAPER);
-                subTextPaint.setAlpha(255);
-                subTextPaint.setTextAlign(Paint.Align.CENTER);
-                canvas.drawText(String.valueOf(lanes), badge.centerX(), badge.centerY() + dp(2.7f), subTextPaint);
-            }
-        } else {
-            blockPaint.setStyle(Paint.Style.STROKE);
-            blockPaint.setStrokeWidth(Math.max(1f, dp(0.7f)));
-            blockPaint.setColor(tag != null ? G.alpha(ACCENT, 0x66) : G.alpha(G.INK, 0x24));
-            blockPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{dp(3), dp(2.5f)}, 0));
-            canvas.drawRoundRect(rect, radius, radius, blockPaint);
-            blockPaint.setPathEffect(null);
-        }
-
-        drawBlockText(canvas, rect, course, s, isActive, textColor, tag, liveLeft, rainLv);
+        int textColor = blockRenderer.drawBlockChrome(canvas, rect, colorIdx, isActive, tag,
+                lanes, progress, endingSoon, rainLv, until);
+        blockRenderer.drawBlockText(canvas, rect, headerHeight, course, s, currentWeek, isActive, textColor,
+                tag, liveLeft, rainLv, showCourseCode, hiddenLocationPhrases, todoCounts, warnCourses);
         HitBlock hb = new HitBlock(rect, course, s, isActive);
         hitBlocks.add(hb);
         return hb;
@@ -923,14 +810,6 @@ public class TimetableView extends View {
         String ymd = com.ecut.campus.data.Dates.dateOf(semesterStartDate, currentWeek, s.dayOfWeek);
         if (ymd.isEmpty()) return com.ecut.campus.data.RainForecast.NONE;
         return rf.query(ymd, sessionStartMin(s), sessionEndMin(s), System.currentTimeMillis()).level;
-    }
-
-    private void drawRainOuterGlow(Canvas canvas, RectF rect, float radius, int rainLv, boolean live) {
-        painter.drawRainOuterGlow(canvas, rect, radius, rainLv, live);
-    }
-
-    private void drawRainInnerMist(Canvas canvas, RectF rect, float radius, int rainLv, boolean live) {
-        painter.drawRainInnerMist(canvas, rect, radius, rainLv, live);
     }
 
     /** 第 p 节边界（0 = 第 1 节顶部）对应的 y。 */
@@ -955,31 +834,15 @@ public class TimetableView extends View {
         float y = posY(pos);
         if (y <= headerHeight || y >= getHeight()) return;
 
-        // 左轨显示当前时间（朱砂小胶囊），与 DESIGN.md §4 对齐
-        String hm = Timetable.Session.formatHm(Math.max(0, Math.min(24 * 60 - 1, nowMinutes)));
-        float pillH = dp(13f);
-        float pillW = timeColWidth - dp(6f);
-        RectF pill = new RectF(dp(3f), y - pillH / 2f, dp(3f) + pillW, y + pillH / 2f);
-        accentPaint.setStyle(Paint.Style.FILL);
-        accentPaint.setColor(G.alarm());
-        canvas.drawRoundRect(pill, dp(3f), dp(3f), accentPaint);
-        subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        subTextPaint.setTextSize(sp(7.8f));
-        subTextPaint.setColor(G.ON_INK);
-        subTextPaint.setAlpha(255);
-        subTextPaint.setTextAlign(Paint.Align.CENTER);
-        canvas.drawText(hm, pill.centerX(), pill.centerY() + dp(2.7f), subTextPaint);
-
-        float x0 = timeColWidth + (todayDayOfWeek - 1) * colWidth;
+        boolean skipDayLine = false;
         for (HitBlock hb : hitBlocks) {
-            // 正在上的课块里已有那条发丝分界线，现在线就不再压过课名
             if (hb.active && hb.label == null && hb.session.dayOfWeek == todayDayOfWeek
-                    && y >= hb.rect.top && y <= hb.rect.bottom && liveProgress(hb.session) >= 0f) return;
+                    && y >= hb.rect.top && y <= hb.rect.bottom && liveProgress(hb.session) >= 0f) {
+                skipDayLine = true;
+                break;
+            }
         }
-        accentPaint.setStyle(Paint.Style.FILL);
-        accentPaint.setColor(G.alarm());
-        canvas.drawRect(x0, y - dp(0.6f), x0 + colWidth, y + dp(0.6f), accentPaint);
-        canvas.drawCircle(x0 + dp(1), y, dp(3), accentPaint);
+        blockRenderer.drawNowLine(canvas, y, timeColWidth, colWidth, todayDayOfWeek, nowMinutes, skipDayLine);
     }
 
     // ==================== 实时：进度 / 倒计时 ====================
@@ -1027,10 +890,6 @@ public class TimetableView extends View {
         return a > nowMinutes ? a - nowMinutes : -1;
     }
 
-    private void drawCountdown(Canvas canvas, RectF rect, int minutes) {
-        painter.drawCountdown(canvas, rect, minutes, accentPaint, subTextPaint);
-    }
-
     private final Runnable ticker = new Runnable() {
         @Override
         public void run() {
@@ -1059,22 +918,7 @@ public class TimetableView extends View {
         float l = timeColWidth + (ghostDay - 1) * colWidth + dp(1.6f);
         float r = l + colWidth - dp(3.2f);
         RectF g = new RectF(l, sectionTopY(ghostStart) + dp(1.6f), r, sectionBottomY(ghostEnd) - dp(1.6f));
-        float rad = G.GLASS ? dp(10) : dp(3);
-        blockPaint.setStyle(Paint.Style.FILL);
-        blockPaint.setColor(G.alpha(INK, 0x14));
-        canvas.drawRoundRect(g, rad, rad, blockPaint);
-        blockPaint.setStyle(Paint.Style.STROKE);
-        blockPaint.setStrokeWidth(dp(1.2f));
-        blockPaint.setColor(INK);
-        blockPaint.setPathEffect(new android.graphics.DashPathEffect(new float[]{dp(4), dp(3)}, 0));
-        canvas.drawRoundRect(g, rad, rad, blockPaint);
-        blockPaint.setPathEffect(null);
-        textPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        textPaint.setTextSize(sp(10f));
-        textPaint.setColor(INK);
-        textPaint.setTextAlign(Paint.Align.CENTER);
-        String label = ghostStart == ghostEnd ? ghostStart + "节" : ghostStart + "–" + ghostEnd;
-        canvas.drawText(label, g.centerX(), g.top + dp(16), textPaint);
+        blockRenderer.drawGhost(canvas, g, ghostStart, ghostEnd);
     }
 
     /** 这一格（day, sec）有没有本周的课挡着。 */
@@ -1111,201 +955,6 @@ public class TimetableView extends View {
             performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
             invalidate();
         }
-    }
-
-    private void drawBlockText(Canvas canvas, RectF rect, Timetable.Course course,
-                               Timetable.Session s, boolean isActive, int textColor, String tag, int liveLeft, int rainLv) {
-        float innerLeft = rect.left + (isActive ? dp(6.2f) : dp(4.0f));
-        float innerRight = rect.right - dp(2.2f);
-        float innerWidth = Math.max(dp(16), innerRight - innerLeft);
-        float innerTop = rect.top + dp(5f);
-        float innerBottom = rect.bottom - dp(4f);
-
-        canvas.save();
-        canvas.clipRect(rect.left + dp(2), Math.max(rect.top + dp(2), headerHeight),
-                rect.right - dp(2), rect.bottom - dp(2));
-
-        textPaint.setTypeface(Typeface.DEFAULT_BOLD);
-        textPaint.setTextSize(sp(10.0f));
-        textPaint.setColor(textColor);
-        textPaint.setTextAlign(Paint.Align.LEFT);
-
-        String title = course.name != null ? course.name : "";
-        if (tag != null) title = tag + title;
-        else if (!isActive) title = "[非本周] " + title;
-        int w = Math.round(innerWidth);
-        float available = innerBottom - innerTop;
-        int maxTitleLines = Math.max(3, (int) Math.ceil(available / Math.max(1f, textPaint.getTextSize())) + 2);
-        StaticLayout titleLayout = textLayout(title, textPaint, w, maxTitleLines, 1.02f);
-
-        // 下面几行都用真实字体量高度（衬线、加宽字距的系统字体会更高更宽），放不下就按优先级丢：
-        // 优先让课程名称尽量显示完整并保留教室，再为选中的课程号、自定义时间、教师和标签分配空间。
-        TextPaint sub = bpSub;
-        sub.set(subTextPaint);
-        sub.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        sub.setTextSize(sp(8.2f));
-        sub.setColor(textColor);
-        sub.setAlpha(isActive ? 215 : 165);
-        sub.setTextAlign(Paint.Align.LEFT);
-        TextPaint mono = bpMono;
-        mono.set(sub);
-        mono.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        mono.setAlpha(isActive ? 235 : 165);
-
-        String loc = ClassroomLabel.compact(s.location, hiddenLocationPhrases);
-        String tl = s.hasCustomTime() ? s.timeStart + "–" + s.timeEnd : "";
-        String teacher = s.teacherFor(currentWeek, course.teacher).trim();
-        float gap = dp(3f);
-        boolean hasCode = showCourseCode && course.code != null && !course.code.isEmpty()
-                && !course.code.equals(course.name);
-        float locationSpace = available - titleLayout.getHeight() - gap;
-        if (hasCode) locationSpace -= gap + sub.getFontSpacing();
-        float minRoomReserve = Math.min(Math.max(0f, available - titleLayout.getLineBottom(0) - gap),
-                sub.getFontSpacing() * 2f);
-        if (locationSpace < minRoomReserve) locationSpace = minRoomReserve;
-        StaticLayout locL = locationLayout(loc, sub, w, locationSpace);
-        StaticLayout timeL = tl.isEmpty() ? null : textLayout(tl, mono, w, 2, 1f);
-        StaticLayout teacherL = teacher.isEmpty() ? null : textLayout(teacher, sub, w, 2, 1f);
-
-        // 正在上：一行标签放在教室正上方。宽够写「● 进行中 · 剩N分」，否则只写「剩N分」，再不行就不写（红框已经说明在上）
-        TextPaint tagCn = bpTagCn;
-        tagCn.set(sub);
-        tagCn.setTypeface(Typeface.DEFAULT_BOLD);
-        tagCn.setColor(G.alarm());
-        tagCn.setAlpha(255);
-        TextPaint tagNum = bpTagNum;
-        tagNum.set(tagCn);
-        tagNum.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-        String tagPre = null;
-        if (liveLeft > 0) {
-            String n = String.valueOf(liveLeft);
-            boolean soonEnd = liveLeft <= TimetableLayout.ENDING_SOON_MINUTES;
-            String longPre = soonEnd ? "即将下课 · 剩" : "● 进行中 · 剩";
-            if (tagWidth(longPre, n, tagCn, tagNum) <= innerWidth) tagPre = longPre;
-            else if (tagWidth("剩", n, tagCn, tagNum) <= innerWidth) tagPre = "剩";
-        }
-        float tagH = tagPre == null ? 0f : tagCn.getFontMetrics().descent - tagCn.getFontMetrics().ascent;
-
-        int titleLines = titleLayout.getLineCount();
-        float[] titleCum = new float[titleLines];
-        for (int i = 0; i < titleLines; i++) titleCum[i] = titleLayout.getLineBottom(i);
-        float roomHeight = locL == null ? 0f : locL.getHeight();
-        StaticLayout codeL = null;
-        if (hasCode) {
-            StaticLayout measured = textLayout(course.code, sub, w, 3, 1f);
-            float codeSpace = available - gap - (roomHeight > 0 ? gap + roomHeight : 0f);
-            if (titleCum[0] + measured.getLineBottom(0) <= codeSpace) {
-                int lines = measured.getLineCount();
-                while (lines > 1 && titleCum[titleLines - 1] + measured.getLineBottom(lines - 1) > codeSpace) lines--;
-                codeL = lines == measured.getLineCount() ? measured : textLayout(course.code, sub, w, lines, 1f);
-            }
-        }
-        float codeHeight = codeL == null ? 0f : gap + codeL.getHeight();
-        int[] plan = blockPlan(available - codeHeight, titleCum, gap,
-                roomHeight,
-                timeL == null ? 0f : timeL.getHeight(),
-                teacherL == null ? 0f : teacherL.getHeight(),
-                tagH);
-        if (plan[0] < titleLines) titleLayout = textLayout(title, textPaint, w, plan[0], 1.02f);
-
-        if (rainLv > com.ecut.campus.data.RainForecast.NONE) {
-            float liveTagW = (plan[1] & 8) != 0 && tagPre != null
-                    ? tagWidth(tagPre, String.valueOf(liveLeft), tagCn, tagNum) : 0f;
-            drawRainStreaks(canvas, rect, course, s, textColor, rainLv,
-                    innerLeft, innerTop, titleLayout.getHeight() + codeHeight, plan[1], gap,
-                    timeL, teacherL, tagH, liveTagW, locL);
-        }
-
-        canvas.translate(innerLeft, innerTop);
-        titleLayout.draw(canvas);
-        float y = titleLayout.getHeight();
-        if (codeL != null) y = drawAt(canvas, codeL, y + gap);
-        if ((plan[1] & 2) != 0) y = drawAt(canvas, timeL, y + gap);
-        if ((plan[1] & 4) != 0) y = drawAt(canvas, teacherL, y + gap);
-        if ((plan[1] & 8) != 0) {
-            float base = y + gap - tagCn.getFontMetrics().ascent;
-            float x = 0f;
-            canvas.drawText(tagPre, x, base, tagCn);
-            x += tagCn.measureText(tagPre);
-            String n = String.valueOf(liveLeft);
-            canvas.drawText(n, x, base, tagNum);
-            x += tagNum.measureText(n);
-            canvas.drawText("分", x, base, tagCn);
-            y += gap + tagH;
-        }
-        if ((plan[1] & 1) != 0) drawAt(canvas, locL, y + gap);
-
-        canvas.restore();
-
-        // 有未完成作业/待办：右下角画等宽小角标 □N；否则若有备注画朱砂小点
-        int todoN = 0;
-        if (isActive && !todoCounts.isEmpty() && course.name != null) {
-            Integer cnt = todoCounts.get(com.ecut.campus.data.CourseTodo.normalizeCourseKey(course.name));
-            if (cnt != null) todoN = cnt;
-        }
-        if (todoN > 0) {
-            String badgeTxt = "□" + todoN;
-            subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            subTextPaint.setTextSize(sp(7.5f));
-            float tw = subTextPaint.measureText(badgeTxt);
-            RectF tb = new RectF(rect.right - tw - dp(6f), rect.bottom - dp(12.5f), rect.right - dp(2f), rect.bottom - dp(2f));
-            badgePaint.setColor(G.alarm());
-            canvas.drawRoundRect(tb, dp(2f), dp(2f), badgePaint);
-            subTextPaint.setColor(G.ON_INK);
-            subTextPaint.setAlpha(255);
-            subTextPaint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(badgeTxt, tb.centerX(), tb.centerY() + dp(2.6f), subTextPaint);
-        } else if (isActive && course.note != null && !course.note.isEmpty()) {
-            badgePaint.setColor(ACCENT);
-            canvas.drawCircle(rect.right - dp(6f), rect.bottom - dp(6f), dp(2.6f), badgePaint);
-        }
-        // 缺勤快到上限（缺勤安全气囊）：左缘一条朱砂竖线
-        if (isActive && !warnCourses.isEmpty()
-                && warnCourses.contains(com.ecut.campus.data.AbsenceBook.key(course.name))) {
-            badgePaint.setColor(G.alarm());
-            canvas.drawRect(rect.left, rect.top + dp(2f), rect.left + dp(2.4f), rect.bottom - dp(2f), badgePaint);
-        }
-    }
-
-    private void drawRainStreaks(Canvas canvas, RectF rect, Timetable.Course course, Timetable.Session s,
-                                 int textColor, int rainLv, float innerLeft, float innerTop,
-                                 float headingHeight, int mask, float gap,
-                                 @Nullable StaticLayout timeL, @Nullable StaticLayout teacherL,
-                                 float tagH, float liveTagW, @Nullable StaticLayout locL) {
-        painter.drawRainStreaks(canvas, rect, course, s, textColor, rainLv, innerLeft, innerTop,
-                headingHeight, mask, gap, timeL, teacherL, tagH, liveTagW, locL);
-    }
-
-    private static StaticLayout textLayout(String t, TextPaint p, int width, int maxLines, float mult) {
-        return StaticLayout.Builder.obtain(t, 0, t.length(), p, Math.max(1, width))
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                .setLineSpacing(0f, mult)
-                .setIncludePad(false)
-                .setMaxLines(Math.max(1, maxLines))
-                .setEllipsize(TextUtils.TruncateAt.END)
-                .build();
-    }
-
-    /** 允许长地点使用卡片中的剩余高度；矮卡交给 blockPlan 判断能否保留一行。 */
-    private static StaticLayout locationLayout(String location, TextPaint paint, int width, float height) {
-        if (location.isEmpty()) return null;
-        int maxLines = Math.max(1, (int) Math.ceil(height / paint.getTextSize()) + 1);
-        StaticLayout layout = textLayout(location, paint, width, maxLines, 1f);
-        int lines = layout.getLineCount();
-        while (lines > 1 && layout.getLineBottom(lines - 1) > height) lines--;
-        return lines == layout.getLineCount() ? layout : textLayout(location, paint, width, lines, 1f);
-    }
-
-    private static float drawAt(Canvas canvas, StaticLayout l, float y) {
-        canvas.save();
-        canvas.translate(0, y);
-        l.draw(canvas);
-        canvas.restore();
-        return y + l.getHeight();
-    }
-
-    private static float tagWidth(String pre, String num, TextPaint cn, TextPaint mono) {
-        return cn.measureText(pre) + mono.measureText(num) + cn.measureText("分");
     }
 
     static int[] blockPlan(float avail, float[] titleCum, float gap, float... items) {

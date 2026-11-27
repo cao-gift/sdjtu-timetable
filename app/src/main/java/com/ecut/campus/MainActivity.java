@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
     private DockBlurView dockBlur;
     private SettingsTab settings;
     private ViewGroup syncHost;
+    private androidx.activity.OnBackPressedCallback settingsBackCallback;
     CampusSyncClient activeSync;
     boolean autoLoginBusy;
     int currentTab = TAB_TIMETABLE;
@@ -58,6 +59,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         G.init(this);
         setContentView(R.layout.activity_main);
+        EdgeToEdge.enable(this);
 
         ViewGroup container = findViewById(R.id.content_container);
         syncHost = findViewById(R.id.sync_host);
@@ -66,9 +68,24 @@ public class MainActivity extends AppCompatActivity {
         // 冷启动只建课表页，第一次打开设置时再创建设置页。
         campusFragment = inflater.inflate(R.layout.fragment_campus, container, false);
         container.addView(campusFragment);
+        EdgeToEdge.applyTop(campusFragment);
 
         textDock = findViewById(R.id.text_dock);
         dockBlur = findViewById(R.id.dock_blur);
+        EdgeToEdge.applyBottomMargin(textDock, () -> {
+            if (timetableView != null) timetableView.setBottomInset(dockInset());
+        });
+        EdgeToEdge.applyBottomMargin(dockBlur, null);
+
+        settingsBackCallback = new androidx.activity.OnBackPressedCallback(false) {
+            @Override
+            public void handleOnBackPressed() {
+                if (currentTab == TAB_SETTINGS && settings != null && settings.backToRoot()) {
+                    updateBackNavigationState();
+                }
+            }
+        };
+        getOnBackPressedDispatcher().addCallback(this, settingsBackCallback);
         if (dockBlur != null) {
             // 纸墨的胶囊是实心墨色，用不着模糊层
             if (G.GLASS) dockBlur.setSource(container);
@@ -210,6 +227,7 @@ public class MainActivity extends AppCompatActivity {
         if (settingsFragment != null) return;
         settingsFragment = getLayoutInflater().inflate(R.layout.fragment_settings, contentContainer, false);
         contentContainer.addView(settingsFragment);
+        EdgeToEdge.apply(this, settingsFragment, false);
         settings = new SettingsTab(this, settingsFragment);
         settings.bind();
     }
@@ -222,9 +240,17 @@ public class MainActivity extends AppCompatActivity {
 
         if (textDock != null && textDock.selectedTab() != tab) textDock.setSelected(tab, true);
         if (dockBlur != null) dockBlur.markDirty();
+        updateBackNavigationState();
 
         if (tab == TAB_TIMETABLE) refreshTimetableTab();
         else refreshSettingsTab();
+    }
+
+    void updateBackNavigationState() {
+        if (settingsBackCallback != null) {
+            settingsBackCallback.setEnabled(
+                    currentTab == TAB_SETTINGS && settings != null && settings.isInSubPage());
+        }
     }
 
     /** 悬浮 Dock 占掉的底部高度（胶囊高 + 离底边距 + 一点呼吸空间）。 */
@@ -641,20 +667,16 @@ public class MainActivity extends AppCompatActivity {
         } else if (requestCode == WidgetBg.REQ_PICK && resultCode == Activity.RESULT_OK && data != null) {
             android.net.Uri picked = data.getData();
             if (settings != null) settings.onWidgetImagePicked(picked);
-            else new Thread(() -> {
+            else Bg.run(() -> {
                 if (WidgetBg.importFrom(getApplicationContext(), picked)) ClassWidget.updateAll(getApplicationContext());
-            }, "widget-bg").start();
+            });
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == RainWeather.REQ_LOCATION && RainWeather.hasPermission(this)) {
-            RainWeather.refreshIfNeeded(this, true, () -> {
-                if (!isFinishing() && timetableView != null) timetableView.invalidate();
-            });
-        } else if (requestCode == CalendarSyncManager.REQ_CALENDAR_PERM) {
+        if (requestCode == CalendarSyncManager.REQ_CALENDAR_PERM) {
             CalendarSyncManager.onPermissionResult(this, grantResults, this::refreshSettingsTab);
         }
     }
@@ -668,12 +690,6 @@ public class MainActivity extends AppCompatActivity {
                         + "\n\n课表已按法定调休自动调整，学校另有通知时可长按课块单独修改。")
                 .setPositiveButton("知道了", null)
                 .show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (currentTab == TAB_SETTINGS && settings != null && settings.backToRoot()) return;
-        super.onBackPressed();
     }
 
     @Override

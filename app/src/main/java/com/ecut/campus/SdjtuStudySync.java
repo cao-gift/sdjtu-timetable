@@ -118,7 +118,8 @@ final class SdjtuStudySync {
                     ? "已进入旧版强智教务，但未取得查询结果，请打开教务原页核对。"
                     : "同步超时，请检查学校门户连接后重试。",
                     !sawAcademic && (!Prefs.hasPortalSession(activity) || Prefs.sessionExpired(activity))), 60_000L);
-            if (!Prefs.hasPortalSession(activity) || Prefs.sessionExpired(activity)) {
+            if (!Prefs.hasPortalSession(activity) || Prefs.sessionExpired(activity)
+                    || !SdjtuSessionProbe.hasSchoolCookie(activity)) {
                 loadEntry(Entry.PORTAL, SdjtuPortal.LOGIN);
             } else if (saved != null && !saved.isEmpty()) {
                 loadEntry(Entry.SAVED_PAGE, saved);
@@ -173,14 +174,11 @@ final class SdjtuStudySync {
                 fail("学校门户跳转到了无法用于同步的页面", false);
                 return;
             }
-            if (SdjtuLoginForm.isLoginPage(url) || SdjtuPortal.isDashboard(url)
-                    || !SdjtuPortal.academicBase(url).isEmpty()) {
-                schedule(200);
-            }
+            schedule(120);
         }
 
         @Override public void onPageFinished(WebView view, String url) {
-            if (!finished && allowed(view.getUrl())) schedule(30);
+            if (!finished && allowed(view.getUrl())) schedule(20);
         }
 
         @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
@@ -196,8 +194,12 @@ final class SdjtuStudySync {
 
         private void navigationFailed(WebResourceRequest request, String message, boolean login) {
             if (finished || !request.getUrl().toString().equals(web.getUrl())) return;
-            if (entry != Entry.PORTAL && !submitted) useNextEntry();
-            else fail(message, login);
+            if (entry != Entry.PORTAL && !submitted) {
+                if (login) loadEntry(Entry.PORTAL, SdjtuPortal.LOGIN);
+                else useNextEntry();
+            } else {
+                fail(message, login);
+            }
         }
     }
 
@@ -213,6 +215,7 @@ final class SdjtuStudySync {
 
     private void loadEntry(Entry next, String url) {
         entry = next;
+        if (next == Entry.PORTAL) ssoOpened = false;
         route++;
         document++;
         installed = evaluating = false;
@@ -220,7 +223,7 @@ final class SdjtuStudySync {
         pageSince = SystemClock.elapsedRealtime();
         handler.removeCallbacks(inspect);
         handler.removeCallbacks(retryEntry);
-        if (next != Entry.PORTAL) handler.postDelayed(retryEntry, next == Entry.SAVED_PAGE ? 8_000L : 14_000L);
+        if (next != Entry.PORTAL) handler.postDelayed(retryEntry, next == Entry.SAVED_PAGE ? 6_000L : 10_000L);
         web.loadUrl(url);
     }
 
@@ -276,12 +279,13 @@ final class SdjtuStudySync {
             request.put("submitted", submitted);
             if (submittedContext != null) request.put("context", submittedContext);
             String arguments = request.toString().replace("\u2028", "\\u2028").replace("\u2029", "\\u2029");
+            boolean navigateInJs = !(SdjtuPortal.isDashboard(url) && !ssoOpened);
             String js = "(function(){if(document.readyState==='loading'||!document.body)return {};"
                     + "if(location.protocol!=='https:'||!/(^|\\.)sdjtu\\.edu\\.cn$/i"
                     + ".test(location.hostname))return {};"
                     + (installed ? "" : install)
                     + "var a=document.__lvlvStudySync;return a?a.portal('" + mode
-                    + "',true,false,a.reader," + arguments + "):{stage:'install'};})()";
+                    + "'," + navigateInJs + ",false,a.reader," + arguments + "):{stage:'install'};})()";
             evaluating = true;
             web.evaluateJavascript(js, raw -> {
                 if (!active() || currentRoute != route) return;
@@ -317,9 +321,10 @@ final class SdjtuStudySync {
             String currentUrl = web == null ? "" : web.getUrl();
             boolean fingerprint = currentUrl != null
                     && currentUrl.toLowerCase(java.util.Locale.ROOT).contains("fingerprint");
-            long grace = autoLogin.attempted() ? 10_000L : (fingerprint ? 8_000L : 1_500L);
+            long grace = autoLogin.attempted() ? 10_000L : (fingerprint ? 8_000L : 1_000L);
             if (now - loginSince >= grace) {
-                if (entry != Entry.PORTAL && !submitted) useNextEntry();
+                // 会话已过期时直接跳统一门户，不再绕道 STUDENT_HOME 浪费一次超时。
+                if (entry != Entry.PORTAL && !submitted) loadEntry(Entry.PORTAL, SdjtuPortal.LOGIN);
                 else fail("请先登录山东交通学院统一门户，完成验证后再同步", true);
                 return;
             }
@@ -327,16 +332,18 @@ final class SdjtuStudySync {
             loginSince = 0;
         }
         String base = SdjtuPortal.academicBase(result.optString("base"));
-        long elapsed = SystemClock.elapsedRealtime() - pageSince;
         if (!base.isEmpty()) {
-            sawAcademic = true;
-            autoLogin.onSuccess();
+            if (!sawAcademic) {
+                sawAcademic = true;
+                autoLogin.onSuccess();
+                Prefs.setPortalSession(activity, true);
+                Prefs.setSessionExpired(activity, false);
+                CookieManager.getInstance().flush();
+            }
             if (!base.equals(Prefs.sdjtuAcademicBase(activity))) Prefs.setSdjtuAcademicBase(activity, base);
         } else if (SdjtuPortal.isDashboard(web.getUrl()) && !"login".equals(stage) && !"error".equals(stage)
-                && !stage.isEmpty() && !ssoOpened
-                && (autoLogin.attempted()
-                || (!"academic".equals(stage) && elapsed > 300L)
-                || elapsed > 1_200L)) {
+                && !stage.isEmpty() && !ssoOpened) {
+            autoLogin.onSuccess();
             ssoOpened = true;
             handler.removeCallbacks(retryEntry);
             web.loadUrl(SdjtuPortal.ACADEMIC_SSO);

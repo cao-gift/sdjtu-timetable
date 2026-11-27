@@ -382,11 +382,11 @@
 
                     <TextView
                         style="@style/G.RowTitle"
-                        android:text="小玩意" />
+                        android:text="小工具" />
 
                     <TextView
                         style="@style/G.RowSub"
-                        android:text="单节课成本与缺勤安全气囊" />
+                        android:text="GPA 目标模拟、单节课成本与缺勤记录" />
                 </LinearLayout>
 
                 <TextView
@@ -595,8 +595,9 @@
                         android:text="课块下雨提示" />
 
                     <TextView
+                        android:id="@+id/tv_rain_hint_sub"
                         style="@style/G.RowSub"
-                        android:text="上课可能下雨时亮起雨雾提醒" />
+                        android:text="无影山校区 · 上课可能下雨时亮起雨雾提醒" />
                 </LinearLayout>
 
                 <com.google.android.material.materialswitch.MaterialSwitch
@@ -982,6 +983,36 @@
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switch_grade_notify"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/row_schedule_change_notify"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/G.RowTitle"
+                            android:text="课表变动时提醒" />
+
+                        <TextView
+                            style="@style/G.RowSub"
+                            android:text="后台静默检查调课、换教室并通知" />
+                    </LinearLayout>
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switch_schedule_change_notify"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content" />
                 </LinearLayout>

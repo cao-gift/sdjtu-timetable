@@ -43,10 +43,13 @@
         <item name="colorSurfaceVariant">@color/g_line</item>
         <item name="colorOnSurfaceVariant">@color/g_sub</item>
         <item name="android:windowBackground">@color/g_paper</item>
-        <item name="android:statusBarColor">@color/g_paper</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">@color/g_paper</item>
+        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/ic_splash_donkey</item>
+        <item name="android:windowSplashScreenIconBackgroundColor" tools:targetApi="s">@color/ic_launcher_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar" tools:targetApi="m">@bool/g_light_bars</item>
         <item name="android:windowLightNavigationBar" tools:targetApi="o_mr1">@bool/g_light_bars</item>
-        <item name="android:navigationBarColor">@color/g_paper</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
         <!-- Gauge：统一小圆角 + 发丝线 + 墨色控件 -->
         <item name="shapeAppearanceSmallComponent">@style/Gauge.Shape.Small</item>
         <item name="shapeAppearanceMediumComponent">@style/Gauge.Shape.Medium</item>

@@ -67,8 +67,7 @@ public final class UpdateInstaller {
             android.widget.Toast.makeText(a, "已开始在 Wi-Fi 下后台下载 " + r.tag + "…",
                     android.widget.Toast.LENGTH_SHORT).show();
         }
-        Handler main = new Handler(Looper.getMainLooper());
-        new Thread(() -> {
+        Bg.run(() -> {
             try {
                 File[] old = dir(app).listFiles();
                 if (old != null) for (File f : old) if (!f.equals(done)) f.delete();
@@ -84,7 +83,7 @@ public final class UpdateInstaller {
                         if (err == null && part.renameTo(done)) {
                             postBgReady(app, r);
                             if (!silent) {
-                                main.post(() -> {
+                                Bg.main(() -> {
                                     if (!a.isFinishing() && !a.isDestroyed()) {
                                         Updater.showDialog(a, r, true);
                                     }
@@ -100,7 +99,7 @@ public final class UpdateInstaller {
             } finally {
                 bgDownloading = false;
             }
-        }, "update-bg-download").start();
+        });
     }
 
     private static void ensureUpdateChannel(Context c) {
@@ -226,18 +225,17 @@ public final class UpdateInstaller {
                 .setNegativeButton("取消", (d, w) -> cancelled[0] = true)
                 .show();
 
-        Handler main = new Handler(Looper.getMainLooper());
-        new Thread(() -> {
+        Bg.run(() -> {
             String lastErr = "";
             for (Source s : sources(r)) {
                 if (cancelled[0]) break;
-                main.post(() -> {
+                Bg.main(() -> {
                     bar.setIndeterminate(true);
                     status.setText("正在从" + s.label + "下载…");
                 });
                 File part = new File(dir(a), done.getName() + ".part");
                 part.delete();
-                String err = download(s, part, r.size, cancelled, (got, total) -> main.post(() -> {
+                String err = download(s, part, r.size, cancelled, (got, total) -> Bg.main(() -> {
                     if (total > 0) {
                         bar.setIndeterminate(false);
                         bar.setProgressCompat((int) (got * 1000 / total), false);
@@ -246,10 +244,10 @@ public final class UpdateInstaller {
                             total > 0 ? String.format(Locale.US, "%.1f", total / 1048576.0) : "?"));
                 }));
                 if (err == null) {
-                    main.post(() -> status.setText("正在校验安装包…"));
+                    Bg.main(() -> status.setText("正在校验安装包…"));
                     err = verify(a, part, r);
                     if (err == null && part.renameTo(done)) {
-                        main.post(() -> {
+                        Bg.main(() -> {
                             if (a.isFinishing() || a.isDestroyed()) return;
                             if (dlg.isShowing()) dlg.dismiss();
                             install(a, done, r);
@@ -265,7 +263,7 @@ public final class UpdateInstaller {
             }
             if (cancelled[0]) return;
             final String fe = lastErr;
-            main.post(() -> {
+            Bg.main(() -> {
                 if (a.isFinishing() || a.isDestroyed()) return;
                 if (dlg.isShowing()) dlg.dismiss();
                 new AlertDialog.Builder(a)
@@ -276,7 +274,7 @@ public final class UpdateInstaller {
                                 r.pageUrl == null || r.pageUrl.isEmpty() ? Updater.defaultDownloadPageUrl() : r.pageUrl))
                         .show();
             });
-        }, "update-download").start();
+        });
     }
 
     interface Progress { void on(long got, long total); }
@@ -285,27 +283,9 @@ public final class UpdateInstaller {
     static String download(Source s, File out, long expectSize, boolean[] cancelled, Progress cb) {
         HttpURLConnection c = null;
         try {
-            String url = s.url;
-            int code = -1;
-            for (int hop = 0; hop < 6; hop++) { // 手动跟随跳转（GitHub → 存储域名）
-                c = (HttpURLConnection) new URL(url).openConnection();
-                c.setInstanceFollowRedirects(false);
-                c.setConnectTimeout(8000);
-                c.setReadTimeout(15000);
-                c.setRequestProperty("User-Agent", "lvlv-android");
-                code = c.getResponseCode();
-                if (code / 100 == 3) {
-                    String loc = c.getHeaderField("Location");
-                    c.disconnect();
-                    if (loc == null) return "跳转地址为空";
-                    url = new URL(new URL(url), loc).toString();
-                    if (!url.startsWith("https://")) return "不安全的跳转";
-                    continue;
-                }
-                if (code != 200) return "HTTP " + code;
-                break;
-            }
-            if (code != 200) return "跳转次数过多";
+            c = Http.openHttpsStream(s.url, 8_000, 15_000, 6);
+            int code = c.getResponseCode();
+            if (code != 200) return "HTTP " + code;
             long total = c.getContentLengthLong();
             if (total <= 0) total = expectSize;
             if (expectSize > 0 && total > 0 && total != expectSize) return "文件大小不对";
@@ -331,7 +311,7 @@ public final class UpdateInstaller {
         } catch (java.net.SocketTimeoutException e) {
             return "超时";
         } catch (Exception e) {
-            return e.getClass().getSimpleName();
+            return e.getMessage() != null && !e.getMessage().isEmpty() ? e.getMessage() : e.getClass().getSimpleName();
         } finally {
             if (c != null) c.disconnect();
         }

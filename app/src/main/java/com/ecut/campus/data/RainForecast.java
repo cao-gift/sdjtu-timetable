@@ -19,6 +19,40 @@ import java.util.Map;
  */
 public final class RainForecast {
 
+    /** 山东交通学院三个固定校区坐标，免定位权限直接拉取预报。 */
+    public enum Campus {
+        WUYINGSHAN("wuyingshan", "无影山校区", "山东济南天桥区", 36.69, 116.98),
+        CHANGQING("changqing", "长清校区", "山东济南长清区", 36.54, 116.80),
+        WEIHAI("weihai", "威海校区", "山东威海环翠区", 37.53, 122.07);
+
+        public final String id;
+        public final String name;
+        public final String region;
+        public final double lat;
+        public final double lon;
+
+        Campus(String id, String name, String region, double lat, double lon) {
+            this.id = id;
+            this.name = name;
+            this.region = region;
+            this.lat = lat;
+            this.lon = lon;
+        }
+
+        public String displayLabel() {
+            return name + "（" + region + "）";
+        }
+
+        public static Campus byId(String id) {
+            if (id != null) {
+                for (Campus c : values()) {
+                    if (c.id.equals(id)) return c;
+                }
+            }
+            return WUYINGSHAN;
+        }
+    }
+
     public static final int NONE = 0, LIGHT = 1, MID = 2, HEAVY = 3;
 
     /** 约 3 小时刷新一次。 */

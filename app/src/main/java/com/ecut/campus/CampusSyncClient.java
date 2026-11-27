@@ -60,7 +60,7 @@ public final class CampusSyncClient {
 
     private static final String TAG = "CampusSync";
     private static final long SDJTU_NAVIGATION_TIMEOUT_MS = 65_000L;
-    private static final long DATA_TIMEOUT_MS = 20_000L;
+    private static final long DATA_TIMEOUT_MS = 25_000L;
     private final Context appContext;
     private final java.util.function.Supplier<WebView> webViewFactory;
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -68,6 +68,7 @@ public final class CampusSyncClient {
     private final Callback callback;
     private final String targetXnm;
     private final String targetXqm;
+    private final boolean notifyTimetableDiff;
     private final java.util.concurrent.atomic.AtomicBoolean directCancelled =
             new java.util.concurrent.atomic.AtomicBoolean(false);
 
@@ -81,7 +82,7 @@ public final class CampusSyncClient {
 
     private CampusSyncClient(Context ctx, WebView existingView,
                              java.util.function.Supplier<WebView> webViewFactory,
-                             Kind kind, String xnm, String xqm, Callback callback) {
+                             Kind kind, String xnm, String xqm, boolean notifyTimetableDiff, Callback callback) {
         this.appContext = ctx.getApplicationContext();
         this.webView = existingView;
         this.webViewFactory = webViewFactory;
@@ -89,6 +90,7 @@ public final class CampusSyncClient {
         this.callback = callback;
         this.targetXnm = xnm;
         this.targetXqm = xqm;
+        this.notifyTimetableDiff = notifyTimetableDiff;
     }
 
     /** 必须在主线程调用，并先把 WebView 附着到当前 Activity 的不可见容器。 */
@@ -102,8 +104,17 @@ public final class CampusSyncClient {
      */
     public static CampusSyncClient startLazy(Context ctx, java.util.function.Supplier<WebView> webViewFactory,
                                              Kind kind, Callback callback) {
-        CampusSyncClient client = new CampusSyncClient(ctx, null, webViewFactory, kind, null, null, callback);
+        CampusSyncClient client = new CampusSyncClient(ctx, null, webViewFactory, kind, null, null, false, callback);
         DiagLog.log(ctx, "sync", "开始同步 " + kind.label + " · " + SdjtuPortal.NAME);
+        client.load();
+        return client;
+    }
+
+    /** 后台静默同步入口（如定时调课检查）：课表发生时间/地点变动时自动发通知并刷新小组件与提醒。 */
+    public static CampusSyncClient startLazyBackground(Context ctx, java.util.function.Supplier<WebView> webViewFactory,
+                                                       Kind kind, Callback callback) {
+        CampusSyncClient client = new CampusSyncClient(ctx, null, webViewFactory, kind, null, null, true, callback);
+        DiagLog.log(ctx, "sync", "后台静默同步 " + kind.label + " · " + SdjtuPortal.NAME);
         client.load();
         return client;
     }
@@ -114,7 +125,7 @@ public final class CampusSyncClient {
      */
     public static CampusSyncClient start(WebView view, Kind kind,
                                          String xnm, String xqm, Callback callback) {
-        CampusSyncClient client = new CampusSyncClient(view.getContext(), view, null, kind, xnm, xqm, callback);
+        CampusSyncClient client = new CampusSyncClient(view.getContext(), view, null, kind, xnm, xqm, false, callback);
         DiagLog.log(view.getContext(), "sync", "开始同步 " + kind.label
                 + (xnm != null ? " xnm=" + xnm + " xqm=" + xqm : "")
                 + " · " + SdjtuPortal.NAME);
@@ -385,6 +396,12 @@ public final class CampusSyncClient {
                 fail("课表写入本地失败");
                 return;
             }
+            if (notifyTimetableDiff && lastTimetableDiff != null && !lastTimetableDiff.isEmpty()) {
+                Notify.scheduleChanged(appContext, lastTimetableDiff);
+                CalendarSyncManager.syncIfEnabledAsync(appContext);
+                ClassReminder.reschedule(appContext);
+                ClassWidget.updateAll(appContext);
+            }
         }
         SemesterArchive.unifyColors(appContext);
         Prefs.setLastSyncTime(appContext, now());
@@ -396,6 +413,12 @@ public final class CampusSyncClient {
 
     private void extractGrades() {
         CookieManager.getInstance().flush();
+        // 刚经由隐藏 WebView 自动登录完成时，WebView 内已持有最新内存 Cookie 与长连接，
+        // 直接在 WebView 内发同源 XHR 避免 CookieManager 异步落盘竞态与额外建连。
+        if (sdjtu != null && sdjtu.usedAutoLogin()) {
+            extractGradesViaWebView();
+            return;
+        }
         String activeBase = sdjtu != null ? sdjtu.currentBase() : Prefs.sdjtuAcademicBase(appContext);
         SdjtuDirectGrades.fetchAsync(appContext, activeBase, directCancelled, outcome -> {
             if (finished || (sdjtu != null && !sdjtu.current())) return;
@@ -411,6 +434,8 @@ public final class CampusSyncClient {
                     fail("教务系统没开放成绩查询（可能评教没做完或查询未开放），在教务网页里能查到后再同步", false);
                     return;
                 default:
+                    handler.removeCallbacks(timeout);
+                    handler.postDelayed(timeout, DATA_TIMEOUT_MS);
                     extractGradesViaWebView();
             }
         });

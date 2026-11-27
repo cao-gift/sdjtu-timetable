@@ -15,6 +15,17 @@ final class Wake {
     private Wake() {
     }
 
+    static boolean canScheduleExact(Context c) {
+        if (c == null) return false;
+        if (Build.VERSION.SDK_INT < 31) return true;
+        try {
+            AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+            return am != null && am.canScheduleExactAlarms();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     static void at(Context c, long when, PendingIntent pi) {
         AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
         if (am == null) return;

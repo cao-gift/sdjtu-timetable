@@ -33,6 +33,26 @@ public final class SyncDiff {
         return String.join("\n", lines);
     }
 
+    /** 变动条目数（按非空行计）。 */
+    public static int changeCount(String summary) {
+        if (summary == null || summary.trim().isEmpty()) return 0;
+        int n = 0;
+        for (String line : summary.split("\n")) {
+            if (!line.trim().isEmpty()) n++;
+        }
+        return n;
+    }
+
+    /** 摘要首行，用于通知收起态预览。 */
+    public static String firstLine(String summary) {
+        if (summary == null) return "";
+        for (String line : summary.split("\n")) {
+            String t = line.trim();
+            if (!t.isEmpty()) return t;
+        }
+        return "";
+    }
+
     private static Map<String, Timetable.Course> byName(Timetable t) {
         Map<String, Timetable.Course> m = new LinkedHashMap<>();
         for (Timetable.Course c : t.courses) {

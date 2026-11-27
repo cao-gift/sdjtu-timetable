@@ -4,17 +4,10 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
 
 import com.ecut.campus.data.UpdateManifest;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /** 检查新版本：优先请求自有官网静态清单，失败后依次回退多路加速镜像与 GitHub Releases。 */
@@ -62,8 +55,7 @@ public final class Updater {
     }
 
     public static void fetchLatest(Callback cb) {
-        Handler main = new Handler(Looper.getMainLooper());
-        new Thread(() -> {
+        Bg.io(() -> {
             Release r = null;
             List<UpdateManifest.Endpoint> endpoints = UpdateManifest.checkEndpoints(SITE_URL, REPO);
             String defaultPage = defaultDownloadPageUrl();
@@ -78,54 +70,25 @@ public final class Updater {
                     break;
                 }
             }
-            final Release fr = r;
-            main.post(() -> cb.done(fr));
-        }, "update-check").start();
+            return r;
+        }, cb::done);
     }
 
     private static String fetchJson(UpdateManifest.Endpoint ep) {
-        HttpURLConnection c = null;
         try {
-            String url = ep.url;
-            int code = -1;
-            for (int hop = 0; hop < 5; hop++) {
-                c = (HttpURLConnection) new URL(url).openConnection();
-                c.setInstanceFollowRedirects(false);
-                c.setConnectTimeout(6000);
-                c.setReadTimeout(8000);
-                c.setRequestProperty("Accept", ep.kind == UpdateManifest.KIND_GITHUB_API
-                        ? "application/vnd.github+json" : "application/json");
-                c.setRequestProperty("Cache-Control", "no-cache");
-                c.setRequestProperty("User-Agent", "lvlv-android");
-                code = c.getResponseCode();
-                if (code / 100 == 3) {
-                    String loc = c.getHeaderField("Location");
-                    c.disconnect();
-                    c = null;
-                    if (loc == null) return null;
-                    url = new URL(new URL(url), loc).toString();
-                    if (!url.startsWith("https://")) return null;
-                    continue;
-                }
-                break;
-            }
-            if (code != 200 || c == null) return null;
-            try (InputStream is = c.getInputStream()) {
-                ByteArrayOutputStream bo = new ByteArrayOutputStream();
-                byte[] buf = new byte[8192];
-                int n;
-                int total = 0;
-                while ((n = is.read(buf)) > 0) {
-                    total += n;
-                    if (total > MAX_BODY_BYTES) return null;
-                    bo.write(buf, 0, n);
-                }
-                return bo.toString(StandardCharsets.UTF_8.name());
-            }
+            Http.Options opts = new Http.Options();
+            opts.connectTimeoutMs = 6_000;
+            opts.readTimeoutMs = 8_000;
+            opts.maxRedirects = 5;
+            opts.maxBytes = MAX_BODY_BYTES;
+            opts.headers.put("Accept", ep.kind == UpdateManifest.KIND_GITHUB_API
+                    ? "application/vnd.github+json" : "application/json");
+            opts.headers.put("Cache-Control", "no-cache");
+            opts.redirectValidator = next -> next.startsWith("https://");
+            Http.Response resp = Http.get(ep.url, opts);
+            return resp.code == 200 && !resp.body.isEmpty() ? resp.body : null;
         } catch (Exception ignored) {
             return null;
-        } finally {
-            if (c != null) c.disconnect();
         }
     }
 

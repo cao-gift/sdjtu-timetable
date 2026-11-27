@@ -141,11 +141,21 @@ public class WebShellActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         G.init(this);
-        if (android.os.Build.VERSION.SDK_INT >= 21) {
-            getWindow().setStatusBarColor(G.PAPER);
-            getWindow().setNavigationBarColor(G.PAPER);
-        }
         setContentView(R.layout.activity_web);
+        EdgeToEdge.applyContent(this, true);
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (popupWindow != null) {
+                    closePopup();
+                } else if (webView != null && webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
 
         webView = findViewById(R.id.webview);
         progress = findViewById(R.id.progress);
@@ -578,15 +588,6 @@ public class WebShellActivity extends AppCompatActivity {
             }
             fileCallback.onReceiveValue(results);
             fileCallback = null;
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) {
-            webView.goBack();
-        } else {
-            super.onBackPressed();
         }
     }
 

@@ -1,16 +1,13 @@
 package com.ecut.campus;
 
-import android.Manifest;
 import android.app.DatePickerDialog;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.InputType;
@@ -24,11 +21,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat;
 
 import com.ecut.campus.data.CourseTodo;
 import com.ecut.campus.data.Dates;
@@ -48,7 +43,6 @@ public final class CourseTodoActivity extends AppCompatActivity {
     static final String EXTRA_COURSE = "course_name";
     private static final int REQ_PICK_PHOTO = 301;
     private static final int REQ_TAKE_PHOTO = 302;
-    private static final int REQ_CAMERA_PERM = 303;
 
     static Intent intent(Context c, String courseName) {
         return new Intent(c, CourseTodoActivity.class).putExtra(EXTRA_COURSE, courseName);
@@ -422,11 +416,7 @@ public final class CourseTodoActivity extends AppCompatActivity {
     }
 
     private void startTakePhoto() {
-        if (Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this,
-                Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            requestPermissions(new String[]{Manifest.permission.CAMERA}, REQ_CAMERA_PERM);
-            return;
-        }
+        // 不声明 CAMERA 权限，直接调用系统相机拍照并回写到应用私有 FileProvider 路径。
         try {
             pendingCaptureFile = new File(TodoPhotoStore.dir(this), TodoPhotoStore.newFilename());
             Uri uri = TodoPhotoStore.uriForCapture(this, pendingCaptureFile);
@@ -435,19 +425,7 @@ public final class CourseTodoActivity extends AppCompatActivity {
             i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivityForResult(i, REQ_TAKE_PHOTO);
         } catch (Throwable e) {
-            Toast.makeText(this, "无法打开相机：" + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_CAMERA_PERM) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startTakePhoto();
-            } else {
-                Toast.makeText(this, "未授予相机权限，可改从相册选择图片", Toast.LENGTH_SHORT).show();
-            }
+            Toast.makeText(this, "无法打开相机，可改从相册选择图片", Toast.LENGTH_LONG).show();
         }
     }
 

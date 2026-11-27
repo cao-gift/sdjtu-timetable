@@ -10,7 +10,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Set;
 
-/** 小玩意的纯逻辑：翻牌批语、每节课价格、缺勤上限。 */
+/** 小工具的纯逻辑：每节课价格、缺勤上限。 */
 public class FunStatsTest {
 
     static Timetable.Session ses(int day, int start, int end, int fromWeek, int toWeek, String loc) {

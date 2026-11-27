@@ -29,6 +29,7 @@ public class ScheduleSettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         G.init(this);
         setContentView(R.layout.activity_schedule_settings);
+        EdgeToEdge.applyContent(this, true);
 
         settings = ScheduleSettingsStore.load(this);
         container = findViewById(R.id.section_settings_container);

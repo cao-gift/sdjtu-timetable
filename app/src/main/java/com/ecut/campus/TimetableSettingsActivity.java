@@ -73,6 +73,7 @@ public class TimetableSettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         G.init(this);
         setContentView(R.layout.activity_timetable_settings);
+        EdgeToEdge.applyContent(this, true);
 
         String storedStart = Prefs.semesterStartDate(this);
         startDate = savedInstanceState == null ? WeekMath.normalizeToMonday(storedStart)
@@ -142,15 +143,12 @@ public class TimetableSettingsActivity extends AppCompatActivity {
         addToggleRow(toggles, "03", "一屏显示全部节次", "压缩课块高度，无需上下滚动即可看全天",
                 Prefs.fitAllSections(this), on -> Prefs.setFitAllSections(this, on));
 
-        addToggleRow(toggles, "04", "课块下雨提示", "上课时段可能降雨时在课块浮现雨雾",
+        addToggleRow(toggles, "04", "课块下雨提示",
+                RainWeather.currentCampus(this).name + " · 上课时段可能降雨时浮现雨雾",
                 Prefs.rainHint(this), on -> {
                     Prefs.setRainHint(this, on);
                     if (on) {
-                        if (!RainWeather.hasPermission(this)) {
-                            RainWeather.askPermissionFromSetting(this);
-                        } else {
-                            RainWeather.refreshIfNeeded(this, false, null);
-                        }
+                        RainWeather.refreshIfNeeded(this, false, null);
                     }
                     ClassWidget.updateAll(getApplicationContext());
                 });
@@ -665,14 +663,6 @@ public class TimetableSettingsActivity extends AppCompatActivity {
         Toast.makeText(this, "课表设置已保存", Toast.LENGTH_SHORT).show();
         setResult(RESULT_OK);
         finish();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == RainWeather.REQ_LOCATION && RainWeather.hasPermission(this)) {
-            RainWeather.refreshIfNeeded(this, true, null);
-        }
     }
 
     private int dp(float v) {

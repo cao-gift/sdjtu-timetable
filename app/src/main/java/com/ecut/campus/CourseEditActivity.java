@@ -82,6 +82,18 @@ public class CourseEditActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         G.init(this);
         setContentView(R.layout.activity_course_edit);
+        EdgeToEdge.applyContent(this, true);
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (dirty) {
+                    confirmExit();
+                } else {
+                    setEnabled(false);
+                    getOnBackPressedDispatcher().onBackPressed();
+                }
+            }
+        });
 
         timetable = TimetableStore.load(this);
         currentWeek = getIntent().getIntExtra(EXTRA_CURRENT_WEEK,
@@ -707,11 +719,6 @@ public class CourseEditActivity extends AppCompatActivity {
                     }
                 })
                 .show();
-    }
-
-    @Override
-    public void onBackPressed() {
-        confirmExit();
     }
 
     private static Timetable.Session copySession(Timetable.Session src) {

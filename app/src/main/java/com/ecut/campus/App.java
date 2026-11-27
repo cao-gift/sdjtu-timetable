@@ -13,21 +13,15 @@ public class App extends Application {
         applyNightMode(Prefs.nightMode(this));
         G.init(this);
         purgeDemoGrades();
-        // 冷启动只做必须的事：后台任务登记放到低优先级线程，
-        // 并让出前 1.2 秒给首屏，避免和课表绘制抢 CPU。
-        Thread warm = new Thread(() -> {
-            android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
-            try {
-                Thread.sleep(1200);
-            } catch (InterruptedException ignored) {
-            }
+        // 冷启动只做必须的事：后台任务登记延迟 1.2 秒放进统一线程池，避免和课表绘制抢 CPU。
+        Bg.runDelayed(1200L, () -> {
             try {
                 GradeCheckWorker.schedule(this);
+                TimetableCheckWorker.schedule(this);
                 if (ClassWidget.placedCount(this) > 0) WidgetRefreshWorker.schedule(this);
             } catch (Throwable ignored) {
             }
-        }, "startup-warm");
-        warm.start();
+        });
     }
 
     /** 1.2.2：演示成绩入口已移除，清掉旧版本合并进真实成绩里的样本。 */

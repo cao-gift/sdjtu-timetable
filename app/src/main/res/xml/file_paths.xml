@@ -2,5 +2,6 @@
 <paths>
     <external-files-path name="export" path="export/" />
     <cache-path name="updates" path="updates/" />
+    <cache-path name="qr_scan" path="qr_scan/" />
     <files-path name="todo_photos" path="todo_photos/" />
 </paths>

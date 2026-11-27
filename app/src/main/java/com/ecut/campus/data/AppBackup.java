@@ -6,7 +6,7 @@ import org.json.JSONObject;
 
 /**
  * 全量本地备份格式（纯 Java，无 Android 依赖）：
- * 打包课表归档、作息、显示与隐藏词组设置、同学分享码、作业待办与小玩意偏好；
+ * 打包课表归档、作息、显示与隐藏词组设置、同学分享码、作业待办与小工具偏好；
  * 严禁包含门户账号密码、Cookie 或会话令牌。
  */
 public final class AppBackup {

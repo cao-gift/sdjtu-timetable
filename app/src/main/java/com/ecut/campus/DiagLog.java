@@ -293,8 +293,6 @@ public final class DiagLog {
                         == android.content.pm.PackageManager.PERMISSION_GRANTED));
             }
             x.append('\n');
-            x.append("相机权限: ").append(yn(Build.VERSION.SDK_INT < 23 || ctx.checkSelfPermission(
-                    android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED)).append('\n');
             android.os.PowerManager pm = (android.os.PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
             if (pm != null && Build.VERSION.SDK_INT >= 23) {
                 x.append("忽略电池优化: ").append(yn(pm.isIgnoringBatteryOptimizations(ctx.getPackageName()))).append('\n');
@@ -344,6 +342,8 @@ public final class DiagLog {
             x.append("显示非本周 = ").append(yn(Prefs.showInactiveCourses(ctx))).append('\n');
             x.append("一屏显示10节 = ").append(yn(Prefs.fitAllSections(ctx))).append('\n');
             x.append("新成绩提醒 = ").append(yn(Prefs.gradeNotify(ctx))).append('\n');
+            x.append("调课提醒 = ").append(yn(Prefs.scheduleChangeNotify(ctx))).append('\n');
+            x.append("下雨预报校区 = ").append(RainWeather.currentCampus(ctx).name).append('\n');
             x.append("自动检查更新 = ").append(yn(Prefs.updateAutoCheck(ctx))).append('\n');
             x.append("更新: 上次检查 ").append(ts(Prefs.updateCheckedAt(ctx)))
                     .append(" · 跳过版本 ").append(Prefs.updateSkippedTag(ctx).isEmpty() ? "(无)" : Prefs.updateSkippedTag(ctx)).append('\n');

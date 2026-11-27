@@ -64,11 +64,9 @@ public final class Ui {
             sl.topMargin = dp(a, 2);
             col.addView(s, sl);
         }
+        sv.setClipToPadding(false);
         a.setContentView(sv);
-        if (!G.GLASS) {
-            a.getWindow().setStatusBarColor(G.PAPER);
-            a.getWindow().setNavigationBarColor(G.PAPER);
-        }
+        EdgeToEdge.apply(a, col, true);
         return col;
     }
 

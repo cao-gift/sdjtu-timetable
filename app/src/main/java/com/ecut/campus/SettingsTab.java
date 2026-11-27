@@ -93,19 +93,17 @@ final class SettingsTab {
             rainSw.setOnCheckedChangeListener((b, on) -> {
                 Prefs.setRainHint(a, on);
                 if (on) {
-                    if (!RainWeather.hasPermission(a)) {
-                        RainWeather.askPermissionFromSetting(a);
-                    } else {
-                        RainWeather.refreshIfNeeded(a, false, a::refreshTimetableTab);
-                    }
+                    RainWeather.refreshIfNeeded(a, false, a::refreshTimetableTab);
                 }
+                renderRainHintSub();
                 a.refreshTimetableTab();
                 ClassWidget.updateAll(a.getApplicationContext());
             });
             View rainRow = settingsFragment.findViewById(R.id.row_rain_hint);
             if (rainRow != null) {
-                rainRow.setOnClickListener(v -> rainSw.toggle());
+                rainRow.setOnClickListener(v -> showRainCampusPicker(rainSw));
             }
+            renderRainHintSub();
         }
         com.google.android.material.materialswitch.MaterialSwitch gradeSw =
                 settingsFragment.findViewById(R.id.switch_grade_notify);
@@ -116,6 +114,18 @@ final class SettingsTab {
                 GradeCheckWorker.schedule(a);
                 if (on) Notify.requestPermissionIfNeeded(a);
             });
+        }
+        com.google.android.material.materialswitch.MaterialSwitch schedChangeSw =
+                settingsFragment.findViewById(R.id.switch_schedule_change_notify);
+        if (schedChangeSw != null) {
+            schedChangeSw.setChecked(Prefs.scheduleChangeNotify(a));
+            schedChangeSw.setOnCheckedChangeListener((b, on) -> {
+                Prefs.setScheduleChangeNotify(a, on);
+                TimetableCheckWorker.schedule(a);
+                if (on) Notify.requestPermissionIfNeeded(a);
+            });
+            View schedChangeRow = settingsFragment.findViewById(R.id.row_schedule_change_notify);
+            if (schedChangeRow != null) schedChangeRow.setOnClickListener(v -> schedChangeSw.toggle());
         }
         renderThemeSegment();
         renderNightSegment();
@@ -239,6 +249,7 @@ final class SettingsTab {
             }
         }
         settingsPage = pageId;
+        a.updateBackNavigationState();
         View scroll = settingsFragment.findViewById(R.id.settings_scroll);
         if (scroll != null) {
             scroll.scrollTo(0, 0);
@@ -291,11 +302,51 @@ final class SettingsTab {
         }
     }
 
+    boolean isInSubPage() {
+        return settingsPage != R.id.settings_page_root;
+    }
+
     /** 返回键：在二级页时先回一级页，返回 true 表示已处理。 */
     boolean backToRoot() {
         if (settingsPage == R.id.settings_page_root) return false;
         showPage(R.id.settings_page_root);
         return true;
+    }
+
+    private void renderRainHintSub() {
+        TextView sub = settingsFragment.findViewById(R.id.tv_rain_hint_sub);
+        if (sub == null) return;
+        com.ecut.campus.data.RainForecast.Campus c = RainWeather.currentCampus(a);
+        sub.setText(c.name + "（" + c.region + "）· 点此切换校区");
+    }
+
+    private void showRainCampusPicker(com.google.android.material.materialswitch.MaterialSwitch rainSw) {
+        com.ecut.campus.data.RainForecast.Campus[] all = com.ecut.campus.data.RainForecast.Campus.values();
+        String[] labels = new String[all.length];
+        String curId = Prefs.rainCampus(a);
+        int checked = 0;
+        for (int i = 0; i < all.length; i++) {
+            labels[i] = all[i].displayLabel();
+            if (all[i].id.equals(curId)) checked = i;
+        }
+        new AlertDialog.Builder(a)
+                .setTitle("选择下雨预报校区")
+                .setSingleChoiceItems(labels, checked, (d, which) -> {
+                    com.ecut.campus.data.RainForecast.Campus chosen = all[which];
+                    boolean changed = !chosen.id.equals(Prefs.rainCampus(a));
+                    Prefs.setRainCampus(a, chosen.id);
+                    if (!Prefs.rainHint(a)) {
+                        Prefs.setRainHint(a, true);
+                        rainSw.setChecked(true);
+                    }
+                    if (changed) RainWeather.clearCache(a);
+                    renderRainHintSub();
+                    RainWeather.refreshIfNeeded(a, true, a::refreshTimetableTab);
+                    Toast.makeText(a, "已切换为" + chosen.name + "天气", Toast.LENGTH_SHORT).show();
+                    d.dismiss();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     void refresh() {
@@ -346,6 +397,7 @@ final class SettingsTab {
         if (rainSw != null && rainSw.isChecked() != Prefs.rainHint(a)) {
             rainSw.setChecked(Prefs.rainHint(a));
         }
+        renderRainHintSub();
 
         bindAccountStatus();
         refreshAboutBadge();
@@ -550,15 +602,15 @@ final class SettingsTab {
     void onWidgetImagePicked(android.net.Uri uri) {
         Toast.makeText(a, "正在处理图片…", Toast.LENGTH_SHORT).show();
         android.content.Context app = a.getApplicationContext();
-        new Thread(() -> {
+        Bg.io(() -> {
             boolean ok = WidgetBg.importFrom(app, uri);
             if (ok) ClassWidget.updateAll(app);
-            a.runOnUiThread(() -> {
-                if (a.isFinishing()) return;
-                renderWidgetBg();
-                Toast.makeText(a, ok ? "组件背景换好了" : "这张图读不了，换一张试试", Toast.LENGTH_SHORT).show();
-            });
-        }, "widget-bg").start();
+            return ok;
+        }, ok -> {
+            if (a.isFinishing() || a.isDestroyed()) return;
+            renderWidgetBg();
+            Toast.makeText(a, ok ? "组件背景换好了" : "这张图读不了，换一张试试", Toast.LENGTH_SHORT).show();
+        });
     }
 
     private void bindClassRemind() {

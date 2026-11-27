@@ -220,6 +220,10 @@ public final class Prefs {
     public static boolean gradeNotify(Context ctx) { return sp(ctx).getBoolean("grade_notify", true); }
     public static void setGradeNotify(Context ctx, boolean v) { sp(ctx).edit().putBoolean("grade_notify", v).apply(); }
 
+    /** 课表变动（调课/换教室）后台提醒，默认开启。 */
+    public static boolean scheduleChangeNotify(Context ctx) { return sp(ctx).getBoolean("schedule_change_notify", true); }
+    public static void setScheduleChangeNotify(Context ctx, boolean v) { sp(ctx).edit().putBoolean("schedule_change_notify", v).apply(); }
+
     /** 课前提醒，默认关。 */
     public static boolean classRemind(Context ctx) { return sp(ctx).getBoolean("class_remind", false); }
     public static void setClassRemind(Context ctx, boolean v) { sp(ctx).edit().putBoolean("class_remind", v).apply(); }
@@ -391,26 +395,16 @@ public final class Prefs {
     /** 课块下雨提示开关，默认开启。 */
     public static boolean rainHint(Context ctx) { return sp(ctx).getBoolean("rain_hint", true); }
     public static void setRainHint(Context ctx, boolean on) { sp(ctx).edit().putBoolean("rain_hint", on).apply(); }
+    /** 下雨预报对应校区（wuyingshan / changqing / weihai），默认无影山校区。 */
+    public static String rainCampus(Context ctx) {
+        return sp(ctx).getString("rain_campus", com.ecut.campus.data.RainForecast.Campus.WUYINGSHAN.id);
+    }
+    public static void setRainCampus(Context ctx, String campusId) {
+        sp(ctx).edit().putString("rain_campus", com.ecut.campus.data.RainForecast.Campus.byId(campusId).id).apply();
+    }
     /** 上次成功拉取天气预报的时间戳（毫秒）。 */
     public static long rainFetchedAt(Context ctx) { return sp(ctx).getLong("rain_fetched_at", 0L); }
     public static void setRainFetchedAt(Context ctx, long t) { sp(ctx).edit().putLong("rain_fetched_at", t).apply(); }
-    /** 最近一次粗略定位坐标（仅在仍有定位权限时用作兜底）。 */
-    public static void setRainLocation(Context ctx, double lat, double lon) {
-        sp(ctx).edit()
-                .putString("rain_lat", Double.toString(lat))
-                .putString("rain_lon", Double.toString(lon))
-                .apply();
-    }
-    public static double[] rainLocation(Context ctx) {
-        String a = sp(ctx).getString("rain_lat", "");
-        String b = sp(ctx).getString("rain_lon", "");
-        if (a == null || b == null || a.isEmpty() || b.isEmpty()) return null;
-        try {
-            return new double[]{Double.parseDouble(a), Double.parseDouble(b)};
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
 
     // ===== 1.3.20：考试倒计时、Wi-Fi 后台更新 =====
     /** 考前一天与考前一小时提醒，默认开启。 */

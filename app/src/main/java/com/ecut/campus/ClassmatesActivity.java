@@ -4,28 +4,27 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.InputType;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.journeyapps.barcodescanner.ScanContract;
-import com.journeyapps.barcodescanner.ScanOptions;
-
+import java.io.File;
 import java.util.List;
 
 /** 二级页：同学。分享我的课表、添加同学、同学列表 → 共同空闲（三级）。 */
 public class ClassmatesActivity extends AppCompatActivity {
 
-    private final ActivityResultLauncher<ScanOptions> scanner =
-            registerForActivityResult(new ScanContract(), result -> {
-                if (result.getContents() != null) importText(result.getContents());
-            });
+    private static final int REQ_PICK_QR = 501;
+    private static final int REQ_CAPTURE_QR = 502;
+    private File pendingQrCapture;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,7 +51,7 @@ public class ClassmatesActivity extends AppCompatActivity {
 
         Ui.label(this, col, "ADD · 添加同学");
         LinearLayout add = Ui.card(this, col);
-        Ui.row(this, add, "01", "扫同学的二维码", "扫描对方课表二维码", "SCAN", v -> scan());
+        Ui.row(this, add, "01", "识别同学二维码", "拍照或从相册识别课表二维码", "QR", v -> scan());
         Ui.row(this, add, "02", "粘贴分享码", "粘贴整段消息自动识别", "PASTE", v -> paste());
 
         List<FriendStore.Friend> friends = FriendStore.load(this);
@@ -97,12 +96,76 @@ public class ClassmatesActivity extends AppCompatActivity {
     }
 
     private void scan() {
-        ScanOptions o = new ScanOptions();
-        o.setDesiredBarcodeFormats(ScanOptions.QR_CODE);
-        o.setPrompt("对准同学的课表二维码");
-        o.setBeepEnabled(false);
-        o.setOrientationLocked(true);
-        scanner.launch(o);
+        new AlertDialog.Builder(this)
+                .setTitle("识别同学二维码")
+                .setItems(new String[]{"拍照识别（调用系统相机）", "从相册选择二维码图片"}, (d, which) -> {
+                    if (which == 0) captureQrPhoto();
+                    else pickQrPhoto();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void pickQrPhoto() {
+        Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+        i.setType("image/*");
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        startActivityForResult(Intent.createChooser(i, "选择课表二维码图片"), REQ_PICK_QR);
+    }
+
+    private void captureQrPhoto() {
+        try {
+            File dir = new File(getCacheDir(), "qr_scan");
+            if (!dir.exists()) dir.mkdirs();
+            pendingQrCapture = new File(dir, "qr_" + System.currentTimeMillis() + ".jpg");
+            Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                    this, getPackageName() + ".fileprovider", pendingQrCapture);
+            Intent i = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            i.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+            i.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            startActivityForResult(i, REQ_CAPTURE_QR);
+        } catch (Throwable e) {
+            Toast.makeText(this, "无法打开相机，可改从相册选择二维码图片", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode != RESULT_OK) {
+            if (requestCode == REQ_CAPTURE_QR && pendingQrCapture != null) {
+                pendingQrCapture.delete();
+                pendingQrCapture = null;
+            }
+            return;
+        }
+        Uri target = null;
+        File toClean = null;
+        if (requestCode == REQ_PICK_QR && data != null) {
+            target = data.getData();
+        } else if (requestCode == REQ_CAPTURE_QR && pendingQrCapture != null) {
+            toClean = pendingQrCapture;
+            pendingQrCapture = null;
+            target = Uri.fromFile(toClean);
+        }
+        if (target == null) return;
+        final Uri uri = target;
+        final File cleanup = toClean;
+        Toast.makeText(this, "正在识别二维码…", Toast.LENGTH_SHORT).show();
+        Bg.io(() -> {
+            try {
+                return QrBitmap.decodeUri(getApplicationContext(), uri);
+            } finally {
+                if (cleanup != null) cleanup.delete();
+            }
+        }, decoded -> {
+            if (isFinishing() || isDestroyed()) return;
+            if (decoded == null || decoded.trim().isEmpty()) {
+                Toast.makeText(this, "未识别出二维码，请确保画面清晰或直接粘贴分享码", Toast.LENGTH_LONG).show();
+            } else {
+                importText(decoded);
+            }
+        });
     }
 
     private void paste() {

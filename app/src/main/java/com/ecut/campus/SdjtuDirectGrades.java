@@ -1,8 +1,6 @@
 package com.ecut.campus;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.webkit.CookieManager;
 
 import com.ecut.campus.data.Grades;
@@ -11,9 +9,6 @@ import com.ecut.campus.data.SdjtuPortal;
 import com.ecut.campus.data.SdjtuSessionCheck;
 
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -56,16 +51,12 @@ final class SdjtuDirectGrades {
     private static final int MAX_REDIRECTS = 3;
     private static final int MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
     private static final int MAX_PAGE_THREADS = 4;
-    private static final String USER_AGENT =
-            "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36";
-
-    private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
     private SdjtuDirectGrades() {}
 
     static void fetchAsync(Context ctx, String academicBase, AtomicBoolean cancelled, Consumer<Outcome> onResult) {
         Context app = ctx.getApplicationContext();
-        new Thread(() -> {
+        Bg.run(() -> {
             Outcome out;
             try {
                 out = fetchBlocking(app, academicBase, cancelled);
@@ -74,10 +65,10 @@ final class SdjtuDirectGrades {
             }
             if (cancelled.get()) return;
             Outcome finalOut = out;
-            MAIN.post(() -> {
+            Bg.main(() -> {
                 if (!cancelled.get()) onResult.accept(finalOut);
             });
-        }, "sdjtu-direct-grades").start();
+        });
     }
 
     private static Outcome fetchBlocking(Context ctx, String academicBase, AtomicBoolean cancelled) {
@@ -175,66 +166,38 @@ final class SdjtuDirectGrades {
     }
 
     private static PageResponse postPage(String startUrl, String referer, int page, AtomicBoolean cancelled) {
-        String currentUrl = startUrl;
-        String method = "POST";
+        if (cancelled.get()) return new PageResponse(null, startUrl, false, "cancelled");
         byte[] payload = QiangzhiGrades.pageQueryBody(page).getBytes(StandardCharsets.UTF_8);
+        try {
+            Http.Options opts = new Http.Options();
+            opts.connectTimeoutMs = CONNECT_TIMEOUT_MS;
+            opts.readTimeoutMs = READ_TIMEOUT_MS;
+            opts.maxRedirects = MAX_REDIRECTS;
+            opts.maxBytes = MAX_RESPONSE_BYTES;
+            opts.userAgent = Http.MOBILE_UA;
+            opts.headers.put("Referer", referer);
+            opts.headers.put("Origin", "https://wwebvpn.sdjtu.edu.cn");
+            opts.headers.put("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
+            opts.cookieProvider = u -> CookieManager.getInstance().getCookie(u);
+            opts.redirectValidator = next -> SdjtuPortal.isSchoolUrl(next)
+                    && !SdjtuSessionCheck.isLoginLocation(next)
+                    && next.contains("/jsxsd/kscj/");
 
-        for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
-            if (cancelled.get()) return new PageResponse(null, currentUrl, false, "cancelled");
-            HttpURLConnection conn = null;
-            try {
-                String cookie = CookieManager.getInstance().getCookie(currentUrl);
-                if (cookie == null || cookie.trim().isEmpty()) {
-                    return new PageResponse(null, currentUrl, true, "no_cookie");
-                }
-                conn = (HttpURLConnection) new URL(currentUrl).openConnection();
-                conn.setRequestMethod(method);
-                conn.setInstanceFollowRedirects(false);
-                conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-                conn.setReadTimeout(READ_TIMEOUT_MS);
-                conn.setRequestProperty("Cookie", cookie);
-                conn.setRequestProperty("User-Agent", USER_AGENT);
-                conn.setRequestProperty("Referer", referer);
-                conn.setRequestProperty("Origin", "https://wwebvpn.sdjtu.edu.cn");
-                conn.setRequestProperty("Accept", "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8");
-                conn.setRequestProperty("Accept-Encoding", "gzip");
-                if ("POST".equals(method)) {
-                    conn.setDoOutput(true);
-                    conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                    conn.setFixedLengthStreamingMode(payload.length);
-                    try (OutputStream os = conn.getOutputStream()) {
-                        os.write(payload);
-                    }
-                }
-
-                int code = conn.getResponseCode();
-                if (code == 401 || code == 403) {
-                    return new PageResponse(null, currentUrl, true, "http_" + code);
-                }
-                if (code >= 300 && code < 400) {
-                    String next = SdjtuSessionProbe.resolveUrl(currentUrl, conn.getHeaderField("Location"));
-                    if (next == null || !SdjtuPortal.isSchoolUrl(next)
-                            || SdjtuSessionCheck.isLoginLocation(next)
-                            || !next.contains("/jsxsd/kscj/")) {
-                        return new PageResponse(null, currentUrl, true, "redirect_login");
-                    }
-                    currentUrl = next;
-                    if (code != 307 && code != 308) method = "GET";
-                    continue;
-                }
-                if (code != 200) {
-                    return new PageResponse(null, currentUrl, false, "http_" + code);
-                }
-                String body = SdjtuSessionProbe.readResponse(conn, MAX_RESPONSE_BYTES);
-                return new PageResponse(body, currentUrl, false, "ok");
-            } catch (IOException e) {
-                return new PageResponse(null, currentUrl, false, "io:" + e.getClass().getSimpleName());
-            } catch (Throwable t) {
-                return new PageResponse(null, currentUrl, false, t.getClass().getSimpleName());
-            } finally {
-                if (conn != null) conn.disconnect();
+            Http.Response resp = Http.postForm(startUrl, payload, opts);
+            if (resp.missingCookie) return new PageResponse(null, resp.finalUrl, true, "no_cookie");
+            if (resp.redirectBlocked) return new PageResponse(null, resp.finalUrl, true, "redirect_login");
+            if (resp.tooManyRedirects) return new PageResponse(null, resp.finalUrl, true, "too_many_redirects");
+            if (resp.code == 401 || resp.code == 403) {
+                return new PageResponse(null, resp.finalUrl, true, "http_" + resp.code);
             }
+            if (resp.code != 200) {
+                return new PageResponse(null, resp.finalUrl, false, "http_" + resp.code);
+            }
+            return new PageResponse(resp.body, resp.finalUrl, false, "ok");
+        } catch (IOException e) {
+            return new PageResponse(null, startUrl, false, "io:" + e.getClass().getSimpleName());
+        } catch (Throwable t) {
+            return new PageResponse(null, startUrl, false, t.getClass().getSimpleName());
         }
-        return new PageResponse(null, currentUrl, true, "too_many_redirects");
     }
 }

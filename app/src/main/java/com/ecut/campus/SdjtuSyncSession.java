@@ -64,12 +64,17 @@ final class SdjtuSyncSession {
         }
         String home = SdjtuPortal.studentHome(cachedBase);
         base = SdjtuPortal.academicBase(SdjtuPortal.isSchoolUrl(home) ? home : SdjtuPortal.STUDENT_HOME);
-        // 明确未登录、会话已过期或用户主动点「自动登录」时直接走统一门户，完成认证并进入教务系统。
-        if (kind == CampusSyncClient.Kind.LOGIN || !Prefs.hasPortalSession(context) || Prefs.sessionExpired(context)) {
+        // 明确未登录、缺少学校 Cookie、会话已过期或用户主动点「自动登录」时直接走统一门户，省去无效跳转。
+        if (kind == CampusSyncClient.Kind.LOGIN || !Prefs.hasPortalSession(context)
+                || Prefs.sessionExpired(context) || !SdjtuSessionProbe.hasSchoolCookie(context)) {
             openPortal();
         } else {
             web.loadUrl(target());
         }
+    }
+
+    boolean usedAutoLogin() {
+        return autoLogin.attempted();
     }
 
     boolean current() {
@@ -109,14 +114,13 @@ final class SdjtuSyncSession {
             listener.fail("同步跳转到了学校 HTTPS 入口以外的页面，请打开统一门户核对", true);
             return;
         }
-        if (!reading && (SdjtuLoginForm.isLoginPage(url) || SdjtuPortal.isDashboard(url)
-                || !SdjtuPortal.academicBase(url).isEmpty())) {
-            schedule(200);
+        if (!reading) {
+            schedule(120);
         }
     }
 
     void pageFinished(String url) {
-        if (current() && !reading && url != null && url.equals(web.getUrl())) schedule(30);
+        if (current() && !reading && url != null && url.equals(web.getUrl())) schedule(20);
     }
 
     private void schedule(long delay) {
@@ -161,11 +165,12 @@ final class SdjtuSyncSession {
 
         URI uri = URI.create(url);
         String path = uri.getRawPath();
-        // Only the portal's own resource list may launch an application card.
+        // 门户资源页无需点击 Vue 卡片，避免与直达 ACADEMIC_SSO 产生双重跳转。
         boolean dashboard = SdjtuPortal.isDashboard(url);
+        boolean navigateInJs = false;
         String js = "(function(){if(document.readyState==='loading'||!document.body)return {};"
                 + "if(!document.__lvlvSyncPortal)document.__lvlvSyncPortal=" + portalScript
-                + ";return document.__lvlvSyncPortal('portal'," + dashboard + ",false,null,{sync:true});})()";
+                + ";return document.__lvlvSyncPortal('portal'," + navigateInJs + ",false,null,{sync:true});})()";
         web.evaluateJavascript(js, raw -> {
             if (!samePage(id, url)) return;
             evaluating = false;
@@ -173,14 +178,14 @@ final class SdjtuSyncSession {
             try {
                 result = new JSONObject(WebShellActivity.unwrapJsString(raw));
             } catch (JSONException e) {
-                schedule(180);
+                schedule(150);
                 return;
             }
             String stage = result.optString("stage");
             if ("login".equals(stage)) {
                 // WebVPN fingerprint and ticket redirects can briefly look like login pages.
-                long grace = path != null && path.toLowerCase(Locale.ROOT).contains("fingerprint") ? 10_000 : 1_500;
-                if (SystemClock.elapsedRealtime() - pageSince < grace) schedule(220);
+                long grace = path != null && path.toLowerCase(Locale.ROOT).contains("fingerprint") ? 10_000 : 1_200;
+                if (SystemClock.elapsedRealtime() - pageSince < grace) schedule(180);
                 else if (!portalOpened) openPortal();
                 else requireLogin("门户需要你完成身份验证，请打开统一门户继续");
                 return;
@@ -190,9 +195,13 @@ final class SdjtuSyncSession {
                 else listener.fail("学校教务暂时无法提供查询，请稍后重试", false);
                 return;
             }
-            if (stage.isEmpty()) { schedule(180); return; }
+            if (stage.isEmpty()) { schedule(150); return; }
 
-            if (dashboard) portalOpened = true;
+            if (dashboard) {
+                portalOpened = true;
+                // 已登录到 WebVPN 资源主页，说明 CAS 认证已通过，立刻解除自动登录防重锁。
+                autoLogin.onSuccess();
+            }
             String found = SdjtuPortal.academicBase(result.optString("base"));
             if (!found.isEmpty() && SdjtuPortal.isSchoolUrl(found)) {
                 base = found;
@@ -202,7 +211,7 @@ final class SdjtuSyncSession {
             long elapsed = SystemClock.elapsedRealtime() - pageSince;
             if (targetPage(url, kind)) {
                 if (found.isEmpty() && elapsed < 350) {
-                    schedule(120);
+                    schedule(100);
                     return;
                 }
                 reading = true;
@@ -216,10 +225,8 @@ final class SdjtuSyncSession {
                     targetAfterSso = true;
                     web.loadUrl(target());
                 }
-            } else if (dashboard && !ssoOpened
-                    && (autoLogin.attempted()
-                    || (!"academic".equals(stage) && elapsed > 300)
-                    || elapsed > 1_200)) {
+            } else if (dashboard && !ssoOpened) {
+                // 到达 WebVPN 主页后立即直达教务 SSO，不等 Vue 资源列表慢渲染。
                 ssoOpened = true;
                 web.loadUrl(SdjtuPortal.ACADEMIC_SSO);
             } else if (dashboard && elapsed > 12_000) {
@@ -227,7 +234,7 @@ final class SdjtuSyncSession {
             } else if (!dashboard && !portalOpened && !autoLogin.attempted() && elapsed > 2_500) {
                 openPortal();
             } else {
-                schedule(220);
+                schedule(180);
             }
         });
     }

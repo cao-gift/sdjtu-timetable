@@ -87,11 +87,8 @@ public final class PinWidgetActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         G.init(this);
         super.onCreate(savedInstanceState);
-        if (Build.VERSION.SDK_INT >= 21) {
-            getWindow().setStatusBarColor(0x00000000);
-            getWindow().setNavigationBarColor(0x00000000);
-        }
         setContentView(R.layout.activity_pin_widget);
+        EdgeToEdge.applyContent(this, false);
         if (savedInstanceState != null) autoAsked = savedInstanceState.getBoolean("asked");
 
         View card = findViewById(R.id.pin_card);

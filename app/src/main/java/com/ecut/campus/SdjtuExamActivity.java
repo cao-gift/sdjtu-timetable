@@ -48,6 +48,7 @@ public final class SdjtuExamActivity extends AppCompatActivity {
         super.onCreate(saved);
         G.init(this);
         setContentView(R.layout.activity_sdjtu_study);
+        EdgeToEdge.applyContent(this, false);
         ((TextView) findViewById(R.id.study_title)).setText("考试安排");
         findViewById(R.id.study_back).setOnClickListener(v -> finish());
         syncButton = findViewById(R.id.study_sync);

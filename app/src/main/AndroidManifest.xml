@@ -4,24 +4,17 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!-- 课块下雨提示：只需城市级粗略位置（系统 LocationManager 网络定位，不依赖谷歌服务） -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- 成绩检查和组件刷新都使用普通 Worker，移除依赖清单中的前台服务权限。 -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <!-- 小组件 / 下一节课通知按上下课时间准点刷新（休眠中也叫醒）；Android 13+ 用 USE_EXACT_ALARM（课表类，自动授予） -->
-    <uses-permission
-        android:name="android.permission.SCHEDULE_EXACT_ALARM"
-        android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- 课前提醒与小组件准点刷新：使用 SCHEDULE_EXACT_ALARM，未授权时在 Wake 中自动降级为非精确唤醒。 -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- 「让小组件自己翻页」：弹系统窗口请求不受电池优化限制 -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.READ_CALENDAR" />
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <queries>
         <intent>
@@ -38,6 +31,7 @@
     <application
         android:name=".App"
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -174,8 +168,15 @@
         <activity
             android:name=".fun.FunActivity"
             android:exported="false"
-            android:label="小玩意"
+            android:label="小工具"
             android:configChanges="orientation|screenSize|keyboardHidden" />
+
+        <activity
+            android:name=".fun.GpaSimulatorActivity"
+            android:exported="false"
+            android:label="GPA 目标模拟器"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".ClassmatesActivity"
@@ -194,11 +195,6 @@
             android:exported="false"
             android:label="共同空闲"
             android:configChanges="orientation|screenSize|keyboardHidden" />
-
-        <activity
-            android:name="com.journeyapps.barcodescanner.CaptureActivity"
-            android:screenOrientation="fullSensor"
-            tools:replace="screenOrientation" />
 
         <!-- 旧版换图标被中断时，覆盖升级后将桌面入口恢复为一个。 -->
         <receiver

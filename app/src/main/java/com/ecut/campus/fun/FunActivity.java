@@ -1,5 +1,6 @@
 package com.ecut.campus.fun;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.widget.EditText;
@@ -14,9 +15,13 @@ import com.ecut.campus.Prefs;
 import com.ecut.campus.R;
 import com.ecut.campus.Ui;
 import com.ecut.campus.data.ClassPrice;
+import com.ecut.campus.data.Grades;
+import com.ecut.campus.data.GradesStore;
 import com.ecut.campus.data.TimetableStore;
 
-/** 二级页「小玩意」：翻牌批语开关、学费（这节课值多少钱）、缺勤安全气囊。全部本地。 */
+import java.util.Locale;
+
+/** 二级页「小工具」：GPA 目标模拟器、学费（这节课值多少钱）、缺勤安全气囊。全部本地。 */
 public class FunActivity extends AppCompatActivity {
 
     /** 从课程详情点「填一下学费」进来：直接弹学费框。 */
@@ -38,7 +43,17 @@ public class FunActivity extends AppCompatActivity {
     }
 
     private void render() {
-        LinearLayout col = Ui.page(this, "设置", "小玩意", "纯本地计算，不联网");
+        LinearLayout col = Ui.page(this, "设置", "小工具", "纯本地计算，不联网");
+
+        Ui.label(this, col, "ACADEMIC · 学业");
+        LinearLayout ac = Ui.card(this, col);
+        Grades grades = GradesStore.load(this);
+        grades.recomputeAll();
+        String gpaSub = grades.totalCourseCount() > 0
+                ? String.format(Locale.US, "当前 GPA %.2f · 反推目标均分与预估成绩", grades.summary.gpa)
+                : "反推目标均分 · 预估后续课程绩点变化";
+        Ui.row(this, ac, "01", "GPA 目标模拟器", gpaSub, "›",
+                v -> startActivity(new Intent(this, GpaSimulatorActivity.class)));
 
         Ui.label(this, col, "TIMETABLE · 课表");
         LinearLayout tt = Ui.card(this, col);

@@ -37,6 +37,7 @@ public class GradesActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         G.init(this);
         setContentView(R.layout.activity_grades);
+        EdgeToEdge.applyContent(this, false);
 
         findViewById(R.id.btn_grades_back).setOnClickListener(v -> finish());
 

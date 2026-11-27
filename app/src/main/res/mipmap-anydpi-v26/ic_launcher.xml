@@ -9,4 +9,5 @@
             android:insetBottom="24.25%"
             android:drawable="@drawable/ic_launcher_artwork" />
     </foreground>
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

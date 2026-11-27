@@ -197,7 +197,7 @@ public final class CourseExtras {
         return b;
     }
 
-    /** 还没填学费：只留一行，点了去「小玩意」填。 */
+    /** 还没填学费：只留一行，点了去「小工具」填。 */
     private View tuitionHint() {
         TextView tv = new TextView(a);
         tv.setText("填一下学费，这里会显示这节课值多少钱 ›");
