@@ -185,7 +185,8 @@
         choices.campus = selected(choices.campuses, wanted.campus) || matchByHint(choices.campuses, wanted.campusHint);
         choices.week = selected(choices.weeks, wanted.week);
         if (choices.campus && fields.campus.value===choices.campus) choices.buildings=namedChoices(fields.building);
-        choices.building = selected(choices.buildings, wanted.building) || matchByHint(choices.buildings, wanted.buildingHint);
+        choices.building = selected(choices.buildings, wanted.building) || matchByHint(choices.buildings, wanted.buildingHint)
+            || (wanted.fallbackFirstBuilding && !wanted.building && choices.buildings.length ? choices.buildings[0].value : '');
         choices.day = selected(choices.days, wanted.day);
         choices.period = selected(choices.periods, wanted.period);
         choices.room = typeof wanted.room === 'string' ? wanted.room.trim() : '';

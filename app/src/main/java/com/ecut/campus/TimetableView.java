@@ -37,6 +37,25 @@ import java.util.List;
  */
 public class TimetableView extends View {
 
+    public static final class ConflictItem {
+        public final Timetable.Course course;
+        public final Timetable.Session displaySession;
+        public final Timetable.Session primarySession;
+        public final String label;
+        public final String adjustId;
+        public final boolean extra;
+
+        public ConflictItem(Timetable.Course course, Timetable.Session displaySession,
+                            Timetable.Session primarySession, String label, String adjustId, boolean extra) {
+            this.course = course;
+            this.displaySession = displaySession;
+            this.primarySession = primarySession;
+            this.label = label;
+            this.adjustId = adjustId == null ? "" : adjustId;
+            this.extra = extra;
+        }
+    }
+
     public interface OnSessionClickListener {
         void onSessionClick(Timetable.Course course, Timetable.Session session, boolean activeThisWeek);
         void onEmptySlotClick(int dayOfWeek, int startSection);
@@ -58,6 +77,12 @@ public class TimetableView extends View {
                                         String label, String adjustId, boolean extra, int week) {}
         /** 点击叠加在课表中的考试卡片。 */
         default void onExamClick(com.ecut.campus.data.ExamCountdown.Entry exam) {}
+        /** 点击重修/时间冲突课程叠卡簇时回调，展示同簇全部冲突课程。 */
+        default void onConflictClick(List<ConflictItem> items, Timetable.Course tappedCourse, int week) {
+            if (!items.isEmpty()) onSessionClick(items.get(0).course, items.get(0).primarySession, true);
+        }
+        /** 点击课块右下角作业与待办胶囊时直达对应课程待办专页。 */
+        default void onTodoBadgeClick(Timetable.Course course) {}
     }
 
     public interface OnVerticalScrollListener {
@@ -197,6 +222,9 @@ public class TimetableView extends View {
         String label;      // 非空 = 带标记（停课/放假/已调走/补课/调课）
         String adjustId = "";
         boolean extra;
+        int clusterKey;
+        int clusterSize = 1;
+        @Nullable RectF todoHitRect;
         com.ecut.campus.data.ExamCountdown.Entry exam;
 
         HitBlock(RectF rect, Timetable.Course course, Timetable.Session session, boolean active) {
@@ -267,6 +295,7 @@ public class TimetableView extends View {
 
     private java.util.Set<String> warnCourses = java.util.Collections.emptySet();
     private java.util.Map<String, Integer> todoCounts = java.util.Collections.emptyMap();
+    private java.util.Set<String> urgentTodoCourses = java.util.Collections.emptySet();
     private List<com.ecut.campus.data.ExamCountdown.Entry> examEntries = Collections.emptyList();
 
     /** 缺勤快到上限的课（规范化课名），课块左缘描朱砂。 */
@@ -275,9 +304,15 @@ public class TimetableView extends View {
         invalidate();
     }
 
-    /** 各课未完成作业/待办数量（规范化课名 → 数量），在课块右下角绘制小角标。 */
+    /** 各课未完成作业/待办数量（规范化课名 → 数量），在课块右下角绘制胶囊角标。 */
     public void setTodoCounts(java.util.Map<String, Integer> counts) {
         todoCounts = counts == null ? java.util.Collections.emptyMap() : counts;
+        invalidate();
+    }
+
+    /** 存在今日截止或已逾期作业的课程（规范化课名），用于点亮待办角标的紧急提示色。 */
+    public void setUrgentTodoCourses(java.util.Set<String> keys) {
+        urgentTodoCourses = keys == null ? java.util.Collections.emptySet() : keys;
         invalidate();
     }
 
@@ -634,15 +669,17 @@ public class TimetableView extends View {
     private void drawCourseBlocks(Canvas canvas, float colWidth, boolean activePass) {
         if (timetable == null || timetable.courses == null) return;
 
-        // 本周真正要上的课（去掉停课/放假，加上补课/调来的）先合并同课连堂时段，再按真实起止位置算重叠。
-        java.util.Map<Timetable.Session, int[]> laneOf = new java.util.IdentityHashMap<>();
+        // 本周真正要上的课（去掉停课/放假，加上补课/调来的）先合并同课连堂时段，再按错层叠卡规划冲突。
+        java.util.Map<Timetable.Session, TimetableLayout.OverlapCard> deckOf = new java.util.IdentityHashMap<>();
+        java.util.Map<Timetable.Session, TimetableLayout.DisplayBlock> blockBySession = new java.util.IdentityHashMap<>();
+        java.util.Map<Timetable.Session, com.ecut.campus.data.WeekOverlay.Extra> extraBySession = new java.util.IdentityHashMap<>();
         List<List<TimetableLayout.DisplayBlock>> solidRaw = new ArrayList<>();
-        List<List<TimetableLayout.DisplayBlock>> solidMerged = new ArrayList<>();
         List<List<Timetable.Session>> perDay = new ArrayList<>();
+        List<List<Timetable.Session>> drawOrderPerDay = new ArrayList<>();
         for (int d = 0; d <= 7; d++) {
             solidRaw.add(new ArrayList<>());
-            solidMerged.add(new ArrayList<>());
             perDay.add(new ArrayList<>());
+            drawOrderPerDay.add(Collections.emptyList());
         }
         for (Timetable.Course c : timetable.courses) {
             for (Timetable.Session s : c.sessions) {
@@ -655,23 +692,43 @@ public class TimetableView extends View {
         for (int d = 1; d <= columnCount(); d++) {
             List<TimetableLayout.DisplayBlock> merged =
                     TimetableLayout.mergeConsecutiveActive(solidRaw.get(d), currentWeek, schedule);
-            solidMerged.set(d, merged);
             for (TimetableLayout.DisplayBlock b : merged) {
                 perDay.get(d).add(b.displaySession);
+                blockBySession.put(b.displaySession, b);
             }
         }
         for (com.ecut.campus.data.WeekOverlay.Extra e : overlay.extras) {
             int d = e.session.dayOfWeek;
-            if (d >= 1 && d <= columnCount()) perDay.get(d).add(e.session);
+            if (d >= 1 && d <= columnCount()) {
+                perDay.get(d).add(e.session);
+                extraBySession.put(e.session, e);
+            }
         }
-        for (int d = 1; d <= 7; d++) assignLanes(perDay.get(d), laneOf);
+        for (int d = 1; d <= columnCount(); d++) {
+            drawOrderPerDay.set(d, TimetableLayout.planOverlapDeck(perDay.get(d), schedule, deckOf));
+        }
 
         if (activePass) {
             for (int d = 1; d <= columnCount(); d++) {
-                for (TimetableLayout.DisplayBlock b : solidMerged.get(d)) {
-                    HitBlock hb = drawBlock(canvas, colWidth, b.course, b.displaySession, true,
-                            null, laneOf.get(b.displaySession));
-                    if (hb != null) hb.hitSession = b.primarySession;
+                for (Timetable.Session s : drawOrderPerDay.get(d)) {
+                    TimetableLayout.OverlapCard card = deckOf.get(s);
+                    TimetableLayout.DisplayBlock b = blockBySession.get(s);
+                    if (b != null) {
+                        HitBlock hb = drawBlock(canvas, colWidth, b.course, b.displaySession, true,
+                                null, card, d);
+                        if (hb != null) hb.hitSession = b.primarySession;
+                        continue;
+                    }
+                    com.ecut.campus.data.WeekOverlay.Extra e = extraBySession.get(s);
+                    if (e != null) {
+                        HitBlock hb = drawBlock(canvas, colWidth, e.course, e.session, true,
+                                "[" + e.label + "] ", card, d);
+                        if (hb != null) {
+                            hb.label = e.label;
+                            hb.adjustId = e.adjustId;
+                            hb.extra = true;
+                        }
+                    }
                 }
             }
         }
@@ -688,7 +745,7 @@ public class TimetableView extends View {
                 if (pass != activePass) continue;
                 if (overlapsActive(s, perDay.get(s.dayOfWeek))) continue;
                 String tag = mark != null ? "[" + mark.label + "] " : null;
-                HitBlock hb = drawBlock(canvas, colWidth, course, s, false, tag, laneOf.get(s));
+                HitBlock hb = drawBlock(canvas, colWidth, course, s, false, tag, null, s.dayOfWeek);
                 if (hb != null && mark != null) {
                     hb.label = mark.label;
                     hb.adjustId = mark.adjustId;
@@ -696,17 +753,6 @@ public class TimetableView extends View {
             }
         }
         if (activePass) {
-            for (com.ecut.campus.data.WeekOverlay.Extra e : overlay.extras) {
-                int d = e.session.dayOfWeek;
-                if (d < 1 || d > columnCount()) continue;
-                HitBlock hb = drawBlock(canvas, colWidth, e.course, e.session, true,
-                        "[" + e.label + "] ", laneOf.get(e.session));
-                if (hb != null) {
-                    hb.label = e.label;
-                    hb.adjustId = e.adjustId;
-                    hb.extra = true;
-                }
-            }
             drawExamBlocks(canvas, colWidth);
             drawNowLine(canvas, colWidth);
             drawGhost(canvas, colWidth);
@@ -720,7 +766,6 @@ public class TimetableView extends View {
                 com.ecut.campus.data.ExamCountdown.examsInWeek(examEntries, semesterStartDate, currentWeek);
         if (weekExams.isEmpty()) return;
         float padH = dp(1.6f), padV = dp(1.6f);
-        float radius = G.GLASS ? dp(10f) : dp(3f);
         for (com.ecut.campus.data.ExamCountdown.Entry ex : weekExams) {
             int day = com.ecut.campus.data.Dates.dayOfWeek(ex.date);
             if (day < 1 || day > columnCount()) continue;
@@ -744,9 +789,9 @@ public class TimetableView extends View {
             Timetable.Course fake = new Timetable.Course();
             fake.name = ex.name;
             fake.key = "exam_" + ex.name;
-            blockRenderer.drawBlockText(canvas, rect, headerHeight, fake, s, currentWeek, true, G.INK,
+            blockRenderer.drawBlockText(canvas, rect, rect, headerHeight, fake, s, currentWeek, true, G.INK,
                     "[考试] ", -1, com.ecut.campus.data.RainForecast.NONE, showCourseCode,
-                    hiddenLocationPhrases, todoCounts, warnCourses);
+                    hiddenLocationPhrases, todoCounts, urgentTodoCourses, warnCourses, 0, 1, null);
             HitBlock hb = new HitBlock(rect, fake, s, true);
             hb.exam = ex;
             hitBlocks.add(hb);
@@ -759,24 +804,33 @@ public class TimetableView extends View {
 
     /** 画一个课块并登记点击区域；不在可见范围返回 null。 */
     private HitBlock drawBlock(Canvas canvas, float colWidth, Timetable.Course course, Timetable.Session s,
-                              boolean isActive, String tag, int[] laneInfo) {
+                              boolean isActive, String tag,
+                              @Nullable TimetableLayout.OverlapCard card, int dayKey) {
         int colorIdx = Math.abs(course.colorIndex) % PALETTE_BG.length;
         float padH = dp(1.6f);
         float padV = dp(1.6f);
-        float[] pos = position(s);
+        float[] rawPos = position(s);
 
-        int lane = 0;
-        int lanes = 1;
-        if (isActive && laneInfo != null) { lane = laneInfo[0]; lanes = laneInfo[1]; }
+        int depth = (isActive && card != null) ? card.depth : 0;
+        int clusterSize = (isActive && card != null) ? card.clusterSize : 1;
+        float vStart = (isActive && card != null) ? card.visualStart : rawPos[0];
+        float vEnd = (isActive && card != null) ? card.visualEnd : rawPos[1];
+        float tStart = (isActive && card != null) ? card.textStart : rawPos[0];
+        float tEnd = (isActive && card != null) ? card.textEnd : rawPos[1];
 
         float cellLeft = timeColWidth + (s.dayOfWeek - 1) * colWidth;
-        float laneW = colWidth / lanes;
-        float left = cellLeft + lane * laneW + padH;
-        float right = cellLeft + (lane + 1) * laneW - padH;
-        float top = posY(pos[0]) + padV;
-        float bottom = posY(pos[1]) - padV;
+        float leftStep = depth > 0 ? Math.min(dp(4.2f) * depth, colWidth * 0.22f) : 0f;
+        float left = cellLeft + padH + leftStep;
+        float right = cellLeft + colWidth - padH;
+        float top = posY(vStart) + padV;
+        float bottom = posY(vEnd) - padV;
         RectF rect = new RectF(left, top, right, bottom);
         if (rect.bottom <= headerHeight || rect.top >= getHeight()) return null;
+
+        float textTop = Math.max(rect.top, posY(tStart) + padV);
+        float textBottom = Math.min(rect.bottom, posY(tEnd) - padV);
+        RectF textRect = (Math.abs(textTop - rect.top) < 0.5f && Math.abs(textBottom - rect.bottom) < 0.5f)
+                ? rect : new RectF(left, textTop, right, Math.max(textTop + dp(12f), textBottom));
 
         float progress = isActive && tag == null ? liveProgress(s) : -1f;
         boolean endingSoon = progress >= 0f
@@ -786,10 +840,17 @@ public class TimetableView extends View {
         int until = isActive && tag == null ? minutesUntil(s) : -1;
 
         int textColor = blockRenderer.drawBlockChrome(canvas, rect, colorIdx, isActive, tag,
-                lanes, progress, endingSoon, rainLv, until);
-        blockRenderer.drawBlockText(canvas, rect, headerHeight, course, s, currentWeek, isActive, textColor,
-                tag, liveLeft, rainLv, showCourseCode, hiddenLocationPhrases, todoCounts, warnCourses);
+                depth, progress, endingSoon, rainLv, until);
+        RectF todoHit = new RectF();
+        blockRenderer.drawBlockText(canvas, rect, textRect, headerHeight, course, s, currentWeek, isActive, textColor,
+                tag, liveLeft, rainLv, showCourseCode, hiddenLocationPhrases,
+                todoCounts, urgentTodoCourses, warnCourses, depth, clusterSize, todoHit);
         HitBlock hb = new HitBlock(rect, course, s, isActive);
+        hb.clusterSize = clusterSize;
+        hb.clusterKey = (card != null && card.clusterId > 0) ? (dayKey * 1000 + card.clusterId) : 0;
+        if (todoHit.width() > 0f && todoHit.height() > 0f) {
+            hb.todoHitRect = todoHit;
+        }
         hitBlocks.add(hb);
         return hb;
     }
@@ -1180,9 +1241,34 @@ public class TimetableView extends View {
         for (int i = hitBlocks.size() - 1; i >= 0; i--) {
             HitBlock b = hitBlocks.get(i);
             if (b.rect.contains(x, y)) {
-                if (b.exam != null) listener.onExamClick(b.exam);
-                else if (b.label != null) listener.onMarkedClick(b.course, b.hitSession, b.label, b.adjustId, b.extra);
-                else listener.onSessionClick(b.course, b.hitSession, b.active);
+                if (b.exam != null) {
+                    listener.onExamClick(b.exam);
+                } else if (b.todoHitRect != null && b.todoHitRect.contains(x, y)) {
+                    listener.onTodoBadgeClick(b.course);
+                } else if (b.clusterSize > 1 && b.clusterKey > 0 && b.active) {
+                    List<ConflictItem> items = new ArrayList<>();
+                    for (HitBlock other : hitBlocks) {
+                        if (other.active && other.clusterKey == b.clusterKey && other.exam == null) {
+                            items.add(new ConflictItem(other.course, other.session, other.hitSession,
+                                    other.label, other.adjustId, other.extra));
+                        }
+                    }
+                    if (items.size() > 1) {
+                        items.sort((u, v) -> {
+                            int cmp = Integer.compare(u.displaySession.startSection, v.displaySession.startSection);
+                            return cmp != 0 ? cmp : Integer.compare(u.displaySession.endSection, v.displaySession.endSection);
+                        });
+                        listener.onConflictClick(items, b.course, currentWeek);
+                    } else if (b.label != null) {
+                        listener.onMarkedClick(b.course, b.hitSession, b.label, b.adjustId, b.extra);
+                    } else {
+                        listener.onSessionClick(b.course, b.hitSession, b.active);
+                    }
+                } else if (b.label != null) {
+                    listener.onMarkedClick(b.course, b.hitSession, b.label, b.adjustId, b.extra);
+                } else {
+                    listener.onSessionClick(b.course, b.hitSession, b.active);
+                }
                 return;
             }
         }

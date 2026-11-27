@@ -120,6 +120,89 @@ public class TimetableLayoutTest {
         assertEquals(8, merged.get(2).displaySession.endSection);
     }
 
+    @Test
+    public void planOverlapDeckKeepsPartialOverlapsFullWidthInUncoveredZones() {
+        ScheduleSettings sched = ScheduleSettings.createDefault();
+        Timetable.Session longCourse = session(1, 4);  // 交通规划 1-4节
+        Timetable.Session shortLate = session(3, 4);   // 运筹学 3-4节
+        Timetable.Session standalone = session(5, 6);
+
+        Map<Timetable.Session, TimetableLayout.OverlapCard> deck = new IdentityHashMap<>();
+        java.util.List<Timetable.Session> order = TimetableLayout.planOverlapDeck(
+                Arrays.asList(longCourse, shortLate, standalone), sched, deck);
+
+        assertEquals(3, order.size());
+        TimetableLayout.OverlapCard cLong = deck.get(longCourse);
+        TimetableLayout.OverlapCard cShort = deck.get(shortLate);
+        TimetableLayout.OverlapCard cSolo = deck.get(standalone);
+
+        // 长课垫底（保留 1-4 节全高），文字区自动落到未被遮挡的 1-2 节
+        assertEquals(0, cLong.depth);
+        assertEquals(2, cLong.clusterSize);
+        assertEquals(0f, cLong.visualStart, 0.01f);
+        assertEquals(4f, cLong.visualEnd, 0.01f);
+        assertEquals(0f, cLong.textStart, 0.01f);
+        assertEquals(2f, cLong.textEnd, 0.01f);
+
+        // 重修冲突短课错层叠放于 3-4 节
+        assertEquals(1, cShort.depth);
+        assertEquals(2, cShort.clusterSize);
+        assertEquals(cLong.clusterId, cShort.clusterId);
+        assertEquals(2f, cShort.visualStart, 0.01f);
+        assertEquals(4f, cShort.visualEnd, 0.01f);
+        assertEquals(2f, cShort.textStart, 0.01f);
+        assertEquals(4f, cShort.textEnd, 0.01f);
+
+        // 无冲突课保持独立
+        assertEquals(0, cSolo.depth);
+        assertEquals(1, cSolo.clusterSize);
+    }
+
+    @Test
+    public void planOverlapDeckPartitionsIdenticalSlotConflictsIntoSteppedBands() {
+        ScheduleSettings sched = ScheduleSettings.createDefault();
+        Timetable.Session a = session(7, 8);
+        Timetable.Session b = session(7, 8);
+
+        Map<Timetable.Session, TimetableLayout.OverlapCard> deck = new IdentityHashMap<>();
+        TimetableLayout.planOverlapDeck(Arrays.asList(a, b), sched, deck);
+
+        TimetableLayout.OverlapCard ca = deck.get(a);
+        TimetableLayout.OverlapCard cb = deck.get(b);
+        assertEquals(0, ca.depth);
+        assertEquals(1, cb.depth);
+        assertEquals(2, ca.clusterSize);
+        assertEquals(ca.clusterId, cb.clusterId);
+        // 底层延伸至簇底 6..8，文字占上半 6..7；上层叠卡占下半 7..8
+        assertEquals(6f, ca.visualStart, 0.01f);
+        assertEquals(8f, ca.visualEnd, 0.01f);
+        assertEquals(6f, ca.textStart, 0.01f);
+        assertEquals(7f, ca.textEnd, 0.01f);
+        assertEquals(7f, cb.visualStart, 0.01f);
+        assertEquals(8f, cb.visualEnd, 0.01f);
+        assertEquals(7f, cb.textStart, 0.01f);
+        assertEquals(8f, cb.textEnd, 0.01f);
+    }
+
+    @Test
+    public void planOverlapDeckHandlesEarlyPartialOverlapByMovingLongCourseTextBelow() {
+        ScheduleSettings sched = ScheduleSettings.createDefault();
+        Timetable.Session longCourse = session(1, 4);
+        Timetable.Session shortEarly = session(1, 2);
+
+        Map<Timetable.Session, TimetableLayout.OverlapCard> deck = new IdentityHashMap<>();
+        TimetableLayout.planOverlapDeck(Arrays.asList(longCourse, shortEarly), sched, deck);
+
+        TimetableLayout.OverlapCard cLong = deck.get(longCourse);
+        TimetableLayout.OverlapCard cShort = deck.get(shortEarly);
+        assertEquals(0, cLong.depth);
+        assertEquals(1, cShort.depth);
+        assertEquals(2f, cLong.textStart, 0.01f);
+        assertEquals(4f, cLong.textEnd, 0.01f);
+        assertEquals(0f, cShort.textStart, 0.01f);
+        assertEquals(2f, cShort.textEnd, 0.01f);
+    }
+
     private static Timetable.Session session(int start, int end) {
         Timetable.Session s = new Timetable.Session();
         s.dayOfWeek = 1;

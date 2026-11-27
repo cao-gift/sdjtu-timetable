@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import androidx.annotation.Nullable;
+
 /**
  * 课表课块、文字排版、现在线与空白画课虚框渲染器（从 TimetableView 拆出）。
  */
@@ -30,6 +32,7 @@ final class TimetableBlockRenderer {
     private final Paint blockPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint accentPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path clipPath = new Path();
     private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint subTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
@@ -51,14 +54,23 @@ final class TimetableBlockRenderer {
     private float dp(float v) { return v * density; }
     private float sp(float v) { return v * scaledDensity; }
 
-    /** 绘制单个课块背景（含正在上课进度、雨效、倒计时、冲突角标与非本周虚框），返回最终文字色。 */
+    /** 绘制单个课块背景（含正在上课进度、雨效、倒计时、错层叠卡切边与非本周虚框），返回最终文字色。 */
     int drawBlockChrome(Canvas canvas, RectF rect, int colorIdx, boolean isActive, String tag,
-                        int lanes, float progress, boolean endingSoon, int rainLv, int minutesUntil) {
+                        int stackDepth, float progress, boolean endingSoon, int rainLv, int minutesUntil) {
         int bgColor = TimetableView.PALETTE_BG[colorIdx];
         int fgColor = TimetableView.PALETTE_FG[colorIdx];
         float radius = G.GLASS ? dp(10f) : dp(3f);
         int textColor = isActive ? fgColor : G.MUTE;
         boolean live = progress >= 0f;
+
+        if (isActive && stackDepth > 0) {
+            // 错层冲突上层叠卡：先描一圈纸底/柔白切缝光环，与底层课程块清晰剥离
+            blockPaint.setStyle(Paint.Style.STROKE);
+            blockPaint.setStrokeWidth(dp(2.2f));
+            blockPaint.setColor(G.GLASS ? (G.NIGHT ? 0xDD141413 : 0xEBFFFFFF) : G.CARD);
+            canvas.drawRoundRect(rect, radius, radius, blockPaint);
+            blockPaint.setStyle(Paint.Style.FILL);
+        }
 
         if (rainLv > RainForecast.NONE) {
             painter.drawRainOuterGlow(canvas, rect, radius, rainLv, live);
@@ -138,18 +150,6 @@ final class TimetableBlockRenderer {
             if (minutesUntil >= 0 && minutesUntil <= 15 && !live) {
                 painter.drawCountdown(canvas, rect, minutesUntil, accentPaint, subTextPaint);
             }
-            if (lanes > 1) {
-                float bs = dp(11);
-                RectF badge = new RectF(rect.right - bs - dp(2), rect.top + dp(2), rect.right - dp(2), rect.top + dp(2) + bs);
-                badgePaint.setColor(G.alarm());
-                canvas.drawRoundRect(badge, dp(2), dp(2), badgePaint);
-                subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-                subTextPaint.setTextSize(sp(7.5f));
-                subTextPaint.setColor(G.CARD);
-                subTextPaint.setAlpha(255);
-                subTextPaint.setTextAlign(Paint.Align.CENTER);
-                canvas.drawText(String.valueOf(lanes), badge.centerX(), badge.centerY() + dp(2.7f), subTextPaint);
-            }
         } else {
             blockPaint.setStyle(Paint.Style.STROKE);
             blockPaint.setStrokeWidth(Math.max(1f, dp(0.7f)));
@@ -173,21 +173,39 @@ final class TimetableBlockRenderer {
         canvas.drawRoundRect(rect, radius, radius, blockPaint);
     }
 
-    /** 绘制课块内文字、雨丝、待办角标、备注点与缺勤警告线。 */
-    void drawBlockText(Canvas canvas, RectF rect, float headerHeight, Timetable.Course course,
-                       Timetable.Session s, int currentWeek, boolean isActive, int textColor,
-                       String tag, int liveLeft, int rainLv, boolean showCourseCode,
-                       List<String> hiddenLocationPhrases, Map<String, Integer> todoCounts,
-                       Set<String> warnCourses) {
-        float innerLeft = rect.left + (isActive ? dp(6.2f) : dp(4.0f));
-        float innerRight = rect.right - dp(2.2f);
+    /** 绘制课块内文字、雨丝、冲突叠卡标签、待办胶囊、备注点与缺勤警告线。 */
+    void drawBlockText(Canvas canvas, RectF rect, RectF textRect, float headerHeight,
+                       Timetable.Course course, Timetable.Session s, int currentWeek,
+                       boolean isActive, int textColor, String tag, int liveLeft, int rainLv,
+                       boolean showCourseCode, List<String> hiddenLocationPhrases,
+                       Map<String, Integer> todoCounts, Set<String> urgentTodoCourses,
+                       Set<String> warnCourses, int stackDepth, int clusterSize,
+                       @Nullable RectF outTodoHitRect) {
+        int todoN = 0;
+        String normCourseKey = "";
+        if (isActive && course.name != null) {
+            normCourseKey = CourseTodo.normalizeCourseKey(course.name);
+            if (!todoCounts.isEmpty()) {
+                Integer cnt = todoCounts.get(normCourseKey);
+                if (cnt != null) todoN = cnt;
+            }
+        }
+        boolean showConflictTag = isActive && clusterSize > 1 && stackDepth > 0;
+        boolean hasBottomPill = todoN > 0 || showConflictTag;
+        float footerReserve = (hasBottomPill && textRect.height() >= dp(46f)) ? dp(15f) : 0f;
+
+        float innerLeft = textRect.left + (isActive ? dp(6.0f) : dp(4.0f));
+        float innerRight = textRect.right - dp(2.4f);
         float innerWidth = Math.max(dp(16), innerRight - innerLeft);
-        float innerTop = rect.top + dp(5f);
-        float innerBottom = rect.bottom - dp(4f);
+        float innerTop = textRect.top + dp(4.8f);
+        float innerBottom = textRect.bottom - dp(3.8f) - footerReserve;
+        if (innerBottom < innerTop + dp(12f)) {
+            innerBottom = textRect.bottom - dp(3.2f);
+        }
 
         canvas.save();
-        canvas.clipRect(rect.left + dp(2), Math.max(rect.top + dp(2), headerHeight),
-                rect.right - dp(2), rect.bottom - dp(2));
+        canvas.clipRect(textRect.left + dp(2), Math.max(textRect.top + dp(2), headerHeight),
+                textRect.right - dp(2), textRect.bottom - dp(2));
 
         textPaint.setTypeface(Typeface.DEFAULT_BOLD);
         textPaint.setTextSize(sp(10.0f));
@@ -198,8 +216,8 @@ final class TimetableBlockRenderer {
         if (tag != null) title = tag + title;
         else if (!isActive) title = "[非本周] " + title;
         int w = Math.round(innerWidth);
-        float available = innerBottom - innerTop;
-        int maxTitleLines = Math.max(3, (int) Math.ceil(available / Math.max(1f, textPaint.getTextSize())) + 2);
+        float available = Math.max(dp(11f), innerBottom - innerTop);
+        int maxTitleLines = Math.max(2, (int) Math.ceil(available / Math.max(1f, textPaint.getTextSize())) + 2);
         StaticLayout titleLayout = textLayout(title, textPaint, w, maxTitleLines, 1.02f);
 
         TextPaint sub = bpSub;
@@ -272,7 +290,7 @@ final class TimetableBlockRenderer {
         if (rainLv > RainForecast.NONE) {
             float liveTagW = (plan[1] & 8) != 0 && tagPre != null
                     ? tagWidth(tagPre, String.valueOf(liveLeft), tagCn, tagNum) : 0f;
-            painter.drawRainStreaks(canvas, rect, course, s, textColor, rainLv,
+            painter.drawRainStreaks(canvas, textRect, course, s, textColor, rainLv,
                     innerLeft, innerTop, titleLayout.getHeight() + codeHeight, plan[1], gap,
                     timeL, teacherL, tagH, liveTagW, locL);
         }
@@ -298,31 +316,187 @@ final class TimetableBlockRenderer {
 
         canvas.restore();
 
-        int todoN = 0;
-        if (isActive && !todoCounts.isEmpty() && course.name != null) {
-            Integer cnt = todoCounts.get(CourseTodo.normalizeCourseKey(course.name));
-            if (cnt != null) todoN = cnt;
+        float todoLeftEdge = textRect.right;
+        if (todoN > 0 && textRect.bottom > headerHeight + dp(14f)) {
+            boolean urgent = urgentTodoCourses != null && urgentTodoCourses.contains(normCourseKey);
+            todoLeftEdge = drawTodoPill(canvas, textRect, todoN, urgent, textColor, outTodoHitRect);
+        } else if (isActive && course.note != null && !course.note.isEmpty() && textRect.bottom > headerHeight + dp(10f)) {
+            drawNoteIndicator(canvas, textRect, textColor);
         }
-        if (todoN > 0) {
-            String badgeTxt = "□" + todoN;
-            subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
-            subTextPaint.setTextSize(sp(7.5f));
-            float tw = subTextPaint.measureText(badgeTxt);
-            RectF tb = new RectF(rect.right - tw - dp(6f), rect.bottom - dp(12.5f), rect.right - dp(2f), rect.bottom - dp(2f));
-            badgePaint.setColor(G.alarm());
-            canvas.drawRoundRect(tb, dp(2f), dp(2f), badgePaint);
-            subTextPaint.setColor(G.ON_INK);
-            subTextPaint.setAlpha(255);
-            subTextPaint.setTextAlign(Paint.Align.CENTER);
-            canvas.drawText(badgeTxt, tb.centerX(), tb.centerY() + dp(2.6f), subTextPaint);
-        } else if (isActive && course.note != null && !course.note.isEmpty()) {
-            badgePaint.setColor(G.ACCENT);
-            canvas.drawCircle(rect.right - dp(6f), rect.bottom - dp(6f), dp(2.6f), badgePaint);
+
+        if (showConflictTag && textRect.bottom > headerHeight + dp(14f)) {
+            drawConflictPill(canvas, textRect, innerLeft, todoLeftEdge, clusterSize, textColor);
         }
+
         if (isActive && !warnCourses.isEmpty() && warnCourses.contains(AbsenceBook.key(course.name))) {
+            badgePaint.setStyle(Paint.Style.FILL);
             badgePaint.setColor(G.alarm());
             canvas.drawRect(rect.left, rect.top + dp(2f), rect.left + dp(2.4f), rect.bottom - dp(2f), badgePaint);
         }
+    }
+
+    /**
+     * 绘制课程右下角作业与待办胶囊：
+     * 使用矢量清单图标 + 等宽数字，与课块同色相墨水/半透明玻璃融合，替代原先突兀的「□1」纯红方块；
+     * 仅在存在今日截止或已逾期作业时点亮暖朱砂描边与提示色（遵循 DESIGN.md「朱砂只给现在」）。
+     */
+    private float drawTodoPill(Canvas canvas, RectF bounds, int count, boolean urgent,
+                               int textColor, @Nullable RectF outHitRect) {
+        String numStr = count > 99 ? "99+" : String.valueOf(count);
+        subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        subTextPaint.setTextSize(sp(8.0f));
+        subTextPaint.setTextAlign(Paint.Align.LEFT);
+        float numW = subTextPaint.measureText(numStr);
+
+        float pillH = dp(13.2f);
+        float padX = dp(4.5f);
+        float iconW = dp(6.4f);
+        float iconGap = dp(2.6f);
+        float pillW = Math.max(pillH, padX + iconW + iconGap + numW + padX);
+        float inset = G.GLASS ? dp(3.2f) : dp(2.5f);
+        if (pillW > bounds.width() - inset * 2f) {
+            pillW = Math.max(dp(12f), bounds.width() - inset * 2f);
+        }
+
+        float right = bounds.right - inset;
+        float left = right - pillW;
+        float bottom = bounds.bottom - inset;
+        float top = bottom - pillH;
+        RectF pill = new RectF(left, top, right, bottom);
+        float pillRadius = G.GLASS ? pillH / 2f : dp(3.0f);
+
+        int fg;
+        int fill;
+        int stroke;
+        if (urgent) {
+            fg = G.NIGHT ? G.mix(G.alarm(), 0xFFFFFFFF, 0.22f) : G.alarm();
+            fill = G.NIGHT ? G.alpha(G.mix(G.alarm(), 0xFF171716, 0.64f), 0xEE)
+                    : G.alpha(G.mix(G.alarm(), 0xFFFFFFFF, 0.84f), 0xF4);
+            stroke = G.alpha(G.alarm(), G.NIGHT ? 0x8C : 0x6E);
+        } else {
+            fg = textColor;
+            if (G.GLASS) {
+                fill = G.NIGHT ? G.alpha(0xFF121211, 0x76) : G.alpha(0xFFFFFFFF, 0xBE);
+                stroke = G.NIGHT ? G.alpha(0xFFFFFFFF, 0x26) : G.alpha(textColor, 0x2C);
+            } else {
+                fill = G.alpha(textColor, G.NIGHT ? 0x2C : 0x15);
+                stroke = G.alpha(textColor, 0x34);
+            }
+        }
+
+        badgePaint.setStyle(Paint.Style.FILL);
+        badgePaint.setColor(fill);
+        canvas.drawRoundRect(pill, pillRadius, pillRadius, badgePaint);
+
+        badgePaint.setStyle(Paint.Style.STROKE);
+        badgePaint.setStrokeWidth(Math.max(1f, dp(0.75f)));
+        badgePaint.setColor(stroke);
+        canvas.drawRoundRect(pill, pillRadius, pillRadius, badgePaint);
+        badgePaint.setStyle(Paint.Style.FILL);
+
+        // 矢量双行待办清单图标（圆点 + 圆头短横线，任何系统字体下都不变形）
+        float cy = pill.centerY();
+        float ix = pill.left + padX;
+        iconPaint.setColor(fg);
+        iconPaint.setStrokeWidth(Math.max(1f, dp(1.1f)));
+        iconPaint.setStrokeCap(Paint.Cap.ROUND);
+        float rDot = dp(0.78f);
+        float rowOff = dp(1.75f);
+        iconPaint.setStyle(Paint.Style.FILL);
+        canvas.drawCircle(ix + rDot, cy - rowOff, rDot, iconPaint);
+        canvas.drawCircle(ix + rDot, cy + rowOff, rDot, iconPaint);
+        iconPaint.setStyle(Paint.Style.STROKE);
+        canvas.drawLine(ix + dp(2.5f), cy - rowOff, ix + iconW, cy - rowOff, iconPaint);
+        canvas.drawLine(ix + dp(2.5f), cy + rowOff, ix + iconW - dp(1.3f), cy + rowOff, iconPaint);
+
+        subTextPaint.setColor(fg);
+        subTextPaint.setAlpha(255);
+        Paint.FontMetrics fm = subTextPaint.getFontMetrics();
+        float textBase = cy - (fm.ascent + fm.descent) / 2f;
+        canvas.drawText(numStr, ix + iconW + iconGap, textBase, subTextPaint);
+
+        if (outHitRect != null) {
+            outHitRect.set(
+                    Math.max(bounds.left, pill.left - dp(7f)),
+                    Math.max(bounds.top, pill.top - dp(7f)),
+                    bounds.right,
+                    bounds.bottom);
+        }
+        return pill.left;
+    }
+
+    /** 绘制冲突叠卡左下角柔和微胶囊（叠卡矢量图标 + 数量），不遮挡课名且不用刺眼纯红。 */
+    private void drawConflictPill(Canvas canvas, RectF bounds, float innerLeft, float maxRight,
+                                  int clusterSize, int textColor) {
+        float inset = G.GLASS ? dp(3.2f) : dp(2.5f);
+        float availW = maxRight - dp(3f) - innerLeft;
+        if (availW < dp(15f)) return;
+
+        subTextPaint.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
+        subTextPaint.setTextSize(sp(7.6f));
+        subTextPaint.setTextAlign(Paint.Align.LEFT);
+
+        String longLbl = "冲突" + clusterSize;
+        String shortLbl = "×" + clusterSize;
+        float padX = dp(4.0f);
+        float iconW = dp(6.0f);
+        float gap = dp(2.2f);
+        String label = (padX * 2 + iconW + gap + subTextPaint.measureText(longLbl) <= availW)
+                ? longLbl : shortLbl;
+        float lblW = subTextPaint.measureText(label);
+        float pillW = padX + iconW + gap + lblW + padX;
+        if (pillW > availW) return;
+
+        float pillH = dp(12.8f);
+        float bottom = bounds.bottom - inset;
+        RectF pill = new RectF(innerLeft, bottom - pillH, innerLeft + pillW, bottom);
+        float pillRadius = G.GLASS ? pillH / 2f : dp(3.0f);
+
+        int fill = G.GLASS
+                ? (G.NIGHT ? G.alpha(0xFF121211, 0x72) : G.alpha(0xFFFFFFFF, 0xB8))
+                : G.alpha(textColor, G.NIGHT ? 0x2A : 0x14);
+        int stroke = G.GLASS
+                ? (G.NIGHT ? G.alpha(0xFFFFFFFF, 0x24) : G.alpha(textColor, 0x2A))
+                : G.alpha(textColor, 0x32);
+
+        badgePaint.setStyle(Paint.Style.FILL);
+        badgePaint.setColor(fill);
+        canvas.drawRoundRect(pill, pillRadius, pillRadius, badgePaint);
+        badgePaint.setStyle(Paint.Style.STROKE);
+        badgePaint.setStrokeWidth(Math.max(1f, dp(0.75f)));
+        badgePaint.setColor(stroke);
+        canvas.drawRoundRect(pill, pillRadius, pillRadius, badgePaint);
+        badgePaint.setStyle(Paint.Style.FILL);
+
+        // 矢量双层叠卡小图标
+        float ix = pill.left + padX;
+        float cy = pill.centerY();
+        iconPaint.setStyle(Paint.Style.STROKE);
+        iconPaint.setStrokeWidth(Math.max(1f, dp(0.95f)));
+        iconPaint.setColor(textColor);
+        RectF back = new RectF(ix, cy - dp(2.7f), ix + dp(4.0f), cy + dp(1.3f));
+        RectF front = new RectF(ix + dp(1.8f), cy - dp(1.1f), ix + dp(5.8f), cy + dp(2.8f));
+        canvas.drawRoundRect(back, dp(0.9f), dp(0.9f), iconPaint);
+        badgePaint.setColor(fill);
+        canvas.drawRoundRect(front, dp(0.9f), dp(0.9f), badgePaint);
+        canvas.drawRoundRect(front, dp(0.9f), dp(0.9f), iconPaint);
+
+        subTextPaint.setColor(textColor);
+        subTextPaint.setAlpha(245);
+        Paint.FontMetrics fm = subTextPaint.getFontMetrics();
+        float textBase = cy - (fm.ascent + fm.descent) / 2f;
+        canvas.drawText(label, ix + iconW + gap, textBase, subTextPaint);
+    }
+
+    /** 课程备注角标：右下角温润同色系小圆点 + 外环，不与朱砂抢色。 */
+    private void drawNoteIndicator(Canvas canvas, RectF bounds, int textColor) {
+        float cx = bounds.right - dp(6.2f);
+        float cy = bounds.bottom - dp(6.2f);
+        badgePaint.setStyle(Paint.Style.FILL);
+        badgePaint.setColor(G.alpha(textColor, 0x26));
+        canvas.drawCircle(cx, cy, dp(3.8f), badgePaint);
+        badgePaint.setColor(G.alpha(textColor, 0xC8));
+        canvas.drawCircle(cx, cy, dp(1.9f), badgePaint);
     }
 
     /** 绘制左轨当前时刻胶囊与今日现在线。 */

@@ -195,7 +195,8 @@ public final class Prefs {
     public static int theme(Context ctx) { return sp(ctx).getInt("ui_theme", G.THEME_GLASS); }
     public static void setTheme(Context ctx, int t) { sp(ctx).edit().putInt("ui_theme", t).commit(); }
 
-    public static int nightMode(Context ctx) { return sp(ctx).getInt("night_mode", 0); }
+    /** 深色模式：0 跟随系统，1 浅色（默认），2 深色。 */
+    public static int nightMode(Context ctx) { return sp(ctx).getInt("night_mode", 1); }
     public static void setNightMode(Context ctx, int m) { sp(ctx).edit().putInt("night_mode", m).apply(); }
 
     /** 上次成功同步课表的时间戳（毫秒）。 */
@@ -405,6 +406,89 @@ public final class Prefs {
     /** 上次成功拉取天气预报的时间戳（毫秒）。 */
     public static long rainFetchedAt(Context ctx) { return sp(ctx).getLong("rain_fetched_at", 0L); }
     public static void setRainFetchedAt(Context ctx, long t) { sp(ctx).edit().putLong("rain_fetched_at", t).apply(); }
+
+    // ===== 1.6.1：查空教室常用校区与教学楼记忆（与天气校区双向联动） =====
+    public static String studyRoomCampusValue(Context ctx) {
+        return sp(ctx).getString("study_room_campus_val", "");
+    }
+
+    public static String studyRoomCampusLabel(Context ctx) {
+        return sp(ctx).getString("study_room_campus_lbl", "");
+    }
+
+    public static String studyRoomBuildingValue(Context ctx) {
+        return sp(ctx).getString("study_room_building_val", "");
+    }
+
+    public static String studyRoomBuildingLabel(Context ctx) {
+        return sp(ctx).getString("study_room_building_lbl", "");
+    }
+
+    /** 查空教室默认校区提示词：优先用上次查询记住的校区，未查过时跟随天气校区偏好。 */
+    public static String effectiveStudyRoomCampusHint(Context ctx) {
+        String saved = studyRoomCampusLabel(ctx).trim();
+        if (!saved.isEmpty()) return saved;
+        return com.ecut.campus.data.RainForecast.Campus.byId(rainCampus(ctx)).name;
+    }
+
+    /** 查空教室默认教学楼提示词：优先用上次同校区记住的教学楼，否则按校区给默认教学楼提示。 */
+    public static String effectiveStudyRoomBuildingHint(Context ctx) {
+        String savedBld = studyRoomBuildingLabel(ctx).trim();
+        if (!savedBld.isEmpty()) return savedBld;
+        return com.ecut.campus.data.SdjtuStudyFormat.defaultBuildingHintForCampus(
+                effectiveStudyRoomCampusHint(ctx));
+    }
+
+    /**
+     * 记住用户查询的空教室校区与教学楼；若识别出交院三大校区且与当前天气校区不同，同步更新天气校区并返回 true。
+     */
+    public static boolean saveStudyRoomPlace(Context ctx, String campusVal, String campusLbl,
+                                             String buildingVal, String buildingLbl) {
+        String cVal = campusVal == null ? "" : campusVal.trim();
+        String cLbl = campusLbl == null ? "" : campusLbl.trim();
+        String bVal = buildingVal == null ? "" : buildingVal.trim();
+        String bLbl = buildingLbl == null ? "" : buildingLbl.trim();
+        if (cVal.isEmpty() && cLbl.isEmpty()) return false;
+        SharedPreferences.Editor ed = sp(ctx).edit()
+                .putString("study_room_campus_val", cVal)
+                .putString("study_room_campus_lbl", cLbl)
+                .putString("study_room_building_val", bVal)
+                .putString("study_room_building_lbl", bLbl);
+        com.ecut.campus.data.RainForecast.Campus matched =
+                com.ecut.campus.data.RainForecast.Campus.matchLabel(cLbl);
+        boolean rainChanged = matched != null && !matched.id.equals(rainCampus(ctx));
+        if (rainChanged) {
+            ed.putString("rain_campus", matched.id);
+        }
+        ed.apply();
+        return rainChanged;
+    }
+
+    /** 用户在设置中切换天气校区时，若尚未记住该校区的教学楼，联动更新查空教室默认校区。 */
+    public static void syncStudyRoomFromRainCampus(Context ctx, com.ecut.campus.data.RainForecast.Campus chosen) {
+        if (chosen == null) return;
+        String savedLbl = studyRoomCampusLabel(ctx);
+        com.ecut.campus.data.RainForecast.Campus savedCampus =
+                com.ecut.campus.data.RainForecast.Campus.matchLabel(savedLbl);
+        if (savedLbl.isEmpty() || savedCampus != chosen) {
+            sp(ctx).edit()
+                    .putString("study_room_campus_val", "")
+                    .putString("study_room_campus_lbl", chosen.name)
+                    .putString("study_room_building_val", "")
+                    .putString("study_room_building_lbl",
+                            com.ecut.campus.data.SdjtuStudyFormat.defaultBuildingHintForCampus(chosen.name))
+                    .apply();
+        }
+    }
+
+    public static void clearStudyRoomPlace(Context ctx) {
+        sp(ctx).edit()
+                .remove("study_room_campus_val")
+                .remove("study_room_campus_lbl")
+                .remove("study_room_building_val")
+                .remove("study_room_building_lbl")
+                .apply();
+    }
 
     // ===== 1.3.20：考试倒计时、Wi-Fi 后台更新 =====
     /** 考前一天与考前一小时提醒，默认开启。 */

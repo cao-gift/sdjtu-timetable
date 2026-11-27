@@ -98,6 +98,15 @@ public class RainForecastTest {
     }
 
     @Test
+    public void matchesCampusLabelsForStudyRoomLinkage() {
+        assertEquals(RainForecast.Campus.WUYINGSHAN, RainForecast.Campus.matchLabel("无影山校区"));
+        assertEquals(RainForecast.Campus.CHANGQING, RainForecast.Campus.matchLabel("长清校区"));
+        assertEquals(RainForecast.Campus.WEIHAI, RainForecast.Campus.matchLabel("威海校区（东）"));
+        assertNull(RainForecast.Campus.matchLabel("未知校区"));
+        assertNull(RainForecast.Campus.matchLabel(""));
+    }
+
+    @Test
     public void widgetChipPropagatesRainLevel() {
         DayPlan.Item a = new DayPlan.Item();
         a.name = "普通地质学";

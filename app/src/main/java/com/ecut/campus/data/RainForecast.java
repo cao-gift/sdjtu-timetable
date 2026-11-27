@@ -51,6 +51,17 @@ public final class RainForecast {
             }
             return WUYINGSHAN;
         }
+
+        /** 从教务校区名称（如「长清校区」「威海校区」「无影山」）识别对应校区；无法识别返回 null。 */
+        public static Campus matchLabel(String label) {
+            if (label == null) return null;
+            String s = label.trim();
+            if (s.isEmpty()) return null;
+            if (s.contains("长清")) return CHANGQING;
+            if (s.contains("威海")) return WEIHAI;
+            if (s.contains("无影山")) return WUYINGSHAN;
+            return null;
+        }
     }
 
     public static final int NONE = 0, LIGHT = 1, MID = 2, HEAVY = 3;

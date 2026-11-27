@@ -94,5 +94,16 @@ public class ExamAndTodoTest {
         assertEquals(2, restored.items.size());
         assertEquals(1, restored.pendingForCourse("高等数学A").size());
         assertFalse(restored.pendingForCourse("大学物理").size() > 0);
+
+        // 紧急作业判定：今日截止或已逾期进入 urgentCourseKeys，未来截止不进入
+        CourseTodo urgentBook = new CourseTodo();
+        urgentBook.add("高等数学 A", "今天交", "2026-12-01");
+        urgentBook.add("大学英语", "下周交", "2026-12-08");
+        Calendar cal = Calendar.getInstance();
+        cal.clear();
+        cal.set(2026, Calendar.DECEMBER, 1, 10, 0, 0);
+        java.util.Set<String> urgent = urgentBook.urgentCourseKeys(cal.getTimeInMillis());
+        assertTrue(urgent.contains(CourseTodo.normalizeCourseKey("高等数学A")));
+        assertFalse(urgent.contains(CourseTodo.normalizeCourseKey("大学英语")));
     }
 }

@@ -190,6 +190,18 @@ public final class CourseTodo {
         return map;
     }
 
+    /** 返回存在「今日截止或已逾期」未完成作业的规范化课名集合（供课块角标区分紧急状态）。 */
+    public java.util.Set<String> urgentCourseKeys(long nowMs) {
+        java.util.Set<String> out = new java.util.HashSet<>();
+        for (Item it : items) {
+            if (it.done || it.courseKey.isEmpty()) continue;
+            if (daysUntilDue(it, nowMs) <= 0) {
+                out.add(it.courseKey);
+            }
+        }
+        return out;
+    }
+
     /** 解析 yyyy-MM-dd 为本地当天 00:00 毫秒数；无效返回 -1。 */
     public static long parseDueDayStart(String dueDate) {
         if (!Dates.valid(dueDate)) return -1L;

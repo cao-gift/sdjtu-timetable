@@ -7,7 +7,7 @@
 **An unofficial Android timetable app dedicated to Shandong Jiaotong University (SDJTU)**
 Sign in once via WebVPN for instant offline access to timetables, grades, empty rooms, curriculum plans, and exams.
 
-[![Version](https://img.shields.io/badge/Version-v1.6.0_(79)-1B1B1F?style=flat-square)](https://github.com/cao-gift/sdjtu-timetable/releases)
+[![Version](https://img.shields.io/badge/Version-v1.6.1_(80)-1B1B1F?style=flat-square)](https://github.com/cao-gift/sdjtu-timetable/releases)
 [![Android](https://img.shields.io/badge/Android-7.0+-2F5D3A?style=flat-square)](https://lvlv.freeblock.cn)
 [![License](https://img.shields.io/badge/License-GPL--3.0-555450?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/Mirror-lvlv.freeblock.cn-FF4A1C?style=flat-square)](https://lvlv.freeblock.cn)
@@ -59,7 +59,7 @@ Locked directly to SDJTU Unified Portal (`wwebvpn.sdjtu.edu.cn`) so all five aca
 | :--- | :--- | :---: |
 | **Timetable Sync** | One-tap top-bar sync for current & historical terms; merges adjacent identical sessions, separates course code from title, and preserves custom entries | Offline |
 | **Grades & GPA** | Term breakdown with GPA trend chart, score sorting, periodic new-grade notifications, and tap-to-reveal anti-spoiler grade cards | Offline |
-| **Empty Rooms** | Live uncached query pre-filled with Wuyingshan Campus, Building 1, current week, and weekday; renders per-room period matrix with quick slot filters | Live |
+| **Empty Rooms** | Live uncached query that remembers your campus & building (synced with campus weather) and prioritizes classrooms free consecutively from now until evening | Live |
 | **Curriculum Plan** | Syncs legacy Qiangzhi execution plans with total course/credit/required stats, horizontal semester ruler, category grouping, and search | Offline |
 | **Exam Schedule** | Merges regular final exams and early in-class finals into a single deduplicated hairline timeline with reminders & system calendar sync | Offline |
 | **Auto-Login** | Opt-in local credential encryption via Android Keystore (AES-256-GCM); automatically falls back to the visible portal when extra verification is required | Opt-in |

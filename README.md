@@ -6,7 +6,7 @@
 
 **山东交通学院专属安卓课表应用** · 一次登录 WebVPN，离线秒开课表、成绩、空教室、培养方案与考试
 
-[![Version](https://img.shields.io/badge/Version-v1.6.0_(79)-1B1B1F?style=flat-square)](https://github.com/cao-gift/sdjtu-timetable/releases)
+[![Version](https://img.shields.io/badge/Version-v1.6.1_(80)-1B1B1F?style=flat-square)](https://github.com/cao-gift/sdjtu-timetable/releases)
 [![Android](https://img.shields.io/badge/Android-7.0+-2F5D3A?style=flat-square)](https://lvlv.freeblock.cn)
 [![License](https://img.shields.io/badge/License-GPL--3.0-555450?style=flat-square)](LICENSE)
 [![Website](https://img.shields.io/badge/官网直连-lvlv.freeblock.cn-FF4A1C?style=flat-square)](https://lvlv.freeblock.cn)
@@ -58,7 +58,7 @@
 | :--- | :--- | :---: |
 | **课表同步** | 课表页顶栏一键同步当前 / 历史学期；自动合并相邻连堂，精准区分课程名与课程号，保留完整地点与自建课程 | 离线可读 |
 | **学业成绩** | 按学期汇总成绩与绩点，内置 GPA 趋势图、分数升/降序排列、定时查新成绩通知与「点我翻开」防剧透卡片 | 离线可读 |
-| **查空教室** | 进入手动触发实时查询（不缓存），默认预置无影山校区、1 号教学楼、当前周次与星期，按节次矩阵展示空闲时段 | 实时直连 |
+| **查空教室** | 进入手动触发实时查询（不缓存），自动记住常用校区与教学楼（与天气校区联动），按当前时刻优先推荐「从现在起连空至 20:35」的自习好教室 | 实时直连 |
 | **培养方案** | 同步旧版强智「培养方案执行计划」，统计总学分与必修门数，支持学期刻度筛选、课程体系分组与关键词检索 | 离线可读 |
 | **考试安排** | 自动合并当学期「期末考试」与「随堂提前期末」，去重后按发丝时间轴排序，支持考前提醒与写入手机日历 | 离线可读 |
 | **自动登录** | 可选开启，使用 Android Keystore（AES-256-GCM）本机加密保存门户凭据；遇验证码时自动切到可见页面验证 | 可选开关 |

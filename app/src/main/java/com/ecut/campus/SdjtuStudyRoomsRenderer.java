@@ -31,15 +31,18 @@ final class SdjtuStudyRoomsRenderer {
         final String building, room, state, badge;
         final List<SdjtuStudyFormat.PeriodSlot> periods;
         final int freeCount;
+        final SdjtuStudyFormat.StudyRecommendation rec;
 
         RoomEntry(String building, String room, String state, String badge,
-                  List<SdjtuStudyFormat.PeriodSlot> periods, int freeCount) {
+                  List<SdjtuStudyFormat.PeriodSlot> periods, int freeCount,
+                  SdjtuStudyFormat.StudyRecommendation rec) {
             this.building = building;
             this.room = room;
             this.state = state;
             this.badge = badge;
             this.periods = periods;
             this.freeCount = freeCount;
+            this.rec = rec == null ? SdjtuStudyFormat.StudyRecommendation.EMPTY : rec;
         }
     }
 
@@ -60,16 +63,24 @@ final class SdjtuStudyRoomsRenderer {
     }
 
     JSONObject defaultQueryRequest(int curWeek, int curDay) {
+        String campusVal = Prefs.studyRoomCampusValue(a);
+        String campusHint = Prefs.effectiveStudyRoomCampusHint(a);
+        String buildingVal = Prefs.studyRoomBuildingValue(a);
+        String buildingHint = Prefs.effectiveStudyRoomBuildingHint(a);
+
         JSONObject cond = new JSONObject();
-        SdjtuStudyActivity.put(cond, "campusHint", SdjtuStudyFormat.DEFAULT_CAMPUS_HINT);
-        SdjtuStudyActivity.put(cond, "buildingHint", SdjtuStudyFormat.DEFAULT_BUILDING_HINT);
+        if (!campusVal.isEmpty()) SdjtuStudyActivity.put(cond, "campus", campusVal);
+        if (!buildingVal.isEmpty()) SdjtuStudyActivity.put(cond, "building", buildingVal);
+        SdjtuStudyActivity.put(cond, "campusHint", campusHint);
+        SdjtuStudyActivity.put(cond, "buildingHint", buildingHint);
+        SdjtuStudyActivity.put(cond, "fallbackFirstBuilding", buildingVal.isEmpty());
         SdjtuStudyActivity.put(cond, "week", String.valueOf(curWeek));
         SdjtuStudyActivity.put(cond, "day", String.valueOf(curDay));
         SdjtuStudyActivity.put(cond, "period", "");
         SdjtuStudyActivity.put(cond, "room", "");
         SdjtuStudyActivity.put(cond, "requireBuilding", true);
-        SdjtuStudyActivity.put(cond, "campusLabel", SdjtuStudyFormat.DEFAULT_CAMPUS_HINT);
-        SdjtuStudyActivity.put(cond, "buildingLabel", SdjtuStudyFormat.DEFAULT_BUILDING_HINT);
+        SdjtuStudyActivity.put(cond, "campusLabel", campusHint);
+        SdjtuStudyActivity.put(cond, "buildingLabel", buildingHint.isEmpty() ? "默认教学楼" : buildingHint);
         SdjtuStudyActivity.put(cond, "weekLabel", "第" + curWeek + "周");
         SdjtuStudyActivity.put(cond, "dayLabel", SdjtuStudyFormat.weekdayLabel(curDay));
 
@@ -92,12 +103,12 @@ final class SdjtuStudyRoomsRenderer {
         JSONObject cond = (data != null && data.optJSONObject("roomConditions") != null)
                 ? data.optJSONObject("roomConditions")
                 : request.optJSONObject("roomConditions");
+        String campusFallback = Prefs.effectiveStudyRoomCampusHint(a);
+        String buildingFallback = Prefs.effectiveStudyRoomBuildingHint(a);
         String campusLabel = labelOfOption(cond, "campuses", cond == null ? "" : cond.optString("campus"),
-                cond == null ? SdjtuStudyFormat.DEFAULT_CAMPUS_HINT
-                        : cond.optString("campusLabel", SdjtuStudyFormat.DEFAULT_CAMPUS_HINT));
+                cond == null ? campusFallback : cond.optString("campusLabel", campusFallback));
         String buildingLabel = labelOfOption(cond, "buildings", cond == null ? "" : cond.optString("building"),
-                cond == null ? SdjtuStudyFormat.DEFAULT_BUILDING_HINT
-                        : cond.optString("buildingLabel", SdjtuStudyFormat.DEFAULT_BUILDING_HINT));
+                cond == null ? buildingFallback : cond.optString("buildingLabel", buildingFallback));
         String weekNum = cond == null ? "" : cond.optString("week");
         if (weekNum.isEmpty()) weekNum = String.valueOf(defaultWeek);
         int dayNum = data != null && data.optJSONObject("query") != null && data.optJSONObject("query").optInt("day") > 0
@@ -214,7 +225,9 @@ final class SdjtuStudyRoomsRenderer {
         btn.setBackground(bg);
     }
 
-    RowsResult buildRows(@Nullable JSONObject data, String needle, String selectedPeriodFilter, boolean freeOnly) {
+    RowsResult buildRows(@Nullable JSONObject data, String needle, String selectedPeriodFilter,
+                         boolean freeOnly, int actualCurrentWeek, int todayDayOfWeek,
+                         int nowMinutes, ScheduleSettings schedule) {
         List<SdjtuStudyActivity.Item> items = new ArrayList<>();
         JSONArray records = data == null ? null : data.optJSONArray("rooms");
         JSONObject cond = data == null ? null : data.optJSONObject("roomConditions");
@@ -222,9 +235,25 @@ final class SdjtuStudyRoomsRenderer {
                 cond == null ? "" : cond.optString("building"),
                 cond == null ? "" : cond.optString("buildingLabel"));
 
+        int queriedWeek = parseIntSafe(cond == null ? "" : cond.optString("week"), 0);
+        if (queriedWeek <= 0 && data != null && data.optJSONObject("query") != null) {
+            queriedWeek = data.optJSONObject("query").optInt("week", 0);
+        }
+        int queriedDay = data != null && data.optJSONObject("query") != null
+                ? data.optJSONObject("query").optInt("day", 0) : 0;
+        if (queriedDay <= 0 && cond != null) {
+            queriedDay = parseIntSafe(cond.optString("day"), 0);
+        }
+        boolean isQueryingToday = (queriedWeek <= 0 || queriedWeek == actualCurrentWeek)
+                && (queriedDay <= 0 || queriedDay == todayDayOfWeek);
+
         List<RoomEntry> matched = new ArrayList<>();
         int totalRecords = records == null ? 0 : records.length();
         int totalFree = 0;
+        int nowFreeCount = 0;
+        int untilEndCount = 0;
+        String untilEndTime = "";
+        boolean fromNowActive = false;
         LinkedHashSet<String> distinctBuildings = new LinkedHashSet<>();
 
         for (int i = 0; i < totalRecords; i++) {
@@ -234,19 +263,41 @@ final class SdjtuStudyRoomsRenderer {
             SdjtuStudyFormat.RoomLabel split = SdjtuStudyFormat.splitRoomLabel(rawName, buildingHint);
             String state = SdjtuStudyFormat.effectiveState(r, selectedPeriodFilter);
             if ("free".equals(state)) totalFree++;
+            SdjtuStudyFormat.StudyRecommendation rec = SdjtuStudyFormat.evaluateStudy(
+                    r, selectedPeriodFilter, isQueryingToday, nowMinutes, schedule);
+            if (rec.fromNowMode) {
+                fromNowActive = true;
+                if (rec.streakSections > 0) {
+                    nowFreeCount++;
+                    if (rec.untilDayEnd) {
+                        untilEndCount++;
+                        if (untilEndTime.isEmpty()) untilEndTime = rec.untilTime;
+                    }
+                }
+            }
             if (!needle.isEmpty() && !(rawName + " " + split.room + " " + split.building)
                     .toLowerCase(Locale.ROOT).contains(needle)) continue;
             if (freeOnly && !"free".equals(state)) continue;
             if (!split.building.isEmpty()) distinctBuildings.add(split.building);
-            matched.add(new RoomEntry(split.building, split.room, state,
-                    SdjtuStudyFormat.roomBadge(r, selectedPeriodFilter),
+            String badge = rec.badgeOverride.isEmpty()
+                    ? SdjtuStudyFormat.roomBadge(r, selectedPeriodFilter) : rec.badgeOverride;
+            matched.add(new RoomEntry(split.building, split.room, state, badge,
                     SdjtuStudyFormat.roomPeriods(r),
-                    SdjtuStudyFormat.freePeriodCount(r)));
+                    SdjtuStudyFormat.freePeriodCount(r), rec));
         }
 
         matched.sort((x, y) -> {
             boolean af = "free".equals(x.state), bf = "free".equals(y.state);
             if (af != bf) return af ? -1 : 1;
+            if (x.rec.streakSections != y.rec.streakSections) {
+                return Integer.compare(y.rec.streakSections, x.rec.streakSections);
+            }
+            if (x.rec.untilDayEnd != y.rec.untilDayEnd) {
+                return x.rec.untilDayEnd ? -1 : 1;
+            }
+            if (selectedPeriodFilter.isEmpty() && x.rec.maxAnyStreakSections != y.rec.maxAnyStreakSections) {
+                return Integer.compare(y.rec.maxAnyStreakSections, x.rec.maxAnyStreakSections);
+            }
             if (selectedPeriodFilter.isEmpty() && x.freeCount != y.freeCount) {
                 return Integer.compare(y.freeCount, x.freeCount);
             }
@@ -267,6 +318,14 @@ final class SdjtuStudyRoomsRenderer {
             countText = freeOnly
                     ? "当前筛选时段暂无空闲教室（共 " + totalRecords + " 间，可切「全部教室」查看）"
                     : "没有符合搜索条件的教室";
+        } else if (fromNowActive && selectedPeriodFilter.isEmpty()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("显示 ").append(matched.size()).append(" 间 · 此刻起空闲 ")
+                    .append(nowFreeCount).append("/").append(totalRecords).append(" 间");
+            if (untilEndCount > 0 && !untilEndTime.isEmpty()) {
+                sb.append("（").append(untilEndCount).append(" 间可连坐至 ").append(untilEndTime).append("）");
+            }
+            countText = sb.toString();
         } else {
             String scopeLbl = selectedPeriodFilter.isEmpty()
                     ? "当天有空闲" : SdjtuStudyFormat.shortPeriodLabel(selectedPeriodFilter) + "空闲";
@@ -299,17 +358,31 @@ final class SdjtuStudyRoomsRenderer {
         }
         top.addView(nameCol, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        TextView badge = text(11.5f,
-                "free".equals(r.state) ? freeChipFg() : "unknown".equals(r.state) ? warnChipFg() : G.MUTE);
+        boolean badgeBusyNow = r.rec.fromNowMode && r.rec.streakSections == 0 && "free".equals(r.state);
+        int badgeFg = badgeBusyNow ? G.SUB
+                : "free".equals(r.state) ? freeChipFg() : "unknown".equals(r.state) ? warnChipFg() : G.MUTE;
+        int badgeBgColor = badgeBusyNow ? G.CHIP
+                : "free".equals(r.state) ? freeChipBg() : "unknown".equals(r.state) ? warnChipBg() : G.CHIP;
+
+        TextView badge = text(11.5f, badgeFg);
         badge.setTypeface(Typeface.create(Typeface.MONOSPACE, Typeface.BOLD));
         badge.setPadding(dp(9), dp(4), dp(9), dp(4));
         GradientDrawable bbg = new GradientDrawable();
         bbg.setCornerRadius(dp(G.GLASS ? 12 : 4));
-        bbg.setColor("free".equals(r.state) ? freeChipBg() : "unknown".equals(r.state) ? warnChipBg() : G.CHIP);
+        bbg.setColor(badgeBgColor);
         badge.setBackground(bbg);
         badge.setText(r.badge);
         top.addView(badge);
         card.addView(top);
+
+        if (!r.rec.hintText.isEmpty()) {
+            int hintColor = r.rec.recommended ? freeChipFg() : (badgeBusyNow ? G.MUTE : G.SUB);
+            TextView hintTv = text(12f, hintColor);
+            if (r.rec.recommended) hintTv.setTypeface(Typeface.DEFAULT_BOLD);
+            hintTv.setPadding(0, dp(5), 0, 0);
+            hintTv.setText(r.rec.hintText);
+            card.addView(hintTv);
+        }
 
         if (!r.periods.isEmpty()) {
             LinearLayout strip = new LinearLayout(a);
@@ -320,6 +393,7 @@ final class SdjtuStudyRoomsRenderer {
                 boolean isFree = "free".equals(slot.state);
                 boolean isUnknown = "unknown".equals(slot.state);
                 boolean focused = !selectedPeriodFilter.isEmpty() && selectedPeriodFilter.equals(slot.period);
+                boolean isAnchor = selectedPeriodFilter.isEmpty() && r.rec.fromNowMode && i == r.rec.anchorSlotIndex;
 
                 LinearLayout cell = new LinearLayout(a);
                 cell.setOrientation(LinearLayout.VERTICAL);
@@ -330,6 +404,7 @@ final class SdjtuStudyRoomsRenderer {
                 cbg.setCornerRadius(dp(G.GLASS ? 10 : 4));
                 cbg.setColor(isFree ? freeChipBg() : isUnknown ? warnChipBg() : G.CHIP);
                 if (focused) cbg.setStroke(dp(1.5f), G.INK);
+                else if (isAnchor) cbg.setStroke(Math.max(1, dp(1.25f)), isFree ? freeChipFg() : G.STROKE);
                 cell.setBackground(cbg);
 
                 TextView pLabel = text(10.5f, isFree ? freeChipFg() : isUnknown ? warnChipFg() : G.MUTE);

@@ -205,6 +205,7 @@ final class SettingsTab {
                         Prefs.setNewGradeKeys(a, java.util.Collections.emptySet());
                         Prefs.setSemesterStartDate(a, "");
                         Prefs.setCurrentWeek(a, 1);
+                        Prefs.clearStudyRoomPlace(a);
                         Notify.cancelNewGrades(a);
                         ClassWidget.updateAll(a.getApplicationContext());
                         ClassReminder.reschedule(a.getApplicationContext());
@@ -335,6 +336,7 @@ final class SettingsTab {
                     com.ecut.campus.data.RainForecast.Campus chosen = all[which];
                     boolean changed = !chosen.id.equals(Prefs.rainCampus(a));
                     Prefs.setRainCampus(a, chosen.id);
+                    Prefs.syncStudyRoomFromRainCampus(a, chosen);
                     if (!Prefs.rainHint(a)) {
                         Prefs.setRainHint(a, true);
                         rainSw.setChecked(true);

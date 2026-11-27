@@ -24,8 +24,8 @@ android {
         applicationId "app.lvlv.timetable"
         minSdk 24
         targetSdk 35
-        versionCode 79
-        versionName "1.6.0"
+        versionCode 80
+        versionName "1.6.1"
         buildConfigField "String", "RELEASE_REPOSITORY", groovy.json.JsonOutput.toJson(providers.gradleProperty("lvlvReleaseRepository").getOrElse("cao-gift/sdjtu-timetable"))
         buildConfigField "String", "UPDATE_BASE_URL", groovy.json.JsonOutput.toJson(providers.gradleProperty("lvlvUpdateBaseUrl").getOrElse("https://lvlv.freeblock.cn"))
     }

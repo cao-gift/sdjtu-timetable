@@ -315,6 +315,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
                     syncedAt = completedAt;
                     selectedPeriodFilter = "";
                     notice = "";
+                    rememberRoomPlaceFrom(result.optJSONObject("roomConditions"));
                     JSONArray list = result.optJSONArray("rooms");
                     int total = list == null ? 0 : list.length();
                     int freeCount = 0;
@@ -424,6 +425,7 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
                 selected -> {
                     roomDialog = null;
                     request = selected;
+                    rememberRoomPlaceFrom(selected.optJSONObject("roomConditions"));
                     startSync();
                 },
                 () -> {
@@ -523,13 +525,28 @@ public final class SdjtuStudyActivity extends AppCompatActivity {
         renderRows();
     }
 
+    private void rememberRoomPlaceFrom(@Nullable JSONObject cond) {
+        if (cond == null) return;
+        String cVal = cond.optString("campus").trim();
+        String cLbl = SdjtuStudyRoomsRenderer.labelOfOption(cond, "campuses", cVal, cond.optString("campusLabel"));
+        String bVal = cond.optString("building").trim();
+        String bLbl = SdjtuStudyRoomsRenderer.labelOfOption(cond, "buildings", bVal, cond.optString("buildingLabel"));
+        if (Prefs.saveStudyRoomPlace(this, cVal, cLbl, bVal, bLbl)) {
+            RainWeather.clearCache(this);
+            RainWeather.refreshIfNeeded(this, true, null);
+        }
+    }
+
     private void renderRows() {
         if (tally == null) return;
         String needle = search.getText().toString().trim().toLowerCase(Locale.ROOT);
         if (rooms()) {
             roomsRenderer.styleFreeOnlyButton(filterToggleBtn, freeOnly);
-            SdjtuStudyRoomsRenderer.RowsResult res =
-                    roomsRenderer.buildRows(data, needle, selectedPeriodFilter, freeOnly);
+            int nowMin = ClassPlans.nowMinutes(System.currentTimeMillis());
+            SdjtuStudyRoomsRenderer.RowsResult res = roomsRenderer.buildRows(
+                    data, needle, selectedPeriodFilter, freeOnly,
+                    actualCurrentWeek(), WeekMath.todayDayOfWeek(), nowMin,
+                    ScheduleSettingsStore.load(this));
             tally.setText(res.tallyText);
             tally.setVisibility(data == null ? View.GONE : View.VISIBLE);
             adapter.items = res.items;

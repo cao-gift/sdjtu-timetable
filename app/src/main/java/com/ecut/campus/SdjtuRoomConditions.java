@@ -129,14 +129,21 @@ final class SdjtuRoomConditions {
         displayedCampus = conditions.optString("campus");
         loadingBuildings = false;
 
+        String campusHint = Prefs.effectiveStudyRoomCampusHint(context);
         bind(campus, conditions.optJSONArray("campuses"), displayedCampus,
-                SdjtuStudyFormat.DEFAULT_CAMPUS_HINT, "请选择校区");
+                campusHint, "请选择校区");
         displayedCampus = value(campus);
+        String displayedCampusLabel = label(campus);
 
         JSONArray bldArr = conditions.optJSONArray("buildings");
         hasBuildingOptions = bldArr != null && bldArr.length() > 0;
         String bldCurrent = conditions.optString("building");
-        String bldHint = displayedCampus.isEmpty() ? "" : SdjtuStudyFormat.DEFAULT_BUILDING_HINT;
+        String savedCampusLabel = Prefs.studyRoomCampusLabel(context);
+        boolean sameAsSavedCampus = !savedCampusLabel.isEmpty() && !displayedCampusLabel.isEmpty()
+                && (displayedCampusLabel.contains(savedCampusLabel) || savedCampusLabel.contains(displayedCampusLabel));
+        String bldHint = displayedCampus.isEmpty() ? ""
+                : (sameAsSavedCampus ? Prefs.effectiveStudyRoomBuildingHint(context)
+                        : SdjtuStudyFormat.defaultBuildingHintForCampus(displayedCampusLabel));
         bind(building, bldArr, bldCurrent, bldHint,
                 hasBuildingOptions ? "请选择教学楼" : "当前校区暂无可选教学楼");
         if (hasBuildingOptions && value(building).isEmpty() && building.getCount() > 1) {

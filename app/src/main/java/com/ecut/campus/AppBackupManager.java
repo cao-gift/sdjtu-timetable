@@ -158,6 +158,11 @@ final class AppBackupManager {
         o.put("hiddenLocationPhrases", Prefs.hiddenLocationPhrases(c));
         o.put("fitAllSections", Prefs.fitAllSections(c));
         o.put("rainHint", Prefs.rainHint(c));
+        o.put("rainCampus", Prefs.rainCampus(c));
+        o.put("studyRoomCampusValue", Prefs.studyRoomCampusValue(c));
+        o.put("studyRoomCampusLabel", Prefs.studyRoomCampusLabel(c));
+        o.put("studyRoomBuildingValue", Prefs.studyRoomBuildingValue(c));
+        o.put("studyRoomBuildingLabel", Prefs.studyRoomBuildingLabel(c));
         o.put("classRemind", Prefs.classRemind(c));
         o.put("classRemindLead", Prefs.classRemindLead(c));
         o.put("nextClassNotice", Prefs.nextClassNotice(c));
@@ -173,7 +178,7 @@ final class AppBackupManager {
     private static void restorePrefs(Context c, JSONObject o) {
         if (o.has("theme")) Prefs.setTheme(c, o.optInt("theme", G.THEME_GLASS));
         if (o.has("nightMode")) {
-            int nm = o.optInt("nightMode", 0);
+            int nm = o.optInt("nightMode", 1);
             Prefs.setNightMode(c, nm);
             App.applyNightMode(nm);
         }
@@ -183,6 +188,14 @@ final class AppBackupManager {
         if (o.has("hiddenLocationPhrases")) Prefs.setHiddenLocationPhrases(c, o.optString("hiddenLocationPhrases", ""));
         if (o.has("fitAllSections")) Prefs.setFitAllSections(c, o.optBoolean("fitAllSections", false));
         if (o.has("rainHint")) Prefs.setRainHint(c, o.optBoolean("rainHint", true));
+        if (o.has("rainCampus")) Prefs.setRainCampus(c, o.optString("rainCampus", ""));
+        if (o.has("studyRoomCampusLabel") || o.has("studyRoomCampusValue")) {
+            Prefs.saveStudyRoomPlace(c,
+                    o.optString("studyRoomCampusValue", ""),
+                    o.optString("studyRoomCampusLabel", ""),
+                    o.optString("studyRoomBuildingValue", ""),
+                    o.optString("studyRoomBuildingLabel", ""));
+        }
         if (o.has("classRemind")) Prefs.setClassRemind(c, o.optBoolean("classRemind", false));
         if (o.has("classRemindLead")) Prefs.setClassRemindLead(c, o.optInt("classRemindLead", 10));
         if (o.has("nextClassNotice")) Prefs.setNextClassNotice(c, o.optBoolean("nextClassNotice", false));

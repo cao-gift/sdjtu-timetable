@@ -332,6 +332,21 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 @Override
+                public void onConflictClick(java.util.List<TimetableView.ConflictItem> items,
+                                            Timetable.Course tappedCourse, int week) {
+                    CourseBlockActions.onConflictClick(MainActivity.this, items, tappedCourse, week,
+                            MainActivity.this::refreshTimetableTab, MainActivity.this::openCourseEditor);
+                }
+
+                @Override
+                public void onTodoBadgeClick(Timetable.Course course) {
+                    if (course != null && course.name != null && !course.name.isEmpty()) {
+                        CourseBlockActions.showTodoDialog(MainActivity.this, course.name,
+                                MainActivity.this::refreshTimetableTab);
+                    }
+                }
+
+                @Override
                 public void onWeekSettling(int delta) {
                     // 手指一松就先翻标题，不等吸附动画结束
                     int total = Prefs.totalWeeks(MainActivity.this);
@@ -535,7 +550,9 @@ public class MainActivity extends AppCompatActivity {
             timetableView.setHiddenLocationPhrases(Prefs.hiddenLocationPhrases(this));
             timetableView.setFitAllSections(Prefs.fitAllSections(this));
             timetableView.setWarnCourses(com.ecut.campus.fun.FunPrefs.absenceWarnings(this, currentTimetable, total));
-            timetableView.setTodoCounts(CourseTodoStore.load(this).pendingCounts());
+            com.ecut.campus.data.CourseTodo todoBook = CourseTodoStore.load(this);
+            timetableView.setTodoCounts(todoBook.pendingCounts());
+            timetableView.setUrgentTodoCourses(todoBook.urgentCourseKeys(System.currentTimeMillis()));
             timetableView.setExamEntries(Prefs.examInTimetable(this)
                     ? ExamReminder.loadEntries(this) : java.util.Collections.emptyList());
             timetableView.setTimetable(currentTimetable, week);

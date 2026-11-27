@@ -209,6 +209,163 @@ public final class TimetableLayout {
         for (Timetable.Session c : cluster) laneOf.get(c)[1] = laneEnds.size();
     }
 
+    /**
+     * 重修/选课时间冲突错层叠卡规划结果：
+     * 取代原先把七天窄列再横切 1/2 导致课名竖排成单字条的做法，保持每门课接近全列宽度以正常横排阅读，
+     * 并为底层课计算未被上层叠卡遮挡的文字区，保证每门冲突课的标题/教室都清晰可见。
+     */
+    public static final class OverlapCard {
+        public final float visualStart;
+        public final float visualEnd;
+        public final float textStart;
+        public final float textEnd;
+        public final int depth;
+        public final int clusterSize;
+        public final int clusterId;
+
+        public OverlapCard(float visualStart, float visualEnd, float textStart, float textEnd,
+                           int depth, int clusterSize, int clusterId) {
+            this.visualStart = visualStart;
+            this.visualEnd = visualEnd;
+            this.textStart = textStart;
+            this.textEnd = textEnd;
+            this.depth = depth;
+            this.clusterSize = clusterSize;
+            this.clusterId = clusterId;
+        }
+    }
+
+    /**
+     * 为同一天的有效时段规划错层叠卡布局（纯函数，按绘制顺序返回排序后的时段列表并写入 out）。
+     * - 无冲突课程：depth=0, clusterSize=1，保持原始起止。
+     * - 部分重叠（如 1-4 节与 3-4 节、1-4 节与 1-2 节、1-3 节与 2-4 节）：长课垫底（保留完整起止与左缘色条）、
+     *   短课微缩叠在上方，底层课文字自动排进未遮挡时段（如 1-2 节或 3-4 节），两门课均拥有充裕宽高。
+     * - 完全同时段或多门全覆盖（如两门课同为 7-8 节）：自动按阶梯切分文字与叠卡区，每门课均保持横向全宽可读。
+     */
+    public static List<Timetable.Session> planOverlapDeck(List<Timetable.Session> list,
+                                                          ScheduleSettings schedule,
+                                                          Map<Timetable.Session, OverlapCard> out) {
+        List<Timetable.Session> drawOrder = new ArrayList<>();
+        if (list == null || list.isEmpty()) return drawOrder;
+
+        List<Timetable.Session> sorted = new ArrayList<>(list);
+        sorted.sort((x, y) -> {
+            float[] px = position(x, schedule);
+            float[] py = position(y, schedule);
+            int cmp = Float.compare(px[0], py[0]);
+            return cmp != 0 ? cmp : Float.compare(py[1], px[1]);
+        });
+
+        List<List<Timetable.Session>> clusters = new ArrayList<>();
+        List<Timetable.Session> curCluster = new ArrayList<>();
+        float curEnd = -1f;
+        for (Timetable.Session s : sorted) {
+            float[] p = position(s, schedule);
+            if (!curCluster.isEmpty() && p[0] >= curEnd - 0.01f) {
+                clusters.add(curCluster);
+                curCluster = new ArrayList<>();
+                curEnd = -1f;
+            }
+            curCluster.add(s);
+            curEnd = Math.max(curEnd, p[1]);
+        }
+        if (!curCluster.isEmpty()) clusters.add(curCluster);
+
+        int nextClusterId = 1;
+        for (List<Timetable.Session> cl : clusters) {
+            if (cl.size() == 1) {
+                Timetable.Session s = cl.get(0);
+                float[] p = position(s, schedule);
+                out.put(s, new OverlapCard(p[0], p[1], p[0], p[1], 0, 1, 0));
+                drawOrder.add(s);
+                continue;
+            }
+
+            int cid = nextClusterId++;
+            int n = cl.size();
+            // 尝试模式 A：长时段垫底、短时段在顶，检查每张卡是否都有 >= 0.85 节的未遮挡连续文字区
+            List<Timetable.Session> bySpanDesc = new ArrayList<>(cl);
+            bySpanDesc.sort((a, b) -> {
+                float[] pa = position(a, schedule);
+                float[] pb = position(b, schedule);
+                int lenCmp = Float.compare(pb[1] - pb[0], pa[1] - pa[0]);
+                return lenCmp != 0 ? lenCmp : Float.compare(pa[0], pb[0]);
+            });
+
+            float[][] rawPos = new float[n][];
+            for (int i = 0; i < n; i++) rawPos[i] = position(bySpanDesc.get(i), schedule);
+
+            float[][] uncovered = new float[n][];
+            boolean naturalFits = true;
+            for (int i = 0; i < n; i++) {
+                List<float[]> upper = new ArrayList<>();
+                for (int j = i + 1; j < n; j++) upper.add(rawPos[j]);
+                float[] best = longestUncoveredSegment(rawPos[i][0], rawPos[i][1], upper);
+                if (best[1] - best[0] < 0.85f) {
+                    naturalFits = false;
+                    break;
+                }
+                uncovered[i] = best;
+            }
+
+            if (naturalFits) {
+                for (int i = 0; i < n; i++) {
+                    Timetable.Session s = bySpanDesc.get(i);
+                    out.put(s, new OverlapCard(rawPos[i][0], rawPos[i][1],
+                            uncovered[i][0], uncovered[i][1], i, n, cid));
+                    drawOrder.add(s);
+                }
+            } else {
+                // 模式 B：阶梯叠卡切分（如两门课同为 7-8 节），底层延伸至簇底以体现完整节次，每层获得等高文字区
+                float cMin = Float.MAX_VALUE, cMax = -Float.MAX_VALUE;
+                for (Timetable.Session s : cl) {
+                    float[] p = position(s, schedule);
+                    cMin = Math.min(cMin, p[0]);
+                    cMax = Math.max(cMax, p[1]);
+                }
+                float span = Math.max(0.5f, cMax - cMin);
+                float slice = span / n;
+                for (int i = 0; i < n; i++) {
+                    Timetable.Session s = cl.get(i);
+                    float t0 = cMin + i * slice;
+                    float t1 = (i == n - 1) ? cMax : (cMin + (i + 1) * slice);
+                    out.put(s, new OverlapCard(t0, cMax, t0, t1, i, n, cid));
+                    drawOrder.add(s);
+                }
+            }
+        }
+        return drawOrder;
+    }
+
+    private static float[] longestUncoveredSegment(float start, float end, List<float[]> covers) {
+        if (covers == null || covers.isEmpty()) return new float[]{start, end};
+        List<float[]> clipped = new ArrayList<>();
+        for (float[] c : covers) {
+            float a = Math.max(start, c[0]);
+            float b = Math.min(end, c[1]);
+            if (b > a + 0.005f) clipped.add(new float[]{a, b});
+        }
+        if (clipped.isEmpty()) return new float[]{start, end};
+        clipped.sort((x, y) -> Float.compare(x[0], y[0]));
+
+        float bestStart = start, bestEnd = start;
+        float cursor = start;
+        for (float[] c : clipped) {
+            if (c[0] > cursor + 0.005f) {
+                if (c[0] - cursor > bestEnd - bestStart) {
+                    bestStart = cursor;
+                    bestEnd = c[0];
+                }
+            }
+            cursor = Math.max(cursor, c[1]);
+        }
+        if (end > cursor + 0.005f && end - cursor > bestEnd - bestStart) {
+            bestStart = cursor;
+            bestEnd = end;
+        }
+        return new float[]{bestStart, bestEnd};
+    }
+
     public static boolean overlapsActive(Timetable.Session s, List<Timetable.Session> active, ScheduleSettings schedule) {
         float[] pos = position(s, schedule);
         for (Timetable.Session a : active) {
