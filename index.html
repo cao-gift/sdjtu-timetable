@@ -924,7 +924,7 @@
         <div>
           <div class="status-pill glass mono">
             <span class="now-dot" aria-hidden="true"></span>
-            <span>山东交通学院专属 · <strong id="verTag">v1.5.3</strong> (<span id="verBuild">78</span>)</span>
+            <span>山东交通学院专属 · <strong id="verTag">v1.6.0</strong> (<span id="verBuild">79</span>)</span>
           </div>
 
           <h1 class="hero-title">
@@ -937,7 +937,7 @@
           </p>
 
           <div class="hero-cta">
-            <a class="btn btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.5.3.apk" download="lvlv-v1.5.3.apk">
+            <a class="btn btn-primary" id="downloadBtn" href="./downloads/lvlv-v1.6.0.apk" download="lvlv-v1.6.0.apk">
               <svg class="btn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 3v12"></path>
                 <path d="m7 10 5 5 5-5"></path>
@@ -961,7 +961,7 @@
             </div>
             <div class="metric">
               <div class="metric-k mono">UPDATED</div>
-              <div class="metric-v mono" id="verDate">2026-11-26</div>
+              <div class="metric-v mono" id="verDate">2026-11-27</div>
             </div>
           </div>
         </div>
@@ -1188,11 +1188,11 @@
           <div class="rel-aside">
             <div>
               <span class="sync-badge mono">LATEST RELEASE</span>
-              <div class="rel-num mono" id="notesVer">v1.5.3</div>
+              <div class="rel-num mono" id="notesVer">v1.6.0</div>
               <div class="rel-kv mono">
-                <div><span>构建号</span><span id="notesBuild">78</span></div>
+                <div><span>构建号</span><span id="notesBuild">79</span></div>
                 <div><span>包大小</span><span id="notesSize">3.5 MB</span></div>
-                <div><span>发布日期</span><span id="notesDate">2026-11-26</span></div>
+                <div><span>发布日期</span><span id="notesDate">2026-11-27</span></div>
                 <div><span>应用包名</span><span>app.lvlv.timetable</span></div>
               </div>
             </div>
@@ -1200,9 +1200,11 @@
           </div>
 
           <div>
-            <div class="rel-notes" id="verNotes">1. 设置页自动登录管理文案精简：「管理统一门户自动登录 / 设置统一门户自动登录」统一改为「管理自动登录 / 设置自动登录」。
-2. 课表设置页全面重构与美化：梳理为「学期与周次」「课表显示」「地点简化」「更多」四组 Gauge 卡片；顶部整合等宽当前周次预览与「校准周次」按钮，所有课表显示开关统一为整齐 `01–05` 编号行与 `ON/OFF` 胶囊。
-3. 「地点隐藏词组」体验升级：自动提取当前课表高频校区/教学楼前缀支持一键快捷添加，已启用词组以标签流呈现并支持轻点 `×` 秒删；卡片内与自定义编辑弹窗均提供「原地点 → 简化结果」实时效果预览。</div>
+            <div class="rel-notes" id="verNotes">1. **自动登录提速与稳定性修复**：为交院 CAS 表单水合增加瞬态防误判窗口并延长提交等待上限，非拒登取消时自动解除防重锁；未登录态从空教室/培养方案进入统一门户后直达教务 SSO，成绩同步改走同源 WebView XHR 避免 Cookie 落盘竞态。
+2. **Android 15 适配与全面屏**：升级 `compileSdk / targetSdk` 至 35，新增 `EdgeToEdge` 统一适配状态栏、手势导航条、刘海区与输入法 `WindowInsets`，浮动胶囊底栏自动避让手势条。
+3. **敏感权限精简（零定位、零相机）**：课块下雨提示改为无影山 / 长清 / 威海三校区固定坐标并支持一键切换，彻底移除 `ACCESS_COARSE_LOCATION`；作业附图与同学二维码改由系统相机/相册选图 + ZXing Core 本地解码，移除 `CAMERA`；移除 `USE_EXACT_ALARM`，统一改用 `SCHEDULE_EXACT_ALARM` 并支持未授权自动降级。
+4. **GPA 目标模拟器与「小工具」更名**：全应用「小玩意」统一更名为「小工具」；新增「GPA 目标模拟器」，支持按目标 GPA 与剩余学分反推所需均分/均绩，并添加多门预估课程实时推算总 GPA 变化。
+5. **后台调课提醒与系统视觉升级**：新增每 6 小时后台静默检查课表变动并在调课/换教室/课程增删时推送提醒（可在通用设置开关）；开启 Android 14+ 预测性返回手势，补全 Android 13+ 单色主题图标与 Android 12+ 暖纸/深墨启动页。</div>
             <div class="rel-actions">
               <span>客户端检查更新优先直连本站节点并校验 SHA-256，不可用时自动回退多路镜像。</span>
               <a class="text-link" href="./changelog.html">浏览 v1.5.0 起全部记录 ›</a>
@@ -1284,7 +1286,7 @@
             <p class="dl-sub">支持应用内自动检查更新与 SHA-256 校验，无需折腾加速代理；所有历史正式版均同步归档于 GitHub Releases。</p>
 
             <div class="platform-row" role="group" aria-label="各平台客户端">
-              <a class="plat-btn plat-btn-main" id="downloadBtn2" href="./downloads/lvlv-v1.5.3.apk" download="lvlv-v1.5.3.apk">
+              <a class="plat-btn plat-btn-main" id="downloadBtn2" href="./downloads/lvlv-v1.6.0.apk" download="lvlv-v1.6.0.apk">
                 <svg class="btn-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M5 16v-2a7 7 0 0 1 14 0v2Z"></path>
                   <path d="m8.2 7.8-1.7-2.6"></path>
@@ -1294,7 +1296,7 @@
                 </svg>
                 <span class="plat-meta">
                   <span class="plat-name">安卓端下载</span>
-                  <span class="plat-sub mono" id="downloadName">lvlv-v1.5.3.apk</span>
+                  <span class="plat-sub mono" id="downloadName">lvlv-v1.6.0.apk</span>
                 </span>
               </a>
 
@@ -1321,7 +1323,7 @@
             </div>
 
             <div class="sha-bar mono">
-              <span class="sha-text"><strong>SHA-256</strong><span id="specSha">bd248aa17f3a4b5de4a2622b0403813efa085342b04a2eb1d8b64c6116fc7c6d</span></span>
+              <span class="sha-text"><strong>SHA-256</strong><span id="specSha">c0a76f5b11ff298c262958b7f5552b42f3487b7a26998611a9e7839cde0b3702</span></span>
               <button class="copy-pill mono" id="copyShaBtn" type="button">复制校验值</button>
             </div>
           </div>
@@ -1663,14 +1665,14 @@
 
       /* ---------- latest.json Dynamic Sync + Copy SHA-256 ---------- */
       const FALLBACK = {
-        tag: "v1.5.3",
-        versionCode: 78,
-        fileName: "lvlv-v1.5.3.apk",
-        apkUrl: "/downloads/lvlv-v1.5.3.apk",
-        size: 3722385,
-        sha256: "bd248aa17f3a4b5de4a2622b0403813efa085342b04a2eb1d8b64c6116fc7c6d",
-        publishedAt: "2026-11-26T13:03:57.845Z",
-        notes: "1. 设置页自动登录管理文案精简：「管理统一门户自动登录 / 设置统一门户自动登录」统一改为「管理自动登录 / 设置自动登录」。\n2. 课表设置页全面重构与美化：梳理为「学期与周次」「课表显示」「地点简化」「更多」四组 Gauge 卡片；顶部整合等宽当前周次预览与「校准周次」按钮，所有课表显示开关统一为整齐 `01–05` 编号行与 `ON/OFF` 胶囊。\n3. 「地点隐藏词组」体验升级：自动提取当前课表高频校区/教学楼前缀支持一键快捷添加，已启用词组以标签流呈现并支持轻点 `×` 秒删；卡片内与自定义编辑弹窗均提供「原地点 → 简化结果」实时效果预览。"
+        tag: "v1.6.0",
+        versionCode: 79,
+        fileName: "lvlv-v1.6.0.apk",
+        apkUrl: "/downloads/lvlv-v1.6.0.apk",
+        size: 3619146,
+        sha256: "c0a76f5b11ff298c262958b7f5552b42f3487b7a26998611a9e7839cde0b3702",
+        publishedAt: "2026-11-27T06:13:00.000Z",
+        notes: "1. **自动登录提速与稳定性修复**：为交院 CAS 表单水合增加瞬态防误判窗口并延长提交等待上限，非拒登取消时自动解除防重锁；未登录态从空教室/培养方案进入统一门户后直达教务 SSO，成绩同步改走同源 WebView XHR 避免 Cookie 落盘竞态。\n2. **Android 15 适配与全面屏**：升级 `compileSdk / targetSdk` 至 35，新增 `EdgeToEdge` 统一适配状态栏、手势导航条、刘海区与输入法 `WindowInsets`，浮动胶囊底栏自动避让手势条。\n3. **敏感权限精简（零定位、零相机）**：课块下雨提示改为无影山 / 长清 / 威海三校区固定坐标并支持一键切换，彻底移除 `ACCESS_COARSE_LOCATION`；作业附图与同学二维码改由系统相机/相册选图 + ZXing Core 本地解码，移除 `CAMERA`；移除 `USE_EXACT_ALARM`，统一改用 `SCHEDULE_EXACT_ALARM` 并支持未授权自动降级。\n4. **GPA 目标模拟器与「小工具」更名**：全应用「小玩意」统一更名为「小工具」；新增「GPA 目标模拟器」，支持按目标 GPA 与剩余学分反推所需均分/均绩，并添加多门预估课程实时推算总 GPA 变化。\n5. **后台调课提醒与系统视觉升级**：新增每 6 小时后台静默检查课表变动并在调课/换教室/课程增删时推送提醒（可在通用设置开关）；开启 Android 14+ 预测性返回手势，补全 Android 13+ 单色主题图标与 Android 12+ 暖纸/深墨启动页。"
       };
       function formatSize(bytes) { return (!bytes || bytes <= 0) ? "--" : (bytes / 1048576).toFixed(1) + " MB"; }
       function formatDate(iso) { const m = String(iso || "").match(/^(\d{4}-\d{2}-\d{2})/); return m ? m[1] : "--"; }

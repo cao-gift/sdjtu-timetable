@@ -218,7 +218,7 @@
     <section class="hero">
       <div class="eyebrow">PRIVACY STATEMENT · 个人信息保护声明</div>
       <h1>驴驴课表隐私政策</h1>
-      <p class="meta-line">应用名称：驴驴课表 · 包名：app.lvlv.timetable · 更新与生效日期：2026 年 11 月 26 日</p>
+      <p class="meta-line">应用名称：驴驴课表 · 包名：app.lvlv.timetable · 更新与生效日期：2026 年 11 月 27 日</p>
       <div class="summary-box">
         <strong>核心承诺：</strong>「驴驴课表」是由学生个人开发维护的非官方校园课表工具。本应用<strong>无独立注册账号、无自建云端服务器、不收集或上传您的学籍与个人数据、不接入任何商业广告或行为统计 SDK</strong>。您同步的课表、成绩、培养方案、考试安排、作业待办与可选的加密自动登录凭据均仅保存在您本机设备中，您可随时查看、导出或一键清空。
       </div>
@@ -239,8 +239,8 @@
         <ul>
           <li><strong>校园教务同步（课表、成绩、培养方案、考试安排、空教室）：</strong>当您点击登录或同步时，应用仅在您手机本地通过 WebView 与山东交通学院官方统一门户（<span class="mono">wwebvpn.sdjtu.edu.cn</span>）及教务系统页面直接通信。解析后的课表、成绩、培养方案与考试安排仅保存于本机应用私有目录，查空教室结果仅在内存中实时展示、不写入本地缓存。开发者无法获取、也不存储您的任何学号、姓名或教务数据。</li>
           <li><strong>统一门户自动登录凭据（可选，默认关闭）：</strong>仅在您主动前往「设置 → 教务账号 → 管理自动登录」输入并明示同意保存后，应用才会使用 Android Keystore 生成的 AES-256-GCM 硬件级密钥对账号密码进行加密，并仅存放于本机 <span class="mono">no_backup</span> 私有目录中。该凭据仅用于本机自动填充学校官方认证表单，绝不会发送至学校官方域名以外的任何服务器，您可随时点击「忘记账号密码」彻底删除。</li>
-          <li><strong>课块下雨提示（可选）：</strong>仅在您手动开启「课块下雨提示」并授予粗略位置权限后，应用通过系统网络定位获取约 1 公里级粗略经纬度，仅用于向开放气象接口（Open-Meteo）查询未来数天对应上课时段的降雨概率。本应用不申请精确定位权限，不记录您的历史位置轨迹。</li>
-          <li><strong>课程作业附图与扫码分享（可选）：</strong>当您主动为作业添加照片、或扫描同学的脱敏课表二维码时，仅在本地处理图像与二维码内容，图片仅存于本机应用私有目录。课表分享码仅包含课程名、教室、上课时间与周次，不包含学号、姓名及教师信息。</li>
+          <li><strong>课块下雨提示（可选）：</strong>当您开启「课块下雨提示」时，应用仅使用您在设置中选择的山东交通学院校区固定参考坐标（无影山校区、长清校区或威海校区）向开放气象接口（Open-Meteo）查询未来数天对应上课时段的降雨概率。本应用<strong>不申请任何定位权限</strong>，不获取您的设备 GPS 或网络位置，也不记录位置轨迹。</li>
+          <li><strong>课程作业附图与扫码分享（可选）：</strong>当您主动为作业添加照片、或扫描同学的脱敏课表二维码时，应用通过系统相机或系统相册选择器由您主动拍摄/选取图片，再在本地完成图片保存与二维码解码（ZXing Core），<strong>不申请相机权限</strong>。作业附图仅存于本机应用私有目录；课表分享码仅包含课程名、教室、上课时间与周次，不包含学号、姓名及教师信息。</li>
           <li><strong>应用内检查更新：</strong>仅拉取官网静态更新清单（<span class="mono">lvlv.freeblock.cn/latest.json</span> 及备用镜像）对比版本号与安装包 SHA-256 校验值，不上传设备唯一标识（如 IMEI、OAID、MAC 地址、Android ID 等）。</li>
           <li><strong>诊断包导出（主动触发）：</strong>仅在您遇到同步异常并主动点击「导出诊断包」时在本地生成脱敏日志压缩包，导出前会自动剔除账号密码、Cookie、会话令牌、学号、姓名、邮箱与 URL 参数，且仅由您自行决定是否保存或发送给开发者。</li>
         </ul>
@@ -261,18 +261,8 @@
             <tbody>
               <tr>
                 <td><strong>网络访问</strong><br /><span class="mono">INTERNET / ACCESS_NETWORK_STATE</span></td>
-                <td>直连学校 WebVPN 教务同步数据、查询天气预报（开启下雨提示时）及检查应用更新。</td>
+                <td>直连学校 WebVPN 教务同步数据、按所选校区固定坐标查询天气预报（开启下雨提示时）及检查应用更新。</td>
                 <td>基础联网</td>
-              </tr>
-              <tr>
-                <td><strong>粗略位置信息</strong><br /><span class="mono">ACCESS_COARSE_LOCATION</span></td>
-                <td>仅在开启「课块下雨提示」时获取约 1 公里级大致位置，用于查询上课时段是否可能下雨。</td>
-                <td>可选</td>
-              </tr>
-              <tr>
-                <td><strong>相机权限</strong><br /><span class="mono">CAMERA</span></td>
-                <td>仅在点击「扫同学的二维码」导入课表或为课程作业拍照附图时调用。</td>
-                <td>可选</td>
               </tr>
               <tr>
                 <td><strong>日历读写权限</strong><br /><span class="mono">READ_CALENDAR / WRITE_CALENDAR</span></td>
@@ -280,8 +270,8 @@
                 <td>可选</td>
               </tr>
               <tr>
-                <td><strong>通知与精确闹钟</strong><br /><span class="mono">POST_NOTIFICATIONS / USE_EXACT_ALARM / SCHEDULE_EXACT_ALARM</span></td>
-                <td>用于您开启的课前提醒、考前提醒、作业截止提醒、常驻下一节课通知及桌面小组件按上下课时刻准点刷新。</td>
+                <td><strong>通知与定时闹钟</strong><br /><span class="mono">POST_NOTIFICATIONS / SCHEDULE_EXACT_ALARM</span></td>
+                <td>用于您开启的课前提醒、考前提醒、作业截止提醒、后台课表变动提醒、常驻下一节课通知及桌面小组件按上下课时刻准点刷新；系统未授予精确闹钟权限时自动降级为非精确唤醒。</td>
                 <td>可选</td>
               </tr>
               <tr>
@@ -304,8 +294,8 @@
         <p>本应用<strong>未接入任何第三方广告 SDK、数据分析/统计埋点 SDK、推送 SDK 或社交登录 SDK</strong>，不存在向第三方共享、转让或公开披露您个人信息的情形。</p>
         <ul>
           <li><strong>学校官方门户（<span class="mono">*.sdjtu.edu.cn</span>）：</strong>由用户自行登录访问，用于获取本人教务数据。</li>
-          <li><strong>Open-Meteo 气象服务（<span class="mono">api.open-meteo.com</span>）：</strong>仅在用户开启「课块下雨提示」并授权定位时发送粗略经纬度（保留约两位小数精度）以获取天气预报，不附带任何个人或设备身份信息。</li>
-          <li><strong>本地开源组件：</strong>应用内集成的 AndroidX、Material Components 与 ZXing 二维码库均为纯本地运行组件，不发起联网数据上报。</li>
+          <li><strong>Open-Meteo 气象服务（<span class="mono">api.open-meteo.com</span>）：</strong>仅在用户开启「课块下雨提示」时发送所选校区的固定经纬度以获取天气预报，不获取设备定位，也不附带任何个人或设备身份信息。</li>
+          <li><strong>本地开源组件：</strong>应用内集成的 AndroidX、Material Components 与 ZXing Core 二维码解码库均为纯本地运行组件，不发起联网数据上报。</li>
         </ul>
       </section>
 
@@ -330,7 +320,7 @@
               <li>一键清空全部本地数据：进入「设置 → 通用设置 → 高级选项 → 清空本地数据」，彻底清除本机全部课表、成绩、培养方案、考试安排、作业待办、上课时间配置及自动登录凭据。</li>
             </ul>
           </li>
-          <li><strong>撤回同意与权限管理：</strong>您可随时在应用内关闭「课块下雨提示」「上课提醒」「成绩更新通知」等功能开关，或在手机系统「设置 → 应用管理 → 驴驴课表 → 权限」中随时撤回位置、相机、日历、通知等任意权限授权。</li>
+          <li><strong>撤回同意与权限管理：</strong>您可随时在应用内关闭「课块下雨提示」「上课提醒」「课表变动提醒」「成绩更新通知」等功能开关，或在手机系统「设置 → 应用管理 → 驴驴课表 → 权限」中随时撤回日历、通知等任意权限授权。本应用不申请定位与相机权限。</li>
           <li><strong>账号注销说明：</strong>本应用不提供也不强制注册自有账号，无云端用户档案。当您执行「清空本地数据」或直接卸载本应用后，即视为终止使用并彻底删除所有本机留存数据。</li>
           <li><strong>响应时限与投诉反馈：</strong>如您对隐私保护有任何疑问、建议或投诉，可通过下方开发者邮箱联系我们，我们将在收到核验请求后的 <strong>15 个工作日</strong> 内予以回复与处理。</li>
         </ul>

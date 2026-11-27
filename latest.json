@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "tag": "v1.5.3",
-  "versionName": "1.5.3",
-  "versionCode": 78,
-  "name": "驴驴课表 v1.5.3",
-  "notes": "1. 设置页自动登录管理文案精简：「管理统一门户自动登录 / 设置统一门户自动登录」统一改为「管理自动登录 / 设置自动登录」。\n2. 课表设置页全面重构与美化：梳理为「学期与周次」「课表显示」「地点简化」「更多」四组 Gauge 卡片；顶部整合等宽当前周次预览与「校准周次」按钮，所有课表显示开关统一为整齐 `01–05` 编号行与 `ON/OFF` 胶囊。\n3. 「地点隐藏词组」体验升级：自动提取当前课表高频校区/教学楼前缀支持一键快捷添加，已启用词组以标签流呈现并支持轻点 `×` 秒删；卡片内与自定义编辑弹窗均提供「原地点 → 简化结果」实时效果预览。",
-  "apkUrl": "/downloads/lvlv-v1.5.3.apk",
-  "githubApkUrl": "https://github.com/cao-gift/sdjtu-timetable/releases/download/v1.5.3/lvlv-v1.5.3.apk",
+  "tag": "v1.6.0",
+  "versionName": "1.6.0",
+  "versionCode": 79,
+  "name": "驴驴课表 v1.6.0",
+  "notes": "1. **自动登录提速与稳定性修复**：为交院 CAS 表单水合增加瞬态防误判窗口并延长提交等待上限，非拒登取消时自动解除防重锁；未登录态从空教室/培养方案进入统一门户后直达教务 SSO，成绩同步改走同源 WebView XHR 避免 Cookie 落盘竞态。\n2. **Android 15 适配与全面屏**：升级 `compileSdk / targetSdk` 至 35，新增 `EdgeToEdge` 统一适配状态栏、手势导航条、刘海区与输入法 `WindowInsets`，浮动胶囊底栏自动避让手势条。\n3. **敏感权限精简（零定位、零相机）**：课块下雨提示改为无影山 / 长清 / 威海三校区固定坐标并支持一键切换，彻底移除 `ACCESS_COARSE_LOCATION`；作业附图与同学二维码改由系统相机/相册选图 + ZXing Core 本地解码，移除 `CAMERA`；移除 `USE_EXACT_ALARM`，统一改用 `SCHEDULE_EXACT_ALARM` 并支持未授权自动降级。\n4. **GPA 目标模拟器与「小工具」更名**：全应用「小玩意」统一更名为「小工具」；新增「GPA 目标模拟器」，支持按目标 GPA 与剩余学分反推所需均分/均绩，并添加多门预估课程实时推算总 GPA 变化。\n5. **后台调课提醒与系统视觉升级**：新增每 6 小时后台静默检查课表变动并在调课/换教室/课程增删时推送提醒（可在通用设置开关）；开启 Android 14+ 预测性返回手势，补全 Android 13+ 单色主题图标与 Android 12+ 暖纸/深墨启动页。",
+  "apkUrl": "/downloads/lvlv-v1.6.0.apk",
+  "githubApkUrl": "https://github.com/cao-gift/sdjtu-timetable/releases/download/v1.6.0/lvlv-v1.6.0.apk",
   "pageUrl": "/",
-  "fileName": "lvlv-v1.5.3.apk",
-  "size": 3722385,
-  "sha256": "bd248aa17f3a4b5de4a2622b0403813efa085342b04a2eb1d8b64c6116fc7c6d",
-  "publishedAt": "2026-11-26T13:03:57.845Z"
+  "fileName": "lvlv-v1.6.0.apk",
+  "size": 3619146,
+  "sha256": "c0a76f5b11ff298c262958b7f5552b42f3487b7a26998611a9e7839cde0b3702",
+  "publishedAt": "2026-11-27T06:14:12.485Z"
 }

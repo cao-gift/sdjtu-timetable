@@ -1,7 +1,57 @@
 {
-  "generatedAt": "2026-11-26T15:49:39.818Z",
-  "count": 4,
+  "generatedAt": "2026-11-27T06:14:12.609Z",
+  "count": 5,
   "releases": [
+    {
+      "version": "1.6.0",
+      "date": "2026-11-27",
+      "items": [
+        {
+          "type": "heading",
+          "text": "新增与优化"
+        },
+        {
+          "type": "item",
+          "text": "**未登录自动登录提速与稳定性修复**：为交院 CAS 登录页 Angular 表单水合增加瞬态防误判窗口，延长登录提交等待上限，并在非认证拒登取消时自动解除防重锁；无 Cookie 或会话过期时从空教室 / 培养方案直接跳统一门户、进入门户主页后立即直达 `ACADEMIC_SSO`（避免与 Vue 卡片点击双重跳转）；经自动登录完成后的成绩同步改走同源 WebView XHR，避免 Cookie 异步落盘竞态。"
+        },
+        {
+          "type": "item",
+          "text": "**Android 15（targetSdk 35）与全面屏适配**：升级 `compileSdk / targetSdk` 至 35，新增 `EdgeToEdge` 统一适配状态栏、手势导航条、刘海区与输入法 `WindowInsets`，浮动胶囊底栏自动抬升避让手势条。"
+        },
+        {
+          "type": "item",
+          "text": "**敏感权限精简（零定位、零相机、降级精确闹钟）**："
+        },
+        {
+          "type": "item",
+          "text": "课块下雨提示改为交院固定三校区坐标（无影山校区·济南天桥区、长清校区·济南长清区、威海校区·威海环翠区），支持在设置中一键切换校区，彻底移除 `ACCESS_COARSE_LOCATION` 定位权限。"
+        },
+        {
+          "type": "item",
+          "text": "作业附图拍照直接调用系统相机，同学二维码改为系统相机拍照或相册选图由 ZXing Core 本地解码，移除 `CAMERA` 权限与 `zxing-android-embedded` 依赖。"
+        },
+        {
+          "type": "item",
+          "text": "移除 `USE_EXACT_ALARM`，统一改用 `SCHEDULE_EXACT_ALARM`，系统未授权时在 `Wake` 中自动降级为非精确唤醒。"
+        },
+        {
+          "type": "item",
+          "text": "**GPA 目标模拟器与「小工具」更名**：全应用「小玩意」统一更名为「小工具」；新增「GPA 目标模拟器」（纯 Java 算法 `data/GpaSimulator` + 纸墨仪表页面），支持按目标 GPA 与剩余学分反推所需均分/均绩，并可添加多门预估课程实时推算总 GPA 变化。"
+        },
+        {
+          "type": "item",
+          "text": "**后台调课提醒**：新增 `TimetableCheckWorker`（每 6 小时后台静默检查课表变动）与课表变动通知渠道，复用 `SyncDiff` 在发现调课、换教室或课程增删时推送提醒，并同步刷新小组件、课前提醒与系统日历；可在「设置 → 通用设置 → 通知 → 课表变动时提醒」开关。"
+        },
+        {
+          "type": "item",
+          "text": "**系统视觉与手势升级**：开启 Android 14+ 预测性返回手势（`enableOnBackInvokedCallback=\"true\"`，返回拦截迁移至 `OnBackPressedCallback`）；补全 Android 13+ 主题图标单色小驴剪影（`<monochrome>`）与 Android 12+ 暖纸/深墨底色启动页。"
+        },
+        {
+          "type": "item",
+          "text": "**架构整理**：新增统一后台线程池 `Bg` 与轻量网络客户端 `Http`，替换分散的裸线程与重复 `HttpURLConnection` 逻辑；拆分 `SdjtuStudyActivity`（空教室与培养方案渲染独立成 `SdjtuStudyRoomsRenderer` / `SdjtuStudyPlanRenderer`）与 `TimetableView`（课块/现在线/虚框渲染抽至 `TimetableBlockRenderer`）。"
+        }
+      ]
+    },
     {
       "version": "1.5.3",
       "date": "2026-11-26",
